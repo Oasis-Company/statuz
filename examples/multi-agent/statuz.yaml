@@ -1,0 +1,58 @@
+statuz_version: "0.1"
+updated_at: "2026-05-27T12:30:00Z"
+
+identity:
+  agent_name: orchestrator-agent
+  project_name: multi-agent-demo
+  organization: Oasis Company
+
+role:
+  name: agent-coordinator
+  responsibilities:
+    - keep agent roles aligned
+    - route work to specialized agents
+    - maintain project-level status
+
+current_state:
+  stage: coordination
+  task: coordinate implementation, documentation, and testing agents
+  status: in_progress
+  last_checkpoint: agent roles defined
+  next_action: ask dev-agent to implement CLI validate command
+
+relations:
+  related_agents:
+    - dev-agent
+    - doc-agent
+    - qa-agent
+  agent_graph:
+    - from: orchestrator-agent
+      to: dev-agent
+      type: delegates_implementation_to
+    - from: dev-agent
+      to: qa-agent
+      type: requests_validation_from
+    - from: doc-agent
+      to: dev-agent
+      type: consumes_output_from
+
+progress:
+  completed:
+    - defined dev-agent role
+    - defined doc-agent role
+    - defined qa-agent role
+  blocked_by: []
+  open_questions:
+    - should qa-agent update status directly or through orchestrator-agent?
+
+rules:
+  should:
+    - each agent writes only its own status unless delegated
+  should_not:
+    - allow an agent to overwrite another agent's checkpoint history
+
+checkpoints:
+  - id: cp-multi-001
+    at: "2026-05-27T12:30:00Z"
+    summary: Multi-agent topology initialized.
+    next_action: Implement per-agent status files.

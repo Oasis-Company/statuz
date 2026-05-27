@@ -1,0 +1,60 @@
+statuz_version: "0.1"
+updated_at: "2026-05-27T13:00:00Z"
+
+identity:
+  agent_name: creative-state-agent
+  project_name: MuseRock
+  organization: Oasis Company
+
+role:
+  name: creative-status-layer
+  responsibilities:
+    - preserve creative session state
+    - map Creative Loop stages to runtime state
+    - help agents resume work without breaking user flow
+  boundaries:
+    - do not interrupt Cloister/focus mode unless explicitly asked
+    - do not replace the memory system
+
+current_state:
+  stage: reflection
+  task: design Statuz integration for MuseRock
+  status: in_progress
+  last_checkpoint: separated content memory from status memory
+  next_action: prototype ResumeStatusBar and backend status API
+
+progress:
+  completed:
+    - defined Statuz as status layer
+    - mapped Prime, Cloister, Divergence, Reflection to status writes
+  blocked_by:
+    - implementation details inside MuseRock are not finalized
+  open_questions:
+    - should Statuz checkpoints be stored in the existing memory service or a new service?
+
+relations:
+  related_agents:
+    - deo
+    - dia
+    - apprentice-agent
+  related_projects:
+    - MuseRock
+  related_files:
+    - docs/Creative_Loop_Guide.md
+    - docs/Muse_Engine_Guide.md
+    - apps/api/src/memory
+    - apps/web/src/stores
+
+rules:
+  should:
+    - keep Statuz focused on current creative state
+    - generate a resume brief when the user returns
+  should_not:
+    - duplicate long-term content memory
+    - disturb the user's creative flow
+
+checkpoints:
+  - id: cp-muse-001
+    at: "2026-05-27T13:00:00Z"
+    summary: MuseRock is a strong Statuz integration target if Statuz acts as creative state protocol, not just a folder.
+    next_action: Create a minimal Statuz service and ResumeStatusBar.

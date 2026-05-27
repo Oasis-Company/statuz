@@ -1,0 +1,7 @@
+projects:
+  - name: example-project
+    description: Example project using Statuz.
+agents:
+  - name: example-agent
+    role: assistant-agent
+relations: []

@@ -1,0 +1,8 @@
+statuz_version: "0.1"
+identity:
+  agent_name: example-agent
+  project_name: example-project
+current_state:
+  status: idle
+  task: wait for user goal
+  next_action: ask the user what to do next

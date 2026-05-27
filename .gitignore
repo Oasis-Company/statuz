@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.DS_Store
+.env
+.env.*
+
+# Optional private Statuz runtime state
+.statuz/private/
+.statuz/local.yaml
