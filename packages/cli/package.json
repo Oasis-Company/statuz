@@ -1,7 +1,7 @@
 {
   "name": "@oasis-company/statuz-cli",
-  "version": "0.1.0-draft",
-  "description": "CLI scaffold for the Statuz AI Agent Runtime Status Protocol",
+  "version": "0.2.0",
+  "description": "CLI for the Statuz AI Agent Runtime Status Protocol",
   "type": "module",
   "bin": {
     "statuz": "dist/index.js"

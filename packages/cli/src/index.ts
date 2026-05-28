@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, basename } from "node:path";
 import YAML from "yaml";
 import Ajv from "ajv";
 import type { StatuzDocument } from "./types.js";
@@ -9,20 +9,39 @@ import type { StatuzDocument } from "./types.js";
 const program = new Command();
 
 function loadYaml(path: string): unknown {
-  const raw = readFileSync(path, "utf8");
-  return YAML.parse(raw);
+  try {
+    const raw = readFileSync(path, "utf8");
+    return YAML.parse(raw);
+  } catch (err) {
+    if (err instanceof Error && "code" in err && (err as any).code === "ENOENT") {
+      console.error(`Error: File not found: ${path}`);
+    } else if (err instanceof YAML.YAMLError) {
+      console.error(`Error: Invalid YAML in file: ${path}`);
+      console.error(`  ${err.message}`);
+    } else {
+      console.error(`Error: Could not read file: ${path}`);
+    }
+    process.exit(1);
+  }
 }
 
 function loadSchema(): unknown {
   const candidates = [
     resolve(process.cwd(), "spec/statuz.schema.json"),
-    resolve(process.cwd(), "../../spec/statuz.schema.json"),
-    resolve(process.cwd(), "../../../spec/statuz.schema.json")
+    resolve(dirname(process.argv[1]), "../../spec/statuz.schema.json"),
+    resolve(dirname(process.argv[1]), "../../../spec/statuz.schema.json")
   ];
   for (const candidate of candidates) {
-    if (existsSync(candidate)) return JSON.parse(readFileSync(candidate, "utf8"));
+    if (existsSync(candidate)) {
+      try {
+        return JSON.parse(readFileSync(candidate, "utf8"));
+      } catch {
+        continue;
+      }
+    }
   }
-  throw new Error("Could not find spec/statuz.schema.json from current working directory.");
+  console.error("Error: Could not find statuz.schema.json. Try running from the project root.");
+  process.exit(1);
 }
 
 function createInitialStatus(agent: string, project: string): StatuzDocument {
@@ -74,43 +93,73 @@ function createInitialStatus(agent: string, project: string): StatuzDocument {
 
 program
   .name("statuz")
-  .description("CLI scaffold for the Statuz AI Agent Runtime Status Protocol")
-  .version("0.1.0-draft");
+  .description("CLI for the Statuz AI Agent Runtime Status Protocol")
+  .version("0.2.0");
 
 program
   .command("init")
-  .description("Create a .statuz/statuz.yaml file")
+  .description("Create a Statuz YAML file")
   .option("--agent <name>", "agent name", "dev-agent")
   .option("--project <name>", "project name", "example-project")
   .option("--out <path>", "output path", ".statuz/statuz.yaml")
+  .option("--gitignore", "generate a .gitignore file for .statuz directory", false)
   .action((options) => {
     const out = resolve(process.cwd(), options.out);
+    const outDir = dirname(out);
     if (existsSync(out)) {
-      console.error(`Refusing to overwrite existing file: ${out}`);
+      console.error(`Error: File already exists: ${out}`);
       process.exit(1);
     }
-    mkdirSync(dirname(out), { recursive: true });
+    try {
+      mkdirSync(outDir, { recursive: true });
+    } catch {
+      console.error(`Error: Could not create directory: ${outDir}`);
+      process.exit(1);
+    }
     const doc = createInitialStatus(options.agent, options.project);
-    writeFileSync(out, YAML.stringify(doc), "utf8");
+    try {
+      writeFileSync(out, YAML.stringify(doc), "utf8");
+    } catch {
+      console.error(`Error: Could not write file: ${out}`);
+      process.exit(1);
+    }
     console.log(`Created ${out}`);
+
+    if (options.gitignore) {
+      const gitignorePath = resolve(outDir, ".gitignore");
+      if (!existsSync(gitignorePath)) {
+        try {
+          writeFileSync(gitignorePath, "# Statuz\n# Uncomment to ignore local status files\n# *.local.yaml\n", "utf8");
+          console.log(`Created ${gitignorePath}`);
+        } catch {
+          console.error(`Warning: Could not create .gitignore file: ${gitignorePath}`);
+        }
+      }
+    }
   });
 
 program
   .command("validate")
-  .description("Validate a Statuz YAML file against the 0.1 schema")
+  .description("Validate a Statuz YAML file against the schema")
   .argument("<file>", "path to statuz YAML file")
   .action((file) => {
-    const doc = loadYaml(resolve(process.cwd(), file));
+    const filePath = resolve(process.cwd(), file);
+    const doc = loadYaml(filePath);
     const schema = loadSchema();
     const ajv = new Ajv({ allErrors: true });
     const validate = ajv.compile(schema);
     const ok = validate(doc);
     if (!ok) {
-      console.error("Invalid Statuz file:");
-      console.error(validate.errors);
+      console.error(`Error: Invalid Statuz file: ${filePath}`);
+      if (validate.errors) {
+        for (const err of validate.errors) {
+          const path = err.instancePath || "(root)";
+          console.error(`  ${path}: ${err.message}`);
+        }
+      }
       process.exit(1);
     }
-    console.log("Valid Statuz file.");
+    console.log(`Valid Statuz file: ${filePath}`);
   });
 
 program
@@ -118,16 +167,22 @@ program
   .description("Print a human-readable resume brief from a Statuz file")
   .argument("<file>", "path to statuz YAML file")
   .action((file) => {
-    const doc = loadYaml(resolve(process.cwd(), file)) as StatuzDocument;
+    const filePath = resolve(process.cwd(), file);
+    const doc = loadYaml(filePath) as StatuzDocument;
     const state = doc.current_state;
     const identity = doc.identity;
-    console.log(`Agent: ${identity.agent_name}`);
-    console.log(`Project: ${identity.project_name}`);
-    console.log(`Status: ${state.status}`);
-    if (state.stage) console.log(`Stage: ${state.stage}`);
-    if (state.task) console.log(`Task: ${state.task}`);
-    if (state.last_checkpoint) console.log(`Last checkpoint: ${state.last_checkpoint}`);
-    if (state.next_action) console.log(`Next action: ${state.next_action}`);
+    
+    console.log("=== Statuz Resume ===");
+    console.log(`Agent:    ${identity.agent_name}`);
+    console.log(`Project:  ${identity.project_name}`);
+    if (identity.organization) console.log(`Org:      ${identity.organization}`);
+    if (identity.environment) console.log(`Env:      ${identity.environment}`);
+    console.log("");
+    console.log(`Status:   ${state.status}`);
+    if (state.stage) console.log(`Stage:    ${state.stage}`);
+    if (state.task) console.log(`Task:     ${state.task}`);
+    if (state.last_checkpoint) console.log(`Last CP:  ${state.last_checkpoint}`);
+    if (state.next_action) console.log(`Next:     ${state.next_action}`);
   });
 
 program.parse(process.argv);

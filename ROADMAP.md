@@ -11,18 +11,18 @@
 
 ## 0.2 — Practical CLI
 
-- [ ] Stable `statuz init`.
-- [ ] Stable `statuz validate`.
-- [ ] Stable `statuz resume`.
-- [ ] Better error messages.
-- [ ] Optional `.gitignore` generation.
+- [x] Stable `statuz init`.
+- [x] Stable `statuz validate`.
+- [x] Stable `statuz resume`.
+- [x] Better error messages.
+- [x] Optional `.gitignore` generation.
 
 ## 0.3 — SDK
 
-- [ ] JavaScript/TypeScript SDK.
-- [ ] Python SDK.
-- [ ] Checkpoint append helpers.
-- [ ] Multi-agent file helpers.
+- [x] JavaScript/TypeScript SDK.
+- [x] Python SDK.
+- [x] Checkpoint append helpers.
+- [x] Multi-agent file helpers.
 
 ## 0.4 — MCP server
 
