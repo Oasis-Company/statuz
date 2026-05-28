@@ -26,10 +26,11 @@
 
 ## 0.4 — MCP server
 
-- [ ] `statuz.read` tool.
-- [ ] `statuz.write_checkpoint` tool.
-- [ ] `statuz.get_resume_brief` tool.
-- [ ] `statuz.update_agent_status` tool.
+- [x] `statuz.read` tool.
+- [x] `statuz.write_checkpoint` tool.
+- [x] `statuz.get_resume_brief` tool.
+- [x] `statuz.update_agent_status` tool.
+- [x] `statuz.init` tool.
 
 ## 0.5 — Integrations
 

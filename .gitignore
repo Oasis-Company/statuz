@@ -8,3 +8,6 @@ coverage/
 # Optional private Statuz runtime state
 .statuz/private/
 .statuz/local.yaml
+
+# Workspace files
+.trae/

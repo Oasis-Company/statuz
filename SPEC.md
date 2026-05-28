@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/statuz-logo.svg" alt="Statuz Logo" width="100" />
+</div>
+
 # Statuz 0.1 Specification Draft
 
 Status: Draft 0.1  

@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/statuz-logo.svg" alt="Statuz Logo" width="120" />
+</div>
+
 # Statuz
 
 > **Memory lets an AI remember the past. Statuz lets an AI understand its present.**
