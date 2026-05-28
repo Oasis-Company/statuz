@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../assets/statuz-logo.svg" alt="Statuz Logo" width="100" />
+</div>
+
 # The Statuz Manifesto
 
 AI agents are becoming more capable, but they remain strangely disoriented.
