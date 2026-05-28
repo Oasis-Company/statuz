@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "statuz-sdk"
+version = "0.3.0"
+description = "Python SDK for the Statuz AI Agent Runtime Status Protocol"
+authors = [
+  { name = "Oasis Company", email = "dev@oasiscompany.org" }
+]
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "pydantic>=2.0",
+  "pyyaml>=6.0",
+  "jsonschema>=4.0",
+]
+
+[project.scripts]
+statuz = "statuz.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
