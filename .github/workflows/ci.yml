@@ -74,3 +74,6 @@ jobs:
       - name: Build MCP server
         working-directory: packages/mcp-server
         run: npm run build
+      - name: Run MCP server security tests
+        working-directory: packages/mcp-server
+        run: npm run test

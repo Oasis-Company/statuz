@@ -4,18 +4,19 @@
 
 # Statuz
 
-> **Memory lets an AI remember the past. Statuz lets an AI understand its present.**
+> **Memory lets an AI remember the past. Statuz lets an AI understand where it stands, what matters now, and when human direction must be renewed.**
 
-Statuz is an open protocol for **AI Agent Runtime Status**. It gives AI agents a structured, persistent way to know:
+Statuz is the **situated alignment protocol for AI agents and their human principals**. It provides an open, verifiable, extensible protocol layer for expressing:
 
-- who they are;
-- what role they are playing;
-- what goal they are pursuing;
+- who the agent is and what role it is playing;
+- what the agent is currently doing;
 - what progress has already been made;
 - what other agents, projects, files, tools, users, products, or organizations are related;
-- what should happen next.
+- where the agent stands in the ecosystem;
+- what changes in the environment affect the agent;
+- when the agent needs to request human direction for strategic decisions.
 
-Statuz is not another long-term memory database. It is the missing **status layer** between memory, tools, skills, projects, and multi-agent systems.
+Statuz is not another long-term memory database. It is the missing **situated alignment layer** between memory, tools, skills, projects, and multi-agent systems.
 
 ## Why Statuz exists
 
@@ -87,15 +88,74 @@ Statuz is **not**:
 
 Statuz is the compact runtime state that tells the agent where it stands.
 
-## Repository status
+## Repository Status
 
-This repository is an early 0.1 seed. It contains:
+This repository contains the **Statuz protocol** in various stages of maturity:
 
-- the Statuz 0.1 draft specification;
+### Statuz Core (Stable)
+The core runtime status layer that answers: who am I, what am I doing, where am I, and what's next.
+
+**Current implementation:**
+- CLI 0.2.0 - `statuz init`, `statuz validate`, `statuz resume`
+- TypeScript SDK 0.3.0 - programmatic access to Statuz files
+- Python SDK 0.3.0 - Python implementation
+- MCP Server 0.4.0 - Model Context Protocol integration
+
+### Statuz niche (Working Draft)
+The ecological positioning and long-term calibration layer that answers: where do I stand in the ecosystem, what changes affect me, and when do I need to recalibrate?
+
+**Status:** Working draft, schema and documentation in progress.
+
+### Statuz SYN (Planning)
+The human governance interface for strategic synchronization requests when position, boundaries, or authority require renewal.
+
+**Status:** Planning stage, see [NICHE_MANIFEST.md](docs/NICHE_MANIFEST.md) for details.
+
+## Three-Layer Architecture
+
+Statuz defines three layers of situated alignment:
+
+| Layer | Purpose | Status |
+|-------|---------|--------|
+| **Statuz Core** | Compact runtime status | Stable (0.1) |
+| **niche** | Ecological position & long-term calibration | Working Draft |
+| **SYN** | Human governance for strategic decisions | Planning |
+
+### Statuz Core
+The minimal situation layer. It answers:
+- Who am I?
+- What am I doing?
+- What is my current state?
+- What progress have I made?
+- What should happen next?
+
+### Statuz niche
+The ecological positioning layer. It answers:
+- Where do I stand in the ecosystem?
+- What changes are happening around me?
+- What changes actually affect me?
+- Should I take action? Why?
+- Who should I collaborate with?
+
+### Statuz SYN
+The human synchronization layer. It answers:
+- When must I request human direction?
+- How do I present strategic options with evidence?
+- How do I record decisions and track accountability?
+
+Learn more about the architecture in [docs/NICHE_MANIFEST.md](docs/NICHE_MANIFEST.md).
+
+## Repository StatusContents
+
+This repository contains:
+
+- the Statuz 0.1 Core specification;
 - JSON Schema for validating status files;
 - examples for single-agent, multi-agent, and creative-agent use cases;
-- a tiny CLI scaffold;
-- a `statuz-bootstrap` Skill draft for generating Statuz folders in AI projects.
+- CLI tools for status management;
+- TypeScript and Python SDKs;
+- MCP Server for local agent integration;
+- Working drafts for niche and SYN extensions.
 
 ## Quick start
 

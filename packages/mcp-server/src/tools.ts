@@ -29,14 +29,14 @@ function assertSafePath(filePath: string): string {
     if (!rel.startsWith("..") && !rel.startsWith("." + sep)) {
       for (const sensitive of SENSITIVE_PATHS) {
         if (resolvedPath.includes(resolve(root, sensitive))) {
-          throw new Error(`Access to sensitive path is restricted: ${filePath}`);
+          throw new Error("Access to sensitive path is restricted");
         }
       }
       return resolvedPath;
     }
   }
   
-  throw new Error(`Path is outside allowed roots: ${filePath}`);
+  throw new Error("Path is outside allowed roots");
 }
 
 export interface ToolContext {

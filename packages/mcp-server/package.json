@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@oasis-npm/statuz-sdk": "workspace:*",
+    "@oasis-npm/statuz-sdk": "file:../sdk-ts/dist",
     "yaml": "^2.7.0"
   },
   "devDependencies": {

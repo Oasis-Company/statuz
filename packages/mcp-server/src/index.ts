@@ -32,7 +32,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   
   try {
-    const tool = getTools()[name];
+    const tools = getTools();
+    const tool = (tools as Record<string, Function>)[name];
     if (!tool) {
       return {
         content: [
