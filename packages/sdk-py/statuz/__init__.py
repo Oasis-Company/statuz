@@ -146,7 +146,7 @@ class Statuz:
 
     @classmethod
     def for_agent(cls, agent_name: str, project_name: str) -> "Statuz":
-        default_path = f".statuz/{agent_name}.yaml"
+        default_path = f".statuz/agents/{agent_name}.yaml"
         if os.path.exists(os.path.abspath(default_path)):
             return cls.read(default_path)
         statuz = cls.create(agent_name, project_name)

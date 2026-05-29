@@ -23,3 +23,54 @@ jobs:
       - name: Validate example
         working-directory: packages/cli
         run: npm run validate:example
+
+  sdk-ts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install TypeScript SDK dependencies
+        working-directory: packages/sdk-ts
+        run: npm install
+      - name: Build TypeScript SDK
+        working-directory: packages/sdk-ts
+        run: npm run build
+      - name: Run TypeScript SDK tests
+        working-directory: packages/sdk-ts
+        run: npm run test
+
+  sdk-py:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Python SDK dependencies
+        working-directory: packages/sdk-py
+        run: pip install -e ".[test]"
+      - name: Run Python SDK tests
+        working-directory: packages/sdk-py
+        run: python -m pytest tests/ -v
+
+  mcp-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install TypeScript SDK dependencies (required for MCP server)
+        working-directory: packages/sdk-ts
+        run: npm install
+      - name: Build TypeScript SDK
+        working-directory: packages/sdk-ts
+        run: npm run build
+      - name: Install MCP server dependencies
+        working-directory: packages/mcp-server
+        run: npm install
+      - name: Build MCP server
+        working-directory: packages/mcp-server
+        run: npm run build

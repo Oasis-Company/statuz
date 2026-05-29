@@ -3,7 +3,8 @@ import { Command } from "commander";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve, basename } from "node:path";
 import YAML from "yaml";
-import Ajv from "ajv";
+const Ajv = require("ajv").default;
+const addFormats = require("ajv-formats");
 import type { StatuzDocument } from "./types.js";
 
 const program = new Command();
@@ -25,7 +26,7 @@ function loadYaml(path: string): unknown {
   }
 }
 
-function loadSchema(): unknown {
+function loadSchema(): Record<string, unknown> {
   const candidates = [
     resolve(process.cwd(), "spec/statuz.schema.json"),
     resolve(dirname(process.argv[1]), "../../spec/statuz.schema.json"),
@@ -147,6 +148,7 @@ program
     const doc = loadYaml(filePath);
     const schema = loadSchema();
     const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
     const validate = ajv.compile(schema);
     const ok = validate(doc);
     if (!ok) {

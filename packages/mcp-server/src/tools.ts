@@ -1,9 +1,43 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { Statuz } from "@oasis-company/statuz-sdk";
+import { Statuz } from "@oasis-npm/statuz-sdk";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, relative, sep } from "node:path";
 
 const DEFAULT_STATUZ_PATH = ".statuz/statuz.yaml";
+
+const SENSITIVE_PATHS = [
+  ".git",
+  "node_modules",
+  ".statuz/private",
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.production"
+];
+
+let allowedRoots: string[] = [process.cwd()];
+
+export function setAllowedRoots(roots: string[]) {
+  allowedRoots = roots.map(root => resolve(root));
+}
+
+function assertSafePath(filePath: string): string {
+  const resolvedPath = resolve(filePath);
+  
+  for (const root of allowedRoots) {
+    const rel = relative(root, resolvedPath);
+    if (!rel.startsWith("..") && !rel.startsWith("." + sep)) {
+      for (const sensitive of SENSITIVE_PATHS) {
+        if (resolvedPath.includes(resolve(root, sensitive))) {
+          throw new Error(`Access to sensitive path is restricted: ${filePath}`);
+        }
+      }
+      return resolvedPath;
+    }
+  }
+  
+  throw new Error(`Path is outside allowed roots: ${filePath}`);
+}
 
 export interface ToolContext {
   statuzPath?: string;
@@ -172,18 +206,35 @@ export const statuzTools: Tool[] = [
 export function getTools() {
   return {
     statuz_validate: async (args: { path: string }): Promise<ToolResult> => {
-      return {
-        success: true,
-        data: {
-          message: "Validation not yet implemented",
-          path: args.path,
-        },
-      };
+      try {
+        const safePath = assertSafePath(args.path);
+        const result = Statuz.validate(safePath);
+        return {
+          success: result.valid,
+          data: {
+            valid: result.valid,
+            errors: result.errors,
+            path: args.path,
+          },
+        };
+      } catch (err) {
+        if (err instanceof Error) {
+          return {
+            success: false,
+            error: `Validation failed: ${err.message}`,
+          };
+        }
+        return {
+          success: false,
+          error: "Validation failed with an unknown error",
+        };
+      }
     },
     statuz_read: async (args: { filePath?: string }): Promise<ToolResult> => {
       const filePath = args.filePath || DEFAULT_STATUZ_PATH;
       try {
-        const statuz = Statuz.read(filePath);
+        const safePath = assertSafePath(filePath);
+        const statuz = Statuz.read(safePath);
         return {
           success: true,
           data: statuz.getDocument(),
@@ -202,31 +253,109 @@ export function getTools() {
       }
     },
     statuz_resume: async (args: { path: string }): Promise<ToolResult> => {
-      return {
-        success: true,
-        data: {
-          message: "Resume not yet implemented",
-          path: args.path,
-        },
-      };
+      try {
+        const safePath = assertSafePath(args.path);
+        const statuz = Statuz.read(safePath);
+        const doc = statuz.getDocument();
+        const state = doc.current_state;
+        const identity = doc.identity;
+
+        const lines: string[] = [
+          "=== Statuz Resume ===",
+          `Agent:    ${identity.agent_name}`,
+          `Project:  ${identity.project_name}`,
+        ];
+
+        if (identity.organization) {
+          lines.push(`Org:      ${identity.organization}`);
+        }
+        if (identity.environment) {
+          lines.push(`Env:      ${identity.environment}`);
+        }
+
+        lines.push("");
+        lines.push(`Status:   ${state.status}`);
+
+        if (state.stage) {
+          lines.push(`Stage:    ${state.stage}`);
+        }
+        if (state.task) {
+          lines.push(`Task:     ${state.task}`);
+        }
+        if (state.last_checkpoint) {
+          lines.push(`Last CP:  ${state.last_checkpoint}`);
+        }
+        if (state.next_action) {
+          lines.push(`Next:     ${state.next_action}`);
+        }
+
+        return {
+          success: true,
+          data: {
+            brief: lines.join("\n"),
+            summary: {
+              agentName: identity.agent_name,
+              projectName: identity.project_name,
+              status: state.status,
+              stage: state.stage,
+              task: state.task,
+              lastCheckpoint: state.last_checkpoint,
+              nextAction: state.next_action,
+            },
+          },
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: message,
+        };
+      }
     },
     statuz_update: async (args: { path: string; field: string; value: unknown }): Promise<ToolResult> => {
-      return {
-        success: true,
-        data: {
-          message: "Update not yet implemented",
-          path: args.path,
-          field: args.field,
-          value: args.value,
-        },
-      };
+      try {
+        const safePath = assertSafePath(args.path);
+        const statuz = Statuz.read(safePath);
+        const doc = statuz.getDocument();
+        
+        const fieldParts = args.field.split(".");
+        let current: any = doc;
+        
+        for (let i = 0; i < fieldParts.length - 1; i++) {
+          if (!(fieldParts[i] in current)) {
+            current[fieldParts[i]] = {};
+          }
+          current = current[fieldParts[i]];
+        }
+        
+        current[fieldParts[fieldParts.length - 1]] = args.value;
+        
+        statuz.write(safePath);
+        
+        return {
+          success: true,
+          data: {
+            message: `Updated ${args.field} in ${args.path}`,
+            field: args.field,
+            value: args.value,
+            newDocument: statuz.getDocument(),
+          },
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: message,
+        };
+      }
     },
     statuz_checkpoint: async (args: { filePath?: string; summary: string; nextAction?: string }): Promise<ToolResult> => {
       const filePath = args.filePath || DEFAULT_STATUZ_PATH;
       try {
-        const statuz = Statuz.read(filePath);
+        const safePath = assertSafePath(filePath);
+        const statuz = Statuz.read(safePath);
         const checkpoint = statuz.appendCheckpoint(args.summary, args.nextAction);
-        statuz.write(filePath);
+        statuz.write(safePath);
         return {
           success: true,
           data: {
@@ -250,7 +379,8 @@ export function getTools() {
     statuz_get_resume_brief: async (args: { filePath?: string }): Promise<ToolResult> => {
       try {
         const path = args.filePath || DEFAULT_STATUZ_PATH;
-        const statuz = Statuz.read(path);
+        const safePath = assertSafePath(path);
+        const statuz = Statuz.read(safePath);
         const doc = statuz.getDocument();
         const state = doc.current_state;
         const identity = doc.identity;
@@ -317,7 +447,8 @@ export function getTools() {
     }): Promise<ToolResult> => {
       try {
         const path = args.filePath || DEFAULT_STATUZ_PATH;
-        const statuz = Statuz.read(path);
+        const safePath = assertSafePath(path);
+        const statuz = Statuz.read(safePath);
         const currentState = statuz.currentState;
 
         if (args.status !== undefined) {
@@ -364,19 +495,19 @@ export function getTools() {
     statuz_init: async (args: { filePath?: string; agentName?: string; projectName?: string }): Promise<ToolResult> => {
       try {
         const path = args.filePath || DEFAULT_STATUZ_PATH;
-        const fullPath = resolve(process.cwd(), path);
+        const safePath = assertSafePath(path);
 
-        if (existsSync(fullPath)) {
+        if (existsSync(safePath)) {
           return {
             success: false,
-            error: `File already exists: ${fullPath}`,
+            error: `File already exists: ${path}`,
           };
         }
 
         const agentName = args.agentName || "dev-agent";
         const projectName = args.projectName || "example-project";
         const statuz = Statuz.create(agentName, projectName);
-        statuz.write(path);
+        statuz.write(safePath);
 
         return {
           success: true,

@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import YAML from "yaml";
-import Ajv from "ajv";
+const Ajv = require("ajv").default;
+const addFormats = require("ajv-formats");
 import type { StatuzDocument, ValidationResult, Checkpoint } from "./types.js";
 
 export class Statuz {
@@ -57,14 +58,15 @@ export class Statuz {
   static validateDocument(doc: unknown): ValidationResult {
     const schema = Statuz.loadSchema();
     const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
     const validate = ajv.compile(schema);
     const valid = validate(doc);
-    if (!valid || !validate.errors) {
+    if (valid) {
       return { valid: true };
     }
     return {
       valid: false,
-      errors: validate.errors.map(err => ({
+      errors: (validate.errors || []).map((err: any) => ({
         path: err.instancePath || "(root)",
         message: err.message || "Unknown validation error"
       }))
@@ -113,7 +115,7 @@ export class Statuz {
   }
 
   static forAgent(agentName: string, projectName: string): Statuz {
-    const defaultPath = `.statuz/${agentName}.yaml`;
+    const defaultPath = `.statuz/agents/${agentName}.yaml`;
     if (existsSync(resolve(process.cwd(), defaultPath))) {
       return Statuz.read(defaultPath);
     }
@@ -184,7 +186,7 @@ export class Statuz {
     this.data.current_state = state;
   }
 
-  private static loadSchema(): unknown {
+  private static loadSchema(): Record<string, unknown> {
     const candidates = [
       resolve(process.cwd(), "spec/statuz.schema.json"),
       resolve(dirname(process.argv[1]), "../../spec/statuz.schema.json"),

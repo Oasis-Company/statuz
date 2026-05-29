@@ -15,7 +15,8 @@
       "const": "0.1"
     },
     "updated_at": {
-      "type": "string"
+      "type": "string",
+      "format": "date-time"
     },
     "identity": {
       "type": "object",
@@ -211,7 +212,8 @@
             "type": "string"
           },
           "at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "summary": {
             "type": "string"

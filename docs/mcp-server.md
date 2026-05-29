@@ -535,10 +535,10 @@ This keeps agent status files separate from source code while remaining project-
 
 ## SDK Integration
 
-The MCP Server uses the TypeScript SDK (`@oasis-company/statuz-sdk`) for core operations:
+The MCP Server uses the TypeScript SDK (`@oasis-npm/statuz-sdk`) for core operations:
 
 ```typescript
-import { Statuz } from "@oasis-company/statuz-sdk";
+import { Statuz } from "@oasis-npm/statuz-sdk";
 
 // Read existing file
 const statuz = Statuz.read(".statuz/statuz.yaml");

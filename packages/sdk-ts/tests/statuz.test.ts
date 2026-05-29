@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Statuz } from "../src/index.js";
-import { existsSync, unlinkSync, rmdirSync } from "node:fs";
+import { existsSync, unlinkSync, rmSync } from "node:fs";
 
 describe("Statuz SDK", () => {
   const testFile = "test-statuz.yaml";
@@ -10,12 +10,7 @@ describe("Statuz SDK", () => {
       unlinkSync(testFile);
     }
     if (existsSync(".statuz")) {
-      const files = ["test-agent.yaml", "another-agent.yaml"];
-      files.forEach(file => {
-        const path = `.statuz/${file}`;
-        if (existsSync(path)) unlinkSync(path);
-      });
-      rmdirSync(".statuz");
+      rmSync(".statuz", { recursive: true, force: true });
     }
   });
 

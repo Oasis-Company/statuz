@@ -1,5 +1,5 @@
 {
-  "name": "@oasis-company/statuz-mcp",
+  "name": "@oasis-npm/statuz-mcp",
   "version": "0.4.0",
   "description": "MCP Server for the Statuz AI Agent Runtime Status Protocol",
   "type": "module",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@oasis-company/statuz-sdk": "workspace:*",
+    "@oasis-npm/statuz-sdk": "workspace:*",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
