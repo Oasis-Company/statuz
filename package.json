@@ -1,0 +1,28 @@
+{
+  "name": "statuz",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Statuz AI Agent Runtime Status Protocol - Monorepo",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:packages": "npm run build --workspace=@oasis-npm/statuz-sdk && npm run build --workspace=@oasis-npm/statuz-cli && npm run build --workspace=@oasis-npm/statuz-mcp",
+    "publish:packages": "npm publish --dry-run --workspace=@oasis-npm/statuz-sdk && npm publish --dry-run --workspace=@oasis-npm/statuz-cli && npm publish --dry-run --workspace=@oasis-npm/statuz-mcp",
+    "publish:packages:real": "npm publish --provenance --workspace=@oasis-npm/statuz-sdk && npm publish --provenance --workspace=@oasis-npm/statuz-cli && npm publish --provenance --workspace=@oasis-npm/statuz-mcp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zbbsdsb/statuz"
+  },
+  "keywords": [
+    "statuz",
+    "ai",
+    "agent",
+    "status",
+    "protocol"
+  ],
+  "author": "Statuz Team",
+  "license": "Apache-2.0"
+}
