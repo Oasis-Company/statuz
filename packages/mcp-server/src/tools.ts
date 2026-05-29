@@ -468,7 +468,7 @@ export function getTools() {
         }
 
         statuz.currentState = currentState;
-        statuz.write(path);
+        statuz.write(safePath);
 
         return {
           success: true,

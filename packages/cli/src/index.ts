@@ -3,8 +3,10 @@ import { Command } from "commander";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve, basename } from "node:path";
 import YAML from "yaml";
-const Ajv = require("ajv").default;
-const addFormats = require("ajv-formats");
+import AjvImport from "ajv";
+import addFormatsImport from "ajv-formats";
+const Ajv = AjvImport as any;
+const addFormats = addFormatsImport as any;
 import type { StatuzDocument } from "./types.js";
 
 const program = new Command();

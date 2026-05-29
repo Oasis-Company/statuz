@@ -1,8 +1,10 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import YAML from "yaml";
-const Ajv = require("ajv").default;
-const addFormats = require("ajv-formats");
+import AjvImport from "ajv";
+import addFormatsImport from "ajv-formats";
+const Ajv = AjvImport as any;
+const addFormats = addFormatsImport as any;
 import type { StatuzDocument, ValidationResult, Checkpoint } from "./types.js";
 
 export class Statuz {
