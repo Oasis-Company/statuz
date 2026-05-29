@@ -189,8 +189,8 @@ export class Statuz {
   private static loadSchema(): Record<string, unknown> {
     const candidates = [
       resolve(process.cwd(), "spec/statuz.schema.json"),
-      resolve(dirname(process.argv[1]), "../../spec/statuz.schema.json"),
-      resolve(dirname(process.argv[1]), "../../../spec/statuz.schema.json")
+      resolve(dirname(import.meta.dirname), "../../spec/statuz.schema.json"),
+      resolve(dirname(import.meta.dirname), "../../../spec/statuz.schema.json")
     ];
     for (const candidate of candidates) {
       if (existsSync(candidate)) {
