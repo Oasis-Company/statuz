@@ -57,7 +57,7 @@ export class Statuz {
 
   static validateDocument(doc: unknown): ValidationResult {
     const schema = Statuz.loadSchema();
-    const ajv = new Ajv({ allErrors: true });
+    const ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(ajv);
     const validate = ajv.compile(schema);
     const valid = validate(doc);

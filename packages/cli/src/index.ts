@@ -147,7 +147,7 @@ program
     const filePath = resolve(process.cwd(), file);
     const doc = loadYaml(filePath);
     const schema = loadSchema();
-    const ajv = new Ajv({ allErrors: true });
+    const ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(ajv);
     const validate = ajv.compile(schema);
     const ok = validate(doc);
