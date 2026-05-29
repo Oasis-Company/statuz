@@ -8,6 +8,15 @@ coverage/
 # Optional private Statuz runtime state
 .statuz/private/
 .statuz/local.yaml
+.statuz/
 
 # Workspace files
 .trae/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temporary test files
+temp-test/
+
