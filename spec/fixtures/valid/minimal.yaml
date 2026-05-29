@@ -1,0 +1,7 @@
+statuz_version: '0.1'
+updated_at: '2024-01-15T10:30:00Z'
+identity:
+  agent_name: test-agent
+  project_name: test-project
+current_state:
+  status: idle

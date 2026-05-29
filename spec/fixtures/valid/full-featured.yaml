@@ -1,0 +1,67 @@
+statuz_version: '0.1'
+updated_at: '2024-01-15T10:30:00Z'
+identity:
+  agent_name: full-featured-agent
+  project_name: full-project
+  organization: TestOrg
+  environment: development
+role:
+  name: developer
+  description: Handles code development tasks
+  capabilities:
+    - code-writing
+    - debugging
+goal:
+  primary: Implement feature X
+  secondary:
+    - Complete implementation
+    - All tests pass
+    - Documentation updated
+current_state:
+  status: working
+  stage: implementation
+  task: writing unit tests
+  last_checkpoint: checkpoint-001
+  next_action: Run integration tests
+progress:
+  percentage: 75
+  milestones:
+    - name: Design completed
+      completed: true
+      at: '2024-01-10T09:00:00Z'
+    - name: Implementation started
+      completed: true
+      at: '2024-01-12T08:00:00Z'
+    - name: Tests completed
+      completed: false
+relations:
+  related_agents:
+    - another-agent
+    - qa-agent
+  related_projects:
+    - main-project
+  related_files:
+    - src/main.ts
+    - test/main.test.ts
+  agent_graph:
+    - from: full-featured-agent
+      to: another-agent
+      type: depends_on
+      description: Needs input from another-agent
+    - from: full-featured-agent
+      to: qa-agent
+      type: part_of
+      description: Part of the main project
+rules:
+  should:
+    - "time.between('09:00', '18:00')"
+    - "day.of.week('saturday') => pause"
+checkpoints:
+  - id: checkpoint-001
+    summary: Completed feature design
+    at: '2024-01-10T17:00:00Z'
+    next_action: Start implementation
+  - id: checkpoint-002
+    summary: Completed core implementation
+    at: '2024-01-14T16:00:00Z'
+    next_action: Write unit tests
