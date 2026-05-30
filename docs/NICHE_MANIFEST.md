@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../assets/statuz-logo.svg" alt="Statuz Logo" width="100" />
+</div>
+
 # Statuz NICHE_MANIFEST - Technical Charter
 
 > **Status:** Working Draft  

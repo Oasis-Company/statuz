@@ -1,12 +1,16 @@
+<div align="center">
+  <img src="assets/statuz-logo.svg" alt="Statuz Logo" width="110">
+</div>
+
 # Roadmap
 
 > Updated 2026-05-30 - Based on positioning calibration
 >
-> **定位声明：** Statuz 是 AI Agent **Situated Alignment Ecosystem**（生态系统）= 协议 + 工具链 + 最佳实践文档
+> **Positioning Statement:** Statuz is an AI Agent **Situated Alignment Ecosystem** = Protocol + Toolchain + Best Practices Documentation
 >
-> **三层架构：** Core + niche + SYN = Statuz，全部必需
+> **Three-Layer Architecture:** Core + niche + SYN = Statuz, all required
 >
-> **当前目标：** 1.0 Stable（Complete）
+> **Current Goal:** 1.0 Stable (Complete)
 
 ---
 
@@ -95,55 +99,55 @@
 
 ## 0.5 — Integrations (IN PROGRESS)
 
-**目标：** 让 niche/SYN 可被实际使用
+**Goal:** Make niche/SYN practically usable
 
-**优先项：** VS Code Extension + npm/Open VSX 发布
+**Priorities:** VS Code Extension + npm/Open VSX publishing
 
 ### 0.5.1 VS Code Extension
-- [ ] Extension 基础结构
-- [ ] Statuz 文件语法高亮
-- [ ] Statuz 文件验证
-- [ ] 快捷命令：Init Statuz / Init niche
+- [ ] Extension basic structure
+- [ ] Statuz file syntax highlighting
+- [ ] Statuz file validation
+- [ ] Quick commands: Init Statuz / Init niche
 - [ ] Resume from Statuz UI
-- [ ] Niche 信号自动生成（监听 VCS 事件）
-- [ ] Niche 评估视图
-- [ ] SYN 决策界面
-- [ ] Niche 状态面板
+- [ ] Niche signal auto-generation (listening to VCS events)
+- [ ] Niche assessment view
+- [ ] SYN decision interface
+- [ ] Niche status panel
 
-### 0.5.2 发布
-- [ ] npm 发布 CLI/SDK/MCP
-- [ ] Open VSX 发布 VS Code Extension
-- [ ] VS Code Marketplace 发布
-- [ ] 安装/使用文档更新
+### 0.5.2 Publishing
+- [ ] npm publish CLI/SDK/MCP
+- [ ] Open VSX publish VS Code Extension
+- [ ] VS Code Marketplace publish
+- [ ] Installation/usage documentation update
 
-**暂不：** Trae SOLO、GitHub、MuseRock（后续迭代）
+**Not Yet:** Trae SOLO, GitHub, MuseRock (future iterations)
 
 ---
 
 ## 1.0 — Stable Protocol
 
-**目标：** 完整的、可生产使用的生态系统
+**Goal:** Complete, production-ready ecosystem
 
 ### 1.0.1 Versioned Spec
-- [ ] SPEC.md 正式版本化（1.0）
-- [ ] 版本兼容性声明
+- [ ] SPEC.md formal versioning (1.0)
+- [ ] Version compatibility statement
 - [ ] Breaking Change Policy
 
 ### 1.0.2 Compliance Tests
-- [ ] Schema 完整测试套件
-- [ ] CLI 回归测试
-- [ ] SDK 集成测试
-- [ ] MCP Server 安全测试
+- [ ] Schema complete test suite
+- [ ] CLI regression tests
+- [ ] SDK integration tests
+- [ ] MCP Server security tests
 
 ### 1.0.3 Migration Guide
-- [ ] 0.x → 1.0 迁移指南
-- [ ] 示例更新
+- [ ] 0.x → 1.0 migration guide
+- [ ] Example updates
 
 ### 1.0.4 Security Model
-- [ ] 正式安全模型文档
-- [ ] 文件访问权限最佳实践
-- [ ] 敏感数据标记规范
+- [ ] Formal security model documentation
+- [ ] File access permissions best practices
+- [ ] Sensitive data tagging specification
 
-### 1.0.5 Dashboard Prototype（可选）
-- [ ] 轻量级 Statuz 状态查看器
-- [ ] Niche 状态概览
+### 1.0.5 Dashboard Prototype (Optional)
+- [ ] Lightweight Statuz status viewer
+- [ ] Niche status overview

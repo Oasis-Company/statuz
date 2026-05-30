@@ -1,10 +1,14 @@
+<div align="center">
+  <img src="assets/statuz-logo.svg" alt="Statuz Logo" width="110">
+</div>
+
 # Contributing to Statuz
 
 Thank you for helping build the AI Agent Runtime Status Protocol.
 
 ## Principles
 
-Please keep contributions aligned with the core idea:
+Please keep contributions aligned with the core ideas:
 
 - Statuz is status, not memory.
 - The protocol should be small before it is powerful.
@@ -12,7 +16,7 @@ Please keep contributions aligned with the core idea:
 - Agents should be able to act on it.
 - Checkpoints should be compact, not transcripts.
 
-## Good first contributions
+## Good First Contributions
 
 - Improve examples.
 - Add schema validation tests.
@@ -20,19 +24,19 @@ Please keep contributions aligned with the core idea:
 - Add a real-world Statuz file from a project.
 - Improve CLI ergonomics.
 
-## Specification changes
+## Specification Changes
 
 Spec changes should include:
 
-1. problem statement;
-2. proposed field or behavior;
-3. example YAML;
-4. compatibility notes;
-5. migration notes if relevant.
+1. Problem statement
+2. Proposed field or behavior
+3. Example YAML
+4. Compatibility notes
+5. Migration notes if relevant
 
-## Commit style
+## Commit Style
 
-Use clear commit messages:
+Use clear commit messages with scopes:
 
 ```text
 spec: clarify checkpoint fields

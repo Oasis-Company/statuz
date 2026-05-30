@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/statuz-logo.svg" width="110" alt="Statuz Logo">
+</p>
+
 # Changelog
 
 ## 0.4.1
