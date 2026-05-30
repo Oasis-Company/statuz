@@ -6,7 +6,7 @@
 
 > **Memory lets an AI remember the past. Statuz lets an AI understand where it stands, what matters now, and when human direction must be renewed.**
 
-Statuz is the **situated alignment protocol for AI agents and their human principals**. It provides an open, verifiable, extensible protocol layer for expressing:
+Statuz is the **situated alignment ecosystem for AI agents and their human principals**. It provides an open, verifiable, extensible stack for expressing:
 
 - who the agent is and what role it is playing;
 - what the agent is currently doing;
@@ -90,7 +90,7 @@ Statuz is the compact runtime state that tells the agent where it stands.
 
 ## Repository Status
 
-This repository contains the **Statuz protocol** in various stages of maturity:
+This repository contains the **Statuz ecosystem** (protocol + tools + best practices) in various stages of maturity:
 
 ### Statuz Core (Stable)
 The core runtime status layer that answers: who am I, what am I doing, where am I, and what's next.
@@ -104,22 +104,22 @@ The core runtime status layer that answers: who am I, what am I doing, where am 
 ### Statuz niche (Working Draft)
 The ecological positioning and long-term calibration layer that answers: where do I stand in the ecosystem, what changes affect me, and when do I need to recalibrate?
 
-**Status:** Working draft, schema and documentation in progress.
+**Status:** Working draft. Schemas and documentation are complete; production tooling is in progress.
 
-### Statuz SYN (Planning)
+### Statuz SYN (Working Draft)
 The human governance interface for strategic synchronization requests when position, boundaries, or authority require renewal.
 
-**Status:** Planning stage, see [NICHE_MANIFEST.md](docs/NICHE_MANIFEST.md) for details.
+**Status:** Working draft. Schemas and documentation are complete; production tooling is in progress.
 
 ## Three-Layer Architecture
 
-Statuz defines three layers of situated alignment:
+Statuz defines three layers of situated alignment (all required):
 
 | Layer | Purpose | Status |
 |-------|---------|--------|
 | **Statuz Core** | Compact runtime status | Stable (0.1) |
 | **niche** | Ecological position & long-term calibration | Working Draft |
-| **SYN** | Human governance for strategic decisions | Planning |
+| **SYN** | Human governance for strategic decisions | Working Draft |
 
 ### Statuz Core
 The minimal situation layer. It answers:
@@ -145,7 +145,7 @@ The human synchronization layer. It answers:
 
 Learn more about the architecture in [docs/NICHE_MANIFEST.md](docs/NICHE_MANIFEST.md).
 
-## Repository StatusContents
+## What's in this repository
 
 This repository contains:
 
@@ -155,7 +155,7 @@ This repository contains:
 - CLI tools for status management;
 - TypeScript and Python SDKs;
 - MCP Server for local agent integration;
-- Working drafts for niche and SYN extensions.
+- niche and SYN schemas + examples;
 
 ## Quick start
 
