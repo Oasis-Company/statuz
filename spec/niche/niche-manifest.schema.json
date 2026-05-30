@@ -1,0 +1,123 @@
+{
+  "$id": "https://statuz.org/schemas/niche/niche-manifest.schema.json",
+  "title": "niche Manifest Schema",
+  "description": "JSON Schema for Statuz niche manifest - declares ecological position",
+  "type": "object",
+  "required": [
+    "niche_version",
+    "declared_position"
+  ],
+  "properties": {
+    "niche_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version, must be 1.0"
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique manifest identifier"
+    },
+    "declared_position": {
+      "type": "object",
+      "required": [
+        "project_name",
+        "purpose",
+        "does",
+        "does_not"
+      ],
+      "properties": {
+        "project_name": {
+          "type": "string",
+          "description": "Name of the project or agent"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "High-level purpose statement"
+        },
+        "does": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of responsibilities and capabilities"
+        },
+        "does_not": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of out-of-scope areas"
+        }
+      },
+      "additionalProperties": true
+    },
+    "strategic_bets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Technology choices and strategic decisions"
+    },
+    "success_signals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Metrics and signals that indicate success"
+    },
+    "relevant_signals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Signal types relevant to this position (e.g., vcs:commit:backend/*)"
+    },
+    "evidence_window_days": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 30,
+      "description": "Days to look back for evidence (default: 30)"
+    },
+    "drift_thresholds": {
+      "type": "object",
+      "properties": {
+        "task_drift": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.25
+        },
+        "collaboration_drift": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.2
+        },
+        "boundary_drift": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.1
+        }
+      },
+      "additionalProperties": true
+    },
+    "syn_policy": {
+      "type": "object",
+      "properties": {
+        "auto_trigger": {
+          "type": "boolean",
+          "default": true
+        },
+        "required_approvers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

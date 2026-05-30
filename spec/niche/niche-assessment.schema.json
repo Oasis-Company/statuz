@@ -1,0 +1,87 @@
+{
+  "$id": "https://statuz.org/schemas/niche/niche-assessment.schema.json",
+  "title": "niche Assessment Schema",
+  "description": "JSON Schema for Statuz niche assessment - relevance judgment",
+  "type": "object",
+  "required": [
+    "assessment_version",
+    "id",
+    "signal_id",
+    "assessor",
+    "timestamp",
+    "relevance_score",
+    "relevance_rational",
+    "confidence"
+  ],
+  "properties": {
+    "assessment_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version, must be 1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^ast-[0-9]{3}$",
+      "description": "Unique assessment ID (e.g., ast-001)"
+    },
+    "signal_id": {
+      "type": "string",
+      "description": "ID of the signal being assessed"
+    },
+    "assessor": {
+      "type": "string",
+      "description": "Agent or system that performed the assessment"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the assessment was made"
+    },
+    "relevance_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "How relevant the signal is (0-1)"
+    },
+    "relevance_rational": {
+      "type": "string",
+      "description": "Explanation of why the signal is relevant"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence in this assessment (0-1)"
+    },
+    "impact_analysis": {
+      "type": "object",
+      "properties": {
+        "affected_components": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Files or components affected"
+        },
+        "estimated_effort": {
+          "type": "string",
+          "description": "Estimated time/effort to address"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "recommended_action": {
+      "type": "string",
+      "description": "Suggested next action"
+    },
+    "will_act": {
+      "type": "boolean",
+      "description": "Whether the assessor will act on this signal"
+    }
+  },
+  "additionalProperties": true
+}

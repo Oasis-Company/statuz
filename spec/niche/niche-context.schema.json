@@ -1,0 +1,101 @@
+{
+  "$id": "https://statuz.org/schemas/niche/niche-context.schema.json",
+  "title": "niche Context Schema",
+  "description": "JSON Schema for Statuz niche context - collaboration payload",
+  "type": "object",
+  "required": [
+    "context_version",
+    "id",
+    "from_agent",
+    "to_agent",
+    "timestamp",
+    "summary",
+    "requested_action"
+  ],
+  "properties": {
+    "context_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version, must be 1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^ctx-[0-9]{3}$",
+      "description": "Unique context ID (e.g., ctx-001)"
+    },
+    "from_agent": {
+      "type": "string",
+      "description": "Agent sending the context"
+    },
+    "to_agent": {
+      "type": "string",
+      "description": "Agent receiving the context"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the context was created"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Brief description of what is needed"
+    },
+    "requested_action": {
+      "type": "string",
+      "description": "Specific action being requested"
+    },
+    "references": {
+      "type": "object",
+      "properties": {
+        "signal_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assessment_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "context_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "expected_by": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the response is expected"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "default": "medium"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["file", "url", "data"]
+          },
+          "path": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

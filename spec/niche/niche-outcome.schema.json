@@ -1,0 +1,93 @@
+{
+  "$id": "https://statuz.org/schemas/niche/niche-outcome.schema.json",
+  "title": "niche Outcome Schema",
+  "description": "JSON Schema for Statuz niche outcome - result record",
+  "type": "object",
+  "required": [
+    "outcome_version",
+    "id",
+    "context_id",
+    "agent",
+    "timestamp",
+    "result",
+    "summary"
+  ],
+  "properties": {
+    "outcome_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version, must be 1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^out-[0-9]{3}$",
+      "description": "Unique outcome ID (e.g., out-001)"
+    },
+    "context_id": {
+      "type": "string",
+      "description": "ID of the context this outcome responds to"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent that produced this outcome"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the outcome was recorded"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["success", "failure", "partial"],
+      "description": "Result status"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Brief description of the outcome"
+    },
+    "details": {
+      "type": "object",
+      "description": "Additional outcome details",
+      "properties": {
+        "tests_passed": {
+          "type": "integer"
+        },
+        "tests_failed": {
+          "type": "integer"
+        },
+        "coverage_improved": {
+          "type": "boolean"
+        },
+        "new_tests_added": {
+          "type": "integer"
+        },
+        "test_report_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "files_changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Suggested next actions"
+    },
+    "related_outcomes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of related outcomes"
+    }
+  },
+  "additionalProperties": true
+}

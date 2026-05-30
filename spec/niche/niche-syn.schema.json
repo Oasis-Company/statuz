@@ -1,0 +1,193 @@
+{
+  "$id": "https://statuz.org/schemas/niche/niche-syn.schema.json",
+  "title": "niche SYN Schema",
+  "description": "JSON Schema for Statuz SYN (human synchronization) - requests and resolutions",
+  "type": "object",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/syn_request"
+    },
+    {
+      "$ref": "#/definitions/syn_resolution"
+    }
+  ],
+  "definitions": {
+    "syn_request": {
+      "type": "object",
+      "required": [
+        "syn_version",
+        "id",
+        "type",
+        "source",
+        "timestamp",
+        "priority",
+        "summary",
+        "context",
+        "options",
+        "recommendation"
+      ],
+      "properties": {
+        "syn_version": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Schema version, must be 1.0"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^syn-[0-9]{3}$",
+          "description": "Unique SYN request ID (e.g., syn-001)"
+        },
+        "type": {
+          "type": "string",
+          "const": "human_decision_required",
+          "description": "Type of SYN request"
+        },
+        "source": {
+          "type": "string",
+          "description": "Source triggering this request (e.g., calibration)"
+        },
+        "calibration_id": {
+          "type": "string",
+          "description": "Related calibration ID if triggered by calibration"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the request was created"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Urgency level"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Brief description of the decision needed"
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "evidence_summary": {
+              "type": "string"
+            },
+            "evidence_window": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "description"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "pros": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "cons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "Available decision options"
+        },
+        "recommendation": {
+          "type": "string",
+          "description": "Suggested option ID"
+        },
+        "requested_decision_by": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Deadline for decision"
+        }
+      },
+      "additionalProperties": true
+    },
+    "syn_resolution": {
+      "type": "object",
+      "required": [
+        "syn_resolution_version",
+        "id",
+        "syn_request_id",
+        "principal",
+        "timestamp",
+        "decision",
+        "decision_summary",
+        "rationale"
+      ],
+      "properties": {
+        "syn_resolution_version": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Schema version, must be 1.0"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^syn-[0-9]{3}-resolution$",
+          "description": "Unique resolution ID (e.g., syn-001-resolution)"
+        },
+        "syn_request_id": {
+          "type": "string",
+          "description": "ID of the SYN request this resolves"
+        },
+        "principal": {
+          "type": "string",
+          "description": "Human principal who made the decision"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the decision was made"
+        },
+        "decision": {
+          "type": "string",
+          "description": "ID of the option selected"
+        },
+        "decision_summary": {
+          "type": "string",
+          "description": "Brief description of the decision"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Explanation of why this decision was made"
+        },
+        "effective_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the decision takes effect"
+        },
+        "next_steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Actions to take based on decision"
+        },
+        "audit_trail": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Files in the audit trail"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

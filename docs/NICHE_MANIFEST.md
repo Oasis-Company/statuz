@@ -1,9 +1,9 @@
 # Statuz NICHE_MANIFEST - Technical Charter
 
-> **Status:** Working Draft  
-> **Version:** 0.1  
+> **Status:** Stable  
+> **Version:** 1.0  
 > **Authors:** Statuz Core Team  
-> **Last Updated:** 2026-05-29
+> **Last Updated:** 2026-05-30
 
 ---
 
@@ -55,8 +55,8 @@ Statuz defines three layers of situated alignment:
 | Layer | Purpose | Status |
 |-------|---------|--------|
 | **Statuz Core** | Compact runtime status | Stable |
-| **niche** | Ecological position & long-term calibration | Working Draft |
-| **SYN** | Human governance for strategic decisions | Planning |
+| **niche** | Ecological position & long-term calibration | Stable (Standards-Track) |
+| **SYN** | Human governance for strategic decisions | Stable (Standards-Track) |
 
 ### 2.1 Statuz Core
 
@@ -69,6 +69,8 @@ The minimal situation layer. Answers:
 
 **Files:**
 - `.statuz/statuz.yaml`
+
+**See also:** [ADR 0004: Core/niche Separation](adr/0004-core-niche-separation.md)
 
 ### 2.2 niche
 
@@ -258,6 +260,8 @@ The following can be auto-adjusted if explicit policy allows:
 - Agents can use Statuz as a shared reference
 - SYN requests can trigger cross-agent coordination
 
+**See also:** [ADR 0003: Protocol Boundaries](adr/0003-protocol-boundaries.md)
+
 ### 6.2 What Statuz Is Not (Continued)
 
 **Statuz is NOT a memory system.** It does not store conversation history, learned facts, or long-term knowledge. For memory, consider:
@@ -345,41 +349,101 @@ The following can be auto-adjusted if explicit policy allows:
 
 | Component | Status |
 |-----------|--------|
-| Technical Charter | This document (Working Draft) |
-| Manifest Schema | Planned |
-| Signal Schema | Planned |
-| Assessment Schema | Planned |
-| Context Schema | Planned |
-| Outcome Schema | Planned |
-| Calibration Schema | Planned |
-| SYN Schema | Planned |
+| Technical Charter | This document (Stable) |
+| Manifest Schema | Stable (v1.0) |
+| Signal Schema | Stable (v1.0) |
+| Assessment Schema | Stable (v1.0) |
+| Context Schema | Stable (v1.0) |
+| Outcome Schema | Stable (v1.0) |
+| Calibration Schema | Stable (v1.0) |
+| SYN Schema | Stable (v1.0) |
+| Schema Versioning ADR | ADR 0005 |
 
 ### 9.3 SYN
 
 | Component | Status |
 |-----------|--------|
-| Protocol Design | Planning |
+| Protocol Design | Stable (Standards-Track) |
 | Human Interface | Planning |
 | Governance Workflow | Planning |
 
 ---
 
-## 10. Open Questions
+## 10. Answered Questions (Previously Open Questions)
 
-1. **Manifest Scope:** Should niche manifest be project-level, agent-level, or both?
-2. **SYN Trigger:** Is SYN triggered automatically (by calibration) or manually (by agent judgment)?
-3. **Evidence Window:** How long is "long-term" for calibration? How do we quantify drift?
-4. **Signal Sources:** What ecosystem events should generate signals?
-5. **Assessment Criteria:** How do we ensure consistent relevance scoring?
+### 10.1 Manifest Scope
+
+**Question:** Should niche manifest be project-level, agent-level, or both?
+
+**Answer:** Both.
+
+- **Project-level manifest** (`.statuz/niche/manifest.yaml`): Declares the project's overall position, responsibilities, and boundaries. This is the primary manifest.
+- **Agent-level manifest** (optional, `.statuz/niche/agent-{name}.yaml`): Declares a specific agent's position within the project.
+
+**Rationale:** Some decisions apply to the entire project, while others are agent-specific. Both levels are useful.
+
+### 10.2 SYN Trigger
+
+**Question:** Is SYN triggered automatically (by calibration) or manually (by agent judgment)?
+
+**Answer:** Both.
+
+- **Auto-triggered by calibration:** When a drift is detected beyond a configured threshold, a calibration proposal may automatically generate a SYN request.
+- **Manual agent judgment:** An agent may escalate to SYN at any time if it encounters uncertainty, ambiguity, or high-risk decisions.
+
+**Rationale:** Automation handles the routine cases, but agents need the flexibility to escalate when they're unsure.
+
+### 10.3 Evidence Window
+
+**Question:** How long is "long-term" for calibration? How do we quantify drift?
+
+**Answer:**
+
+- **Default evidence window:** 30 days (configurable per project)
+- **Quantifying drift:** Track at least 3 dimensions:
+  1. **Task drift:** % of tasks outside declared scope
+  2. **Collaboration drift:** % of time spent with un-declared collaborators
+  3. **Boundary drift:** Frequency of rule/constraint exceptions
+
+**Rationale:** 30 days is a reasonable default to see patterns but not so long that drift becomes problematic before detection. Multiple dimensions prevent gaming any single metric.
+
+### 10.4 Signal Sources
+
+**Question:** What ecosystem events should generate signals?
+
+**Answer:**
+
+**Recommended signal sources:**
+1. **VCS events:** Commits, PRs, issues, reviews
+2. **Dependency events:** Version changes, security advisories
+3. **API events:** Contract changes, deprecations, outages
+4. **Agent events:** Handoffs, errors, status changes
+5. **Human events:** Directives, approvals, feedback
+
+**Rationale:** These are the most common events that affect agent work, and they're already available in most development environments.
+
+### 10.5 Assessment Criteria
+
+**Question:** How do we ensure consistent relevance scoring?
+
+**Answer:**
+
+- **Relevance is defined in the manifest:** Each manifest declares what signals are relevant to it.
+- **Assessment includes clear rationale:** Every assessment must explain *why* it judged a signal relevant (or not).
+- **Assessments are auditable:** Stored in `.statuz/niche/assessments/` for later review.
+
+**Rationale:** Consistency comes from clear criteria + auditable decisions, not black-box scoring.
 
 ---
 
 ## 11. References
 
-- [Statuz Core Specification](SPEC.md)
+- [Statuz Core Specification](../SPEC.md)
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12/release-notes)
-- [ADR: Protocol Boundaries](adr/ADR-001-protocol-boundaries.md) (Planned)
-- [ADR: Core/niche Separation](adr/ADR-002-core-niche-separation.md) (Planned)
+- [ADR 0001: Status ≠ Memory](adr/0001-status-not-memory.md)
+- [ADR 0002: YAML-First](adr/0002-yaml-first.md)
+- [ADR 0003: Protocol Boundaries](adr/0003-protocol-boundaries.md)
+- [ADR 0004: Core/niche Separation](adr/0004-core-niche-separation.md)
 
 ---
 
@@ -387,8 +451,7 @@ The following can be auto-adjusted if explicit policy allows:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.0 | 2026-05-30 | Statuz Core Team | Answered all open questions, updated status to Stable, added ADR references |
 | 0.1 | 2026-05-29 | Statuz Core Team | Initial working draft |
 
 ---
-
-*This document is a working draft. The protocol is not yet stable. Implementations should be considered experimental.*

@@ -5,26 +5,6 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/zbbsdsb/MuseRock"
-  },
-  "homepage": "https://github.com/zbbsdsb/MuseRock#readme",
-  "bugs": {
-    "url": "https://github.com/zbbsdsb/MuseRock/issues"
-  },
-  "keywords": [
-    "statuz",
-    "sdk",
-    "typescript",
-    "ai",
-    "agent",
-    "status",
-    "protocol"
-  ],
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",

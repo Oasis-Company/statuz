@@ -1,0 +1,35 @@
+{
+  "$id": "https://statuz.org/schemas/niche/index.json",
+  "title": "Statuz niche Schemas Index",
+  "description": "Index of JSON Schema definitions for Statuz niche objects",
+  "schemas": [
+    {
+      "name": "manifest",
+      "$ref": "niche-manifest.schema.json"
+    },
+    {
+      "name": "signal",
+      "$ref": "niche-signal.schema.json"
+    },
+    {
+      "name": "assessment",
+      "$ref": "niche-assessment.schema.json"
+    },
+    {
+      "name": "context",
+      "$ref": "niche-context.schema.json"
+    },
+    {
+      "name": "outcome",
+      "$ref": "niche-outcome.schema.json"
+    },
+    {
+      "name": "calibration",
+      "$ref": "niche-calibration.schema.json"
+    },
+    {
+      "name": "syn",
+      "$ref": "niche-syn.schema.json"
+    }
+  ]
+}

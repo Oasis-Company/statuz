@@ -8,26 +8,6 @@
   "bin": {
     "statuz-mcp": "dist/index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/zbbsdsb/MuseRock"
-  },
-  "homepage": "https://github.com/zbbsdsb/MuseRock#readme",
-  "bugs": {
-    "url": "https://github.com/zbbsdsb/MuseRock/issues"
-  },
-  "keywords": [
-    "statuz",
-    "mcp",
-    "model-context-protocol",
-    "ai",
-    "agent",
-    "status",
-    "protocol"
-  ],
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
@@ -36,7 +16,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@oasis-npm/statuz-sdk": "file:../sdk-ts/dist",
+    "@oasis-npm/statuz-sdk": "workspace:*",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
