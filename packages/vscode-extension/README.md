@@ -95,6 +95,12 @@ None at this time.
 - SYN decision tracking
 - JSON Schema validation for all supported file types
 
+## Contributors
+
+This extension is maintained by:
+
+- **ceaserzhao** ([@zbbsdsb](https://github.com/zbbsdsb)) from **Oasis Company**
+
 ## License
 
 Apache-2.0

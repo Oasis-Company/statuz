@@ -207,6 +207,12 @@ A good agent should be able to say:
 
 That sentence is Statuz.
 
+## Contributors
+
+This project is maintained by:
+
+- **ceaserzhao** ([@zbbsdsb](https://github.com/zbbsdsb)) from **Oasis Company**
+
 ## License
 
 Apache-2.0.

@@ -1,9 +1,21 @@
 {
-  "name": "@statuz/vscode-extension",
+  "name": "statuz-vscode",
   "version": "0.5.0",
   "publisher": "statuz",
   "displayName": "Statuz",
   "description": "VS Code Extension for Statuz AI Agent Runtime Status Protocol",
+  "author": "ceaserzhao (Oasis Company)",
+  "contributors": [
+    {
+      "name": "ceaserzhao",
+      "url": "https://github.com/zbbsdsb",
+      "organization": "Oasis Company"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/statuz/statuz.git"
+  },
   "categories": [
     "Other",
     "AI"
@@ -29,7 +41,7 @@
         {
           "id": "nicheExplorer",
           "title": "Niche Explorer",
-          "icon": "resources/icon.svg"
+          "icon": "resources/icon.png"
         }
       ]
     },
@@ -38,6 +50,13 @@
         {
           "id": "nicheExplorer",
           "name": "Niche Explorer"
+        }
+      ],
+      "statuz.synDecisionView": [
+        {
+          "type": "webview",
+          "id": "statuz.synDecisionView",
+          "name": "SYN Decision"
         }
       ]
     },

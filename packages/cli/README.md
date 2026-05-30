@@ -59,6 +59,12 @@ Reads and displays the current state from a statuz file.
 statuz resume ./statuz.yaml
 ```
 
+## Contributors
+
+This package is maintained by:
+
+- **ceaserzhao** ([@zbbsdsb](https://github.com/zbbsdsb)) from **Oasis Company**
+
 ## License
 
 Apache-2.0

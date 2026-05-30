@@ -2,6 +2,14 @@
   "name": "@statuz/cli",
   "version": "0.5.0",
   "description": "CLI for the Statuz AI Agent Runtime Status Protocol",
+  "author": "ceaserzhao (Oasis Company)",
+  "contributors": [
+    {
+      "name": "ceaserzhao",
+      "url": "https://github.com/zbbsdsb",
+      "organization": "Oasis Company"
+    }
+  ],
   "type": "module",
   "bin": {
     "statuz": "dist/index.js"
@@ -22,5 +30,28 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/statuz-protocol/statuz.git",
+    "directory": "packages/cli"
+  },
+  "keywords": [
+    "statuz",
+    "ai-agent",
+    "agent-status",
+    "runtime-status",
+    "agent-protocol",
+    "cli"
+  ],
+  "bugs": {
+    "url": "https://github.com/statuz-protocol/statuz/issues"
+  },
+  "homepage": "https://github.com/statuz-protocol/statuz#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ]
 }

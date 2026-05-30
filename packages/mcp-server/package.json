@@ -2,6 +2,14 @@
   "name": "@statuz/mcp-server",
   "version": "0.5.0",
   "description": "MCP Server for the Statuz AI Agent Runtime Status Protocol",
+  "author": "ceaserzhao (Oasis Company)",
+  "contributors": [
+    {
+      "name": "ceaserzhao",
+      "url": "https://github.com/zbbsdsb",
+      "organization": "Oasis Company"
+    }
+  ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +24,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@statuz/sdk-ts": "workspace:*",
+    "@statuz/sdk-ts": "^0.5.0",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
@@ -25,5 +33,33 @@
     "typescript": "^5.7.2",
     "vitest": "^2.1.5"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/statuz-protocol/statuz.git",
+    "directory": "packages/mcp-server"
+  },
+  "keywords": [
+    "statuz",
+    "ai-agent",
+    "agent-status",
+    "runtime-status",
+    "agent-protocol",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "bugs": {
+    "url": "https://github.com/statuz-protocol/statuz/issues"
+  },
+  "homepage": "https://github.com/statuz-protocol/statuz#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "!dist/*.test.js",
+    "!dist/*.test.d.ts",
+    "!dist/*.spec.js",
+    "!dist/*.spec.d.ts"
+  ]
 }
