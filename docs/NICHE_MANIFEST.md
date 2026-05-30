@@ -1,6 +1,6 @@
 # Statuz NICHE_MANIFEST - Technical Charter
 
-> **Status:** Stable  
+> **Status:** Working Draft  
 > **Version:** 1.0  
 > **Authors:** Statuz Core Team  
 > **Last Updated:** 2026-05-30
@@ -50,13 +50,13 @@ By adding an ecological positioning layer, agents can:
 
 ## 2. Three-Layer Architecture
 
-Statuz defines three layers of situated alignment:
+Statuz defines three layers of situated alignment (all required):
 
 | Layer | Purpose | Status |
 |-------|---------|--------|
 | **Statuz Core** | Compact runtime status | Stable |
-| **niche** | Ecological position & long-term calibration | Stable (Standards-Track) |
-| **SYN** | Human governance for strategic decisions | Stable (Standards-Track) |
+| **niche** | Ecological position & long-term calibration | Working Draft |
+| **SYN** | Human governance for strategic decisions | Working Draft |
 
 ### 2.1 Statuz Core
 
@@ -349,23 +349,23 @@ The following can be auto-adjusted if explicit policy allows:
 
 | Component | Status |
 |-----------|--------|
-| Technical Charter | This document (Stable) |
-| Manifest Schema | Stable (v1.0) |
-| Signal Schema | Stable (v1.0) |
-| Assessment Schema | Stable (v1.0) |
-| Context Schema | Stable (v1.0) |
-| Outcome Schema | Stable (v1.0) |
-| Calibration Schema | Stable (v1.0) |
-| SYN Schema | Stable (v1.0) |
+| Technical Charter | This document (Working Draft) |
+| Manifest Schema | Working Draft (v1.0) |
+| Signal Schema | Working Draft (v1.0) |
+| Assessment Schema | Working Draft (v1.0) |
+| Context Schema | Working Draft (v1.0) |
+| Outcome Schema | Working Draft (v1.0) |
+| Calibration Schema | Working Draft (v1.0) |
+| SYN Schema | Working Draft (v1.0) |
 | Schema Versioning ADR | ADR 0005 |
 
 ### 9.3 SYN
 
 | Component | Status |
 |-----------|--------|
-| Protocol Design | Stable (Standards-Track) |
-| Human Interface | Planning |
-| Governance Workflow | Planning |
+| Protocol Design | Working Draft |
+| Human Interface | In Progress (VS Code Extension) |
+| Governance Workflow | In Progress |
 
 ---
 
@@ -451,7 +451,8 @@ The following can be auto-adjusted if explicit policy allows:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2026-05-30 | Statuz Core Team | Answered all open questions, updated status to Stable, added ADR references |
+| 1.1 | 2026-05-30 | Statuz Core Team | Updated status to Working Draft; all schemas + docs complete; production tooling (VS Code Extension + publishing) in progress |
+| 1.0 | 2026-05-30 | Statuz Core Team | Answered all open questions, added ADR references |
 | 0.1 | 2026-05-29 | Statuz Core Team | Initial working draft |
 
 ---

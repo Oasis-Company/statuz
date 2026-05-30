@@ -1,6 +1,6 @@
 {
-  "name": "@oasis-npm/statuz-cli",
-  "version": "0.2.0",
+  "name": "@statuz/cli",
+  "version": "0.5.0",
   "description": "CLI for the Statuz AI Agent Runtime Status Protocol",
   "type": "module",
   "bin": {

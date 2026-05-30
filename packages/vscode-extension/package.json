@@ -1,0 +1,130 @@
+{
+  "name": "@statuz/vscode-extension",
+  "version": "0.5.0",
+  "publisher": "statuz",
+  "displayName": "Statuz",
+  "description": "VS Code Extension for Statuz AI Agent Runtime Status Protocol",
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "keywords": [
+    "statuz",
+    "ai",
+    "agent",
+    "runtime",
+    "status",
+    "niche",
+    "syn"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:yaml",
+    "onLanguage:yml"
+  ],
+  "main": "dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nicheExplorer",
+          "title": "Niche Explorer",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "nicheExplorer": [
+        {
+          "id": "nicheExplorer",
+          "name": "Niche Explorer"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "statuz.helloWorld",
+        "title": "Statuz: Hello World"
+      },
+      {
+        "command": "statuz.init",
+        "title": "Statuz: Initialize Statuz"
+      },
+      {
+        "command": "statuz.validate",
+        "title": "Statuz: Validate All Files"
+      },
+      {
+        "command": "statuz.resume",
+        "title": "Statuz: Resume from Statuz"
+      },
+      {
+        "command": "statuz.initNiche",
+        "title": "Statuz: Initialize Niche"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "**/.statuz/statuz.yaml",
+        "url": "./schemas/statuz.schema.json"
+      },
+      {
+        "fileMatch": "**/statuz.yaml",
+        "url": "./schemas/statuz.schema.json"
+      },
+      {
+        "fileMatch": "**/.statuz/niche/manifest.yaml",
+        "url": "./schemas/niche/niche-manifest.schema.json"
+      },
+      {
+        "fileMatch": "**/niche-manifest.yaml",
+        "url": "./schemas/niche/niche-manifest.schema.json"
+      },
+      {
+        "fileMatch": "**/.statuz/niche/signals/*.yaml",
+        "url": "./schemas/niche/niche-signal.schema.json"
+      },
+      {
+        "fileMatch": "**/.statuz/niche/assessments/*.yaml",
+        "url": "./schemas/niche/niche-assessment.schema.json"
+      },
+      {
+        "fileMatch": "**/.statuz/niche/contexts/*.yaml",
+        "url": "./schemas/niche/niche-context.schema.json"
+      },
+      {
+        "fileMatch": "**/.statuz/niche/outcomes/*.yaml",
+        "url": "./schemas/niche/niche-outcome.schema.json"
+      },
+      {
+        "fileMatch": "**/.statuz/niche/calibrations/*.yaml",
+        "url": "./schemas/niche/niche-calibration.schema.json"
+      },
+      {
+        "fileMatch": "**/.statuz/niche/syn/*.yaml",
+        "url": "./schemas/niche/niche-syn.schema.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsc",
+    "watch": "tsc -watch"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.95.0",
+    "@types/ajv": "^1.0.0",
+    "@vscode/vsce": "^3.2.1",
+    "typescript": "^5.7.2"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.95.0"
+  }
+}
