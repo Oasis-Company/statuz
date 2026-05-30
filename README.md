@@ -2,6 +2,21 @@
   <img src="assets/statuz-logo.svg" alt="Statuz Logo" width="120" />
 </div>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/@statuz/statuz">
+    <img alt="npm" src="https://img.shields.io/npm/v/@statuz/statuz?style=flat-square&color=blue">
+  </a>
+  <a href="https://www.npmjs.com/package/@statuz/statuz">
+    <img alt="npm" src="https://img.shields.io/npm/dt/@statuz/statuz?style=flat-square&color=green">
+  </a>
+  <a href="https://open-vsx.org/extension/statuz/statuz-vscode">
+    <img alt="Open VSX" src="https://img.shields.io/badge/Open%20VSX-v0.5.0-blue?style=flat-square">
+  </a>
+  <a href="https://github.com/statuz-protocol/statuz/blob/main/LICENSE">
+    <img alt="GitHub license" src="https://img.shields.io/github/license/statuz-protocol/statuz?style=flat-square&color=orange">
+  </a>
+</p>
+
 # Statuz
 
 > **Memory lets an AI remember the past. Statuz lets an AI understand where it stands, what matters now, and when human direction must be renewed.**
@@ -90,26 +105,26 @@ Statuz is the compact runtime state that tells the agent where it stands.
 
 ## Repository Status
 
-This repository contains the **Statuz ecosystem** (protocol + tools + best practices) in various stages of maturity:
+This repository contains the **Statuz ecosystem** (protocol + tools + best practices):
 
-### Statuz Core (Stable)
+### ✅ Statuz Core (0.5.0 - Stable)
 The core runtime status layer that answers: who am I, what am I doing, where am I, and what's next.
 
 **Current implementation:**
-- CLI 0.2.0 - `statuz init`, `statuz validate`, `statuz resume`
-- TypeScript SDK 0.3.0 - programmatic access to Statuz files
-- Python SDK 0.3.0 - Python implementation
-- MCP Server 0.4.0 - Model Context Protocol integration
+- CLI 0.5.0 - `statuz init`, `statuz validate`, `statuz resume`
+- TypeScript SDK 0.5.0 - programmatic access to Statuz files
+- MCP Server 0.5.0 - Model Context Protocol integration
+- VS Code Extension 0.5.0 - in-editor validation and tree view
 
-### Statuz niche (Working Draft)
+### ⚙️ Statuz niche (0.5.0 - Working Draft)
 The ecological positioning and long-term calibration layer that answers: where do I stand in the ecosystem, what changes affect me, and when do I need to recalibrate?
 
-**Status:** Working draft. Schemas and documentation are complete; production tooling is in progress.
+**Status:** Working draft. Schemas and documentation are complete; production tooling (VS Code) is available.
 
-### Statuz SYN (Working Draft)
+### ⚙️ Statuz SYN (0.5.0 - Working Draft)
 The human governance interface for strategic synchronization requests when position, boundaries, or authority require renewal.
 
-**Status:** Working draft. Schemas and documentation are complete; production tooling is in progress.
+**Status:** Working draft. Schemas and documentation are complete; VS Code webview tooling is available.
 
 ## Three-Layer Architecture
 
@@ -117,9 +132,9 @@ Statuz defines three layers of situated alignment (all required):
 
 | Layer | Purpose | Status |
 |-------|---------|--------|
-| **Statuz Core** | Compact runtime status | Stable (0.1) |
-| **niche** | Ecological position & long-term calibration | Working Draft |
-| **SYN** | Human governance for strategic decisions | Working Draft |
+| **Statuz Core** | Compact runtime status | Stable (0.5.0) |
+| **niche** | Ecological position & long-term calibration | Working Draft (0.5.0) |
+| **SYN** | Human governance for strategic decisions | Working Draft (0.5.0) |
 
 ### Statuz Core
 The minimal situation layer. It answers:
@@ -159,26 +174,46 @@ This repository contains:
 
 ## Quick start
 
+### VS Code Extension (Recommended)
+Search for **"Statuz"** in the VS Code Marketplace or install from [Open VSX](https://open-vsx.org/extension/statuz/statuz-vscode).
+
+### CLI Installation
+Install the super package that includes everything:
+
+```bash
+npm install -g @statuz/statuz
+```
+
+Or install just what you need:
+
+```bash
+# Only CLI
+npm install -g @statuz/cli
+
+# Only SDK
+npm install @statuz/sdk-ts
+
+# Only MCP Server
+npm install @statuz/mcp-server
+```
+
+### Using the CLI
 Create a status file:
 
 ```bash
-mkdir -p .statuz
-cp examples/basic/statuz.yaml .statuz/statuz.yaml
+statuz init --agent dev-agent --project my-ai-project
 ```
 
-Validate it with the CLI scaffold:
+Validate a status file:
 
 ```bash
-cd packages/cli
-npm install
-npm run build
-node dist/index.js validate ../../examples/basic/statuz.yaml
+statuz validate .statuz/statuz.yaml
 ```
 
-Generate a fresh project status file:
+Resume from a status file:
 
 ```bash
-node dist/index.js init --agent dev-agent --project my-ai-project
+statuz resume .statuz/statuz.yaml
 ```
 
 ## Suggested repository name
