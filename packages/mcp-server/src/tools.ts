@@ -1,5 +1,5 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { Statuz } from "@oasis-npm/statuz-sdk";
+import { Statuz } from "@statuz/sdk-ts";
 import { existsSync } from "node:fs";
 import { resolve, relative, sep } from "node:path";
 

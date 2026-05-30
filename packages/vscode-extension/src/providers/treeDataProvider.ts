@@ -1,21 +1,28 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as yaml from 'yaml';
 
 interface TreeNode {
 	label: string;
 	type: 'root' | 'core' | 'niche' | 'folder' | 'file';
 	filePath?: string;
 	children?: TreeNode[];
+	isSynRequest?: boolean;
 }
 
 export class NicheTreeDataProvider implements vscode.TreeDataProvider<TreeNode> {
 	private _onDidChangeTreeData = new vscode.EventEmitter<TreeNode | undefined | void>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 	private workspaceRoot: string | undefined;
+	private static synViewProvider: { openSynRequest: (path: string) => void } | undefined;
 
 	constructor() {
 		this.workspaceRoot = this.getWorkspaceRoot();
+	}
+
+	static setSynDecisionViewProvider(provider: { openSynRequest: (path: string) => void }): void {
+		NicheTreeDataProvider.synViewProvider = provider;
 	}
 
 	private getWorkspaceRoot(): string | undefined {
@@ -36,13 +43,24 @@ export class NicheTreeDataProvider implements vscode.TreeDataProvider<TreeNode> 
 
 		if (element.type === 'file' && element.filePath) {
 			treeItem.resourceUri = vscode.Uri.file(element.filePath);
-			treeItem.command = {
-				command: 'statuz.openFile',
-				title: 'Open File',
-				arguments: [element.filePath]
-			};
-			treeItem.iconPath = vscode.ThemeIcon.File;
-			treeItem.contextValue = 'file';
+
+			if (element.isSynRequest) {
+				treeItem.command = {
+					command: 'statuz.openSynDecision',
+					title: 'Open SYN Decision',
+					arguments: [element.filePath]
+				};
+				treeItem.iconPath = new vscode.ThemeIcon('request-changes');
+				treeItem.contextValue = 'synRequest';
+			} else {
+				treeItem.command = {
+					command: 'statuz.openFile',
+					title: 'Open File',
+					arguments: [element.filePath]
+				};
+				treeItem.iconPath = vscode.ThemeIcon.File;
+				treeItem.contextValue = 'file';
+			}
 		} else if (element.type === 'folder') {
 			treeItem.iconPath = vscode.ThemeIcon.Folder;
 			treeItem.contextValue = 'folder';
@@ -170,7 +188,7 @@ export class NicheTreeDataProvider implements vscode.TreeDataProvider<TreeNode> 
 			const requestsPath = path.join(synPath, 'requests');
 			const resolutionsPath = path.join(synPath, 'resolutions');
 
-			const requestsNode = this.buildFolderNode('Requests', requestsPath);
+			const requestsNode = this.buildSynRequestsNode(requestsPath);
 			const resolutionsNode = this.buildFolderNode('Resolutions', resolutionsPath);
 
 			synNode.children = [requestsNode, resolutionsNode].filter(node => {
@@ -188,6 +206,43 @@ export class NicheTreeDataProvider implements vscode.TreeDataProvider<TreeNode> 
 		}
 
 		return synNode;
+	}
+
+	private buildSynRequestsNode(requestsPath: string): TreeNode {
+		const node: TreeNode = {
+			label: 'Requests',
+			type: 'folder',
+			children: []
+		};
+
+		if (fs.existsSync(requestsPath)) {
+			const files = fs.readdirSync(requestsPath).filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+			const count = files.length;
+			node.label = `Requests (${count})`;
+
+			node.children = files.map(file => {
+				const filePath = path.join(requestsPath, file);
+				const isSynRequest = this.isSynRequestFile(filePath);
+				return {
+					label: file,
+					type: 'file' as const,
+					filePath,
+					isSynRequest
+				};
+			});
+		}
+
+		return node;
+	}
+
+	private isSynRequestFile(filePath: string): boolean {
+		try {
+			const content = fs.readFileSync(filePath, 'utf-8');
+			const parsed = yaml.parse(content);
+			return parsed?.syn_version === '1.0' && parsed?.type === 'human_decision_required';
+		} catch {
+			return false;
+		}
 	}
 }
 

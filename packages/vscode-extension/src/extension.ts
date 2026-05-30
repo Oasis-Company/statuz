@@ -7,6 +7,9 @@ import { initStatuz } from './commands/init';
 import { validateAllFiles } from './commands/validate';
 import { resumeFromStatuz } from './commands/resume';
 import { initNiche } from './commands/initNiche';
+import { SynDecisionViewProvider } from './views/synDecisionView';
+
+let synDecisionViewProvider: SynDecisionViewProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Statuz extension is now active!');
@@ -26,8 +29,26 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerTreeDataProvider('nicheExplorer', nicheTreeDataProvider)
 	);
 
+	synDecisionViewProvider = new SynDecisionViewProvider(context);
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(
+			SynDecisionViewProvider.viewType,
+			synDecisionViewProvider
+		)
+	);
+
+	NicheTreeDataProvider.setSynDecisionViewProvider({
+		openSynRequest: (filePath: string) => {
+			synDecisionViewProvider?.openSynRequest(filePath);
+		}
+	});
+
 	const openFileCommand = vscode.commands.registerCommand('statuz.openFile', async (filePath: string) => {
 		await openFile(filePath);
+	});
+
+	const openSynDecisionCommand = vscode.commands.registerCommand('statuz.openSynDecision', async (filePath: string) => {
+		synDecisionViewProvider?.openSynRequest(filePath);
 	});
 
 	const refreshTreeCommand = vscode.commands.registerCommand('statuz.refreshTree', () => {
@@ -61,6 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
 		resumeCommand,
 		initNicheCommand,
 		openFileCommand,
+		openSynDecisionCommand,
 		refreshTreeCommand
 	);
 }
