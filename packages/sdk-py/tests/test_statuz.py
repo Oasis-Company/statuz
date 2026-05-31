@@ -1,4 +1,5 @@
 import os
+import shutil
 import pytest
 from statuz import Statuz
 
@@ -9,10 +10,13 @@ def cleanup():
     if os.path.exists("test-statuz.yaml"):
         os.remove("test-statuz.yaml")
     if os.path.exists(".statuz"):
-        for file in ["test-agent.yaml", "another-agent.yaml"]:
-            path = f".statuz/{file}"
-            if os.path.exists(path):
-                os.remove(path)
+        agents_dir = os.path.join(".statuz", "agents")
+        if os.path.exists(agents_dir):
+            for file in os.listdir(agents_dir):
+                path = os.path.join(agents_dir, file)
+                if os.path.isfile(path):
+                    os.remove(path)
+            os.rmdir(agents_dir)
         os.rmdir(".statuz")
 
 

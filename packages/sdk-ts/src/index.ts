@@ -1,4 +1,5 @@
 export { Statuz } from "./statuz.js";
+export { CoordinationClient } from "./coordination.js";
 export type { 
   StatuzDocument, 
   Checkpoint, 
@@ -14,3 +15,9 @@ export type {
   StatusValue,
   StageValue 
 } from "./types.js";
+export type {
+  Signal,
+  SynRequest,
+  SignalResponse,
+  SynResponse
+} from "./coordination.js";

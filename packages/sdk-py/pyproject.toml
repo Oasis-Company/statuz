@@ -21,6 +21,11 @@ dependencies = [
   "jsonschema>=4.0",
 ]
 
+[project.optional-dependencies]
+coordination = [
+  "requests>=2.0",
+]
+
 [project.scripts]
 statuz = "statuz.cli:main"
 

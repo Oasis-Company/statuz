@@ -16,6 +16,15 @@ from .types import (
     Relations,
     Rules,
     ValidationResult,
+    Role,
+    Goal,
+)
+from .coordination import (
+    CoordinationClient,
+    Signal,
+    SynRequest,
+    SignalResponse,
+    SynResponse,
 )
 
 
@@ -93,7 +102,7 @@ class Statuz:
             )
 
     def validate(self) -> ValidationResult:
-        return self._validate_document(self._data.model_dump())
+        return self._validate_document(self._data.model_dump(exclude_none=True))
 
     @classmethod
     def create(cls, agent_name: str, project_name: str) -> "Statuz":
@@ -105,6 +114,15 @@ class Statuz:
                 agent_name=agent_name,
                 project_name=project_name,
                 environment="local-dev"
+            ),
+            role=Role(
+                name="agent",
+                responsibilities=["perform designated tasks"],
+                boundaries=["do not modify system files"]
+            ),
+            goal=Goal(
+                primary="complete assigned tasks",
+                secondary=[]
             ),
             current_state=CurrentState(
                 stage="initialization",
@@ -122,7 +140,8 @@ class Statuz:
                 related_agents=[],
                 related_projects=[],
                 related_files=[],
-                related_tools=[]
+                related_tools=[],
+                agent_graph=[]
             ),
             rules=Rules(
                 should=[
@@ -232,4 +251,9 @@ __all__ = [
     "Identity",
     "CurrentState",
     "ValidationResult",
+    "CoordinationClient",
+    "Signal",
+    "SynRequest",
+    "SignalResponse",
+    "SynResponse",
 ]
