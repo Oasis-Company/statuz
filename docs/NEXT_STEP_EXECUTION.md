@@ -1,263 +1,315 @@
-# Statuz Next Step Execution
+# Next Step Execution Plan
 
-## Overview
+> **Status:** Working Draft  
+> **Target:** Small team or individual contributors working in sequence  
+> **Language:** English for code/docs, Chinese for internal discussion  
+> **Last updated:** 2026-06-02
 
-This document defines the execution plan for Statuz's next phase, from public positioning convergence to SYN project-level MVP.
+---
 
-## Phase 0: Public Positioning Convergence (Completed)
+## Where We Are Now (Snapshot)
 
-- [x] Update README.md - Add Core, niche, SYN positioning
-- [x] Update ROADMAP.md - Reflect actual status, add niche/SYN
-- [x] Update CHANGELOG.md - Add all version records
+```
+Protocol Layer:    ████████████████ 100%   All 7 schemas (Core + niche + SYN) defined
+Core Tools:        ████████████████ 100%   CLI / SDK-TS / SDK-PY / MCP Server shipped
+Examples:          ████████████████ 100%   niche demo (23/23) + SYN demo (22/22) pass
+VS Code Extension: ████░░░░░░░░░░░░  25%   Skeleton exists, none of the niche/SYN UI
+niche Runtime:     ██░░░░░░░░░░░░░░   0%   Schemas only, no engine
+SYN Workflow:      ██░░░░░░░░░░░░░░   0%   Schemas only, no engine
+Conformance:       ███░░░░░░░░░░░░░  20%   Fixtures exist, no cross-impl tests
+```
 
-## Phase 1: Core Trustworthy Foundation and Consistency
+**The hard truth:** niche and SYN are real on paper but dead in code. We have beautiful schemas and 45+ validated example files, but no engine that actually watches changes, judges relevance, or presents decisions to humans.
 
-### Goals
+---
 
-Before extending the protocol, make the currently existing Core, CLI, SDK, and MCP server verifiable, compatible, and maintainable.
+## Phase A: VS Code Extension — The Human Interface
 
-### Tasks
+**Why first:** niche/SYN have no value if humans can't see them. The VS Code extension is the primary surface where developers interact with Statuz.
 
-#### Task 1.1: Create Conformance Fixtures
-- [ ] Create `spec/fixtures/valid/` directory
-- [ ] Create `spec/fixtures/invalid/` directory
-- [ ] Add valid examples: minimal, full-featured
-- [ ] Add invalid examples: missing fields, wrong types, bad formats
+### A.1 — Syntax Highlighting & Validation
 
-**Files to Create:**
-- `spec/fixtures/valid/minimal.yaml`
-- `spec/fixtures/valid/full-featured.yaml`
-- `spec/fixtures/invalid/missing-identity.yaml`
-- `spec/fixtures/invalid/wrong-version.yaml`
-- `spec/fixtures/invalid/bad-date-format.yaml`
+| Task | What | Acceptance |
+|------|------|------------|
+| A.1.1 | `.statuz/*.yaml` syntax highlighting (TM Grammar) | Editor highlights keys/values correctly |
+| A.1.2 | `.statuz/*.json` schema association | Editor validates against correct schema |
+| A.1.3 | Real-time validation on save | Red squiggles on invalid YAML/JSON |
+| A.1.4 | Quick-fix for common schema errors | "Add missing field X" action |
 
-#### Task 1.2: Unify SDK Parsing Behavior
-- [ ] Ensure CLI, TS SDK, Python SDK, and MCP server output consistently for the same files
-- [ ] Validate logic consistency
-- [ ] Error message consistency
-- [ ] YAML parsing consistency
+### A.2 — Niche Status Panel (Tree View)
 
-#### Task 1.3: Expand CI Coverage
-- [ ] TypeScript SDK build and tests
-- [ ] Python SDK build and tests
-- [ ] MCP server build
-- [ ] All packages pass in CI
+| Task | What | Acceptance |
+|------|------|------------|
+| A.2.1 | File watcher on `.statuz/niche/` directory | Auto-refresh when files change |
+| A.2.2 | Tree view: manifests → signals → assessments → outcomes | One click to expand/collapse each level |
+| A.2.3 | Inline signal severity icons (info/warning/critical) | Color-coded, immediately visible |
+| A.2.4 | Click a signal → open assessment | Quick drill-down |
+| A.2.5 | Click a manifest → show declared niche vs observed drift | Side-by-side comparison |
 
-#### Task 1.4: Fix MCP Tool Documentation Consistency
-- [ ] Verify all 8 tools are implemented
-- [ ] Remove or complete placeholder tools
-- [ ] Update docs/mcp-server.md
+### A.3 — SYN Decision Webview
 
-#### Task 1.5: Improve MCP Security Boundary Tests
-- [ ] Path traversal protection tests
-- [ ] Sensitive directory access denial tests
-- [ ] allowedRoots configuration tests
+| Task | What | Acceptance |
+|------|------|------------|
+| A.3.1 | Detect `.statuz/niche/syn-requests/` files | Badge counter on status bar |
+| A.3.2 | Webview: SYN request detail (evidence, options, risks) | Readable, not raw YAML dump |
+| A.3.3 | Accept/Reject/Defer buttons → writes SYN resolution file | One-click decision |
+| A.3.4 | "Ask me later" snooze with configurable interval | Doesn't re-prompt for N hours |
+| A.3.5 | SYN history view | See past decisions and their outcomes |
 
-### Checkpoints
+### A.4 — VCS Signal Auto-Generation (Optional but high value)
 
-- [ ] A set of fixtures passes validation across CLI, TS SDK, Python SDK, and MCP server
-- [ ] Invalid fixtures are rejected in all implementations
-- [ ] Stable tools listed in MCP documentation actually exist in source code and are testable
-- [ ] MCP cannot access files beyond allowed workspace root
-- [ ] Checkpoint identification strategy should not have significant collision risks after concurrency, merging, or history deletion
+| Task | What | Acceptance |
+|------|------|------------|
+| A.4.1 | Git post-commit hook → generate niche signal | Signal YAML appears on commit |
+| A.4.2 | Detect file patterns from manifest responsibilities | e.g. `src/auth/*` changed → relevant |
+| A.4.3 | Configurable signal templates | User can customize auto-generated signal format |
 
-## Phase 2: niche Technical Charter
+### A.5 — Quick Commands
 
-### Goals
+| Task | What | Acceptance |
+|------|------|------------|
+| A.5.1 | `Statuz: Initialize` → creates `.statuz/statuz.yaml` | Works from command palette |
+| A.5.2 | `Statuz: Initialize Niche` → creates `.statuz/niche/manifest.yaml` | Works from command palette |
+| A.5.3 | `Statuz: Validate All` → validates all Statuz files in workspace | Shows problems panel |
+| A.5.4 | `Statuz: Resume` → shows current state summary | Side panel with next actions |
 
-Define niche's immutable principles and extension boundaries before writing implementation code.
+---
 
-### Tasks
+## Phase B: Niche Runtime Engine
 
-#### Task 2.1: Improve NICHE_MANIFEST.md
-- [ ] Write formal definition of niche
-- [ ] Write layered relationship between niche and Core
-- [ ] Write boundaries between niche and Memory, MCP, A2A, and project management tools
-- [ ] Clarify actor types and principals
-- [ ] Clarify three positioning states: declared, observed, calibrated
-- [ ] Clarify first set of objects
-- [ ] Clarify automation boundaries
-- [ ] Clarify security and privacy principles
-- [ ] Clarify extension mechanisms and compatibility rules
+**Why second:** The schemas exist but nothing watches the world and generates signals/assessments automatically. Without this, niche is just static config.
 
-#### Task 2.2: Create ADR - Protocol Boundaries
-- [ ] ADR: Statuz does not replace MCP/A2A
-- [ ] Clarify transport neutrality principle
-- [ ] Clarify boundaries with other systems
+### B.1 — Signal Generator
 
-#### Task 2.3: Create ADR - Core/niche Layering
-- [ ] ADR: Core and niche layering principles
-- [ ] Prevent Core bloat
-- [ ] Prevent niche from becoming static configuration
+| Task | What | Acceptance |
+|------|------|------------|
+| B.1.1 | Git watcher: detect commits, branch changes, merge conflicts | Signal YAML generated on each event |
+| B.1.2 | File change classifier: maps changed paths to manifest responsibilities | Only relevant changes trigger signals |
+| B.1.3 | Dependency watcher: detect `package.json` / `requirements.txt` / `Cargo.toml` changes | Signal when a dependency changes |
+| B.1.4 | Configurable watcher rules per manifest | Project can tune what triggers signals |
+| B.1.5 | Signal deduplication | Same change doesn't generate duplicate signals |
 
-### Checkpoints
+### B.2 — Assessment Engine
 
-- [ ] A developer not involved in discussions can accurately state what niche solves and what it doesn't after reading the technical charter
-- [ ] No ambiguous statements like "agent automatically gains new permissions based on long-term behavior" exist in the document
-- [ ] Document clearly states that Statuz does not undertake cross-agent transport and does not replace A2A
-- [ ] Document clearly states that SYN is for human principals
+| Task | What | Acceptance |
+|------|------|------------|
+| B.2.1 | Match signal to manifest: "does this signal affect my declared responsibilities?" | Yes/No + reason |
+| B.2.2 | Relevance scoring: 0–100 based on match strength | Threshold configurable per project |
+| B.2.3 | Generate assessment: why relevant, suggested action, affected scope | Assessment YAML with explainable reasoning |
+| B.2.4 | Auto-generate niche context for downstream agents | Minimal, necessary context (not full memory dump) |
 
-## Phase 3: niche Minimum Object Set
+### B.3 — Outcome Recorder
 
-### Goals
+| Task | What | Acceptance |
+|------|------|------------|
+| B.3.1 | Record outcome after agent action | What was done, what changed, impact on local state |
+| B.3.2 | Link outcome to parent signal + assessment | Traceable chain: signal → assessment → outcome |
+| B.3.3 | Aggregate outcomes for calibration | Running summary of "what actually happened" |
 
-Translate niche from concept to verifiable working draft, but control scope without immediately building a large runtime system.
+### B.4 — Calibration Detector
 
-### Tasks
+| Task | What | Acceptance |
+|------|------|------------|
+| B.4.1 | Compare declared niche vs observed niche over time window | Drift metric |
+| B.4.2 | Detect scope creep: agent doing things outside declared responsibilities | Flag when threshold exceeded |
+| B.4.3 | Detect collaboration drift: working with new agents/projects not in manifest | Flag when threshold exceeded |
+| B.4.4 | Generate calibration proposal with evidence + options | Calibration YAML, not auto-applied |
+| B.4.5 | Calibration proposal → SYN trigger (if involves permissions/strategy) | Routes to Phase C |
 
-#### Task 3.1: Define niche manifest schema
-- [ ] Define minimal field set for `niche manifest`
-- [ ] Include declared_niche, does, does_not, strategic_bets, success_signals
+---
 
-#### Task 3.2: Define niche signal schema
-- [ ] Define minimal field set for `niche signal`
-- [ ] Include id, type, source, content, relevance_criteria, timestamp
+## Phase C: SYN Workflow
 
-#### Task 3.3: Define niche assessment schema
-- [ ] Define minimal field set for `niche assessment`
-- [ ] Include signal_id, agent_id, relevance_score, impact_analysis, confidence, rationale
+**Why third:** SYN is the governance layer. It only makes sense when niche is generating real signals, assessments, and calibrations.
 
-#### Task 3.4: Define niche context schema
-- [ ] Define minimal field set for `niche context`
-- [ ] Include from_agent, to_agent, task_summary, relevant_signals, relevant_assessments, constraints
+### C.1 — SYN Trigger Rules
 
-#### Task 3.5: Define niche outcome schema
-- [ ] Define minimal field set for `niche outcome`
-- [ ] Include task_id, status, result_summary, impacted_signals, next_steps
+| Task | What | Acceptance |
+|------|------|------------|
+| C.1.1 | Define SYN severity levels: CRITICAL / HIGH / MEDIUM / LOW | Documented with examples |
+| C.1.2 | Auto-trigger SYN when calibration involves permissions, boundaries, or strategy | Spec-compliant |
+| C.1.3 | Auto-trigger SYN when new capability/dependency/relationship forms | Spec-compliant |
+| C.1.4 | Low-risk calibrations (routing preference, minor scope) do NOT trigger SYN | Auto-applied with log only |
+| C.1.5 | SYN deduplication + batching: similar requests merged | Not a notification storm |
 
-#### Task 3.6: Define niche calibration schema
-- [ ] Define minimal field set for `niche calibration`
-- [ ] Include proposal_id, declared_vs_observed, evidence_window, drift_rationale, proposed_changes, approval_required
+### C.2 — SYN Queue & Resolution
 
-#### Task 3.7: Define SYN schema
-- [ ] Define minimal field set for `SYN request`
-- [ ] Define minimal field set for `SYN resolution`
-- [ ] Create valid/invalid examples for each object type
+| Task | What | Acceptance |
+|------|------|------------|
+| C.2.1 | SYN request file format: evidence, options, risks, recommendation | Machine-verifiable, human-readable |
+| C.2.2 | SYN resolution: accepted / rejected / deferred with rationale | Stored, traceable |
+| C.2.3 | Resolution → apply changes to manifest / config | Approved changes take effect |
+| C.2.4 | SYN history: all decisions preserved, rollbackable | Audit trail |
+| C.2.5 | SYN frequency control: max N per day, snooze, focus mode | Configurable per project |
 
-### Checkpoints
+### C.3 — SYN in VS Code (ties back to Phase A.3)
 
-- [ ] Each object can explain its unique responsibility in one sentence
-- [ ] `manifest` ≠ `state`; declaration and observation must not be confused
-- [ ] `assessment` must contain explainable basis for "why relevant"
-- [ ] `context` must embody minimal disclosure principle
-- [ ] `calibration` must contain evidence window, drift rationale, proposed changes, and approval requirements
-- [ ] `SYN resolution` must identify the principal or governance process authorized to confirm changes
+| Task | What | Acceptance |
+|------|------|------------|
+| C.3.1 | Badge counter on status bar when pending SYN exist | Immediately visible |
+| C.3.2 | SYN detail panel: evidence, diff, risk assessment | Not just raw YAML |
+| C.3.3 | One-click approve / reject / defer | No CLI needed |
+| C.3.4 | "Remind me tomorrow" defer option | Practical for busy devs |
 
-## Phase 4: niche Vertical Demo
+---
 
-### Goals
+## Phase D: Conformance & Quality
 
-Instead of building comprehensive integrations first, prove the killer feature with a sufficiently clear demo.
+**Ongoing, parallel to A/B/C.** Makes sure all implementations behave the same way.
 
-### Tasks
+### D.1 — Shared Conformance Suite
 
-#### Task 4.1: Create Example Actor Positioning
-- [ ] Create backend agent manifest
-- [ ] Create frontend agent manifest
-- [ ] Create qa agent manifest
-- [ ] Create project-owner manifest
+| Task | What | Acceptance |
+|------|------|------------|
+| D.1.1 | Expand `spec/fixtures/valid/` with edge cases | 20+ valid fixtures covering all object types |
+| D.1.2 | Expand `spec/fixtures/invalid/` with error cases | 20+ invalid fixtures covering common mistakes |
+| D.1.3 | Conformance test runner: same fixtures → same verdict across CLI, TS SDK, PY SDK, MCP | Automated, in CI |
+| D.1.4 | Add niche/SYN fixtures to conformance suite | Cover all 7 schemas |
+
+### D.2 — MCP Server Audit
+
+| Task | What | Acceptance |
+|------|------|------------|
+| D.2.1 | Audit actual tool list vs documented tool list | Zero mismatches |
+| D.2.2 | Mark each tool as stable / experimental / internal | Documented |
+| D.2.3 | Security boundary tests: reject paths outside workspace root | Automated test |
+| D.2.4 | Security boundary tests: reject sensitive paths (`.env`, `.git/config`, etc.) | Automated test |
 
-#### Task 4.2: Create signal→assessment Chain
-- [ ] backend publishes api.contract.changed signal
-- [ ] frontend generates assessment to judge relevance
+### D.3 — CI Pipeline
+
+| Task | What | Acceptance |
+|------|------|------------|
+| D.3.1 | CLI: build + test on push | GitHub Actions |
+| D.3.2 | SDK-TS: build + test on push | GitHub Actions |
+| D.3.3 | SDK-PY: install + test on push | GitHub Actions |
+| D.3.4 | MCP Server: build + security test on push | GitHub Actions |
+| D.3.5 | VS Code Extension: package on push | GitHub Actions |
+| D.3.6 | Conformance suite: cross-impl on push | GitHub Actions |
 
-#### Task 4.3: Create context→outcome Chain
-- [ ] frontend generates niche context for qa-agent
-- [ ] qa-agent produces outcome
-- [ ] outcome affects frontend status
+---
 
-#### Task 4.4: Create Calibration and SYN Examples
-- [ ] calibration proposal (drift proposal after repeated occurrences)
-- [ ] SYN request (requires human confirmation)
-- [ ] SYN resolution (human decision)
+## Phase E: 1.0 Ship
 
-### Checkpoints
-
-- [ ] Observers can understand the difference between Statuz and ordinary status files from the demo without understanding the entire protocol
-- [ ] Demo clearly shows "why this change is relevant to this agent"
-- [ ] Demo clearly shows "why this collaborator was chosen"
-- [ ] Demo clearly shows "which changes can be handled automatically and which must be escalated to users for decision"
-
-## Phase 5: SYN Project-level MVP
-
-### Goals
-
-First use Statuz itself as the calibrated object to verify whether SYN can truly help users clarify positioning and strategy.
-
-### Tasks
-
-#### Task 5.1: Create Statuz Project niche Manifest
-- [ ] Create project-level niche manifest
-- [ ] Write declared position, does, does_not, strategic bets, success signals
-
-#### Task 5.2: Generate Observed Direction
-- [ ] Observe what the Statuz team is actually doing
-- [ ] Compare declared position with observed behavior
-
-#### Task 5.3: Generate Calibration Proposal
-- [ ] Generate proposal from observed direction
-- [ ] Explain drift rationale
-- [ ] List proposed changes
-
-#### Task 5.4: Generate SYN Request
-- [ ] Request project owner to decide on Core and niche relationship
-- [ ] Include options, benefits, risks, and recommendations
-
-#### Task 5.5: Generate SYN Resolution
-- [ ] Project owner approves an option
-- [ ] Record rationale and effective_date
-
-### Checkpoints
-
-- [ ] SYN must not just ask "which one?"; it must provide evidence, options, benefits, risks, and recommended rationale
-- [ ] Before resolution, the project manifest's formal strategic positioning must not be silently modified
-- [ ] Principal's approval scope must be clear
-- [ ] The number and intrusiveness level of SYN must be controllable
-
-## Execution Reminders
-
-### Don't Make Core Heavier Because the Vision Grows
-
-Core's value comes from simplicity, stability, and ease of adoption. niche and SYN should first appear as optional standards tracks, not immediately requiring all `.statuz/statuz.yaml` files to carry strategy, relationships, calibration, and user approval objects.
-
-### Don't Equate Observation with Authority
-
-Must always uphold:
-- observed niche can be automatically generated
-- calibration proposal can be automatically generated
-- low-risk routing preferences can be automatically adjusted when explicit policy allows
-- permissions, trust, privacy, formal roles, and strategic positioning must NOT automatically take effect based solely on observation
-
-### Don't Turn SYN Into an Annoying Question System
-
-SYN should only be used for decision points that truly require synchronization. Must plan for:
-- Severity levels
-- Merging strategies
-- Deferral strategies
-- Daily or per-cycle request limits
-
-### Don't Split the Repo First
-
-Continue maintaining monorepo in the next phase. One protocol repository; multiple packages; shared schema; shared fixtures; shared conformance tests; shared roadmap and governance.
-
-## Minimum Completion Definition for Next Round Delivery
-
-### Must Deliver
-
-- [x] Updated README positioning section
-- [x] Updated ROADMAP
-- [x] This execution document
-- [ ] Initial technical charter for `docs/NICHE_MANIFEST.md`
-- [ ] Two core ADRs: protocol boundaries, Core/niche layering
-- [ ] Core conformance fixtures planning or first batch of fixtures
-- [ ] Alignment between MCP documentation and actual tool surface
-- [ ] A project-level niche manifest example
-- [ ] A SYN request / resolution example
-
-### Can Be Postponed
-
-- [ ] Complete niche SDK
-- [ ] A2A extension implementation
-- [ ] VS Code / Cursor UI
-- [ ] Dashboard
-- [ ] Large-scale framework adapters
+**The stabilization phase.** After A/B/C/D are substantially done.
+
+### E.1 — Protocol Versioning
+
+| Task | What | Acceptance |
+|------|------|------------|
+| E.1.1 | SPEC.md formal 1.0 version | Tagged, published |
+| E.1.2 | Breaking Change Policy documented | Clear rules for what constitutes breaking |
+| E.1.3 | Version compatibility matrix | Which implementations support which spec versions |
+
+### E.2 — Migration
+
+| Task | What | Acceptance |
+|------|------|------------|
+| E.2.1 | 0.x → 1.0 migration guide | Step-by-step, with before/after examples |
+| E.2.2 | All examples updated to 1.0 | Remove deprecated patterns |
+| E.2.3 | Schema migration scripts (if needed) | Automated upgrade tool |
+
+### E.3 — Security Model
+
+| Task | What | Acceptance |
+|------|------|------------|
+| E.3.1 | Formal security model document | Threat model, trust boundaries, mitigation |
+| E.3.2 | Sensitive data tagging: what must NEVER be in Statuz files | Documented, enforced by validation |
+| E.3.3 | File access permission guide | Best practices for multi-user/multi-agent scenarios |
+
+### E.4 — Publishing & Launch
+
+| Task | What | Acceptance |
+|------|------|------------|
+| E.4.1 | npm publish all packages at 1.0 | All four packages on npm |
+| E.4.2 | Open VSX publish VS Code extension at 1.0 | Available for install |
+| E.4.3 | VS Code Marketplace publish | Available for install |
+| E.4.4 | Landing page / docs site update | Reflects 1.0 status |
+| E.4.5 | "Getting Started in 5 Minutes" guide | New user can try Core immediately |
+
+---
+
+## What We're NOT Doing (Yet)
+
+These are explicitly deferred — mentioned in the vision doc and ADAPTERS.md but not on the critical path:
+
+| Item | Reason |
+|------|--------|
+| Web Dashboard | Semantics not stable enough; VS Code is the right first UI |
+| A2A Transport Implementation | niche context can be expressed in A2A later; don't build transport ourselves |
+| JetBrains Plugin | VS Code first, then expand based on demand |
+| GitHub Actions / Slack Bot | After protocol + VS Code are solid |
+| Large-scale Framework Adapters | After 1.0, when semantics are stable |
+| Cross-Organization Trust Model | Premature without real-world adoption data |
+| Automated Calibration Engine (full) | Start with detection + proposal; full auto-calibration needs trust model |
+| New Agent-Side Intelligence | We're building tools for agents to express status, not a new agent framework |
+
+---
+
+## Execution Order & Dependencies
+
+```
+Phase A (VS Code Extension)
+    ├── A.1 (Syntax) ─────────── can start immediately
+    ├── A.2 (Niche Panel) ────── needs A.1
+    ├── A.3 (SYN Webview) ────── needs A.2, Phase C for content
+    ├── A.4 (VCS Signals) ────── needs Phase B.1
+    └── A.5 (Commands) ──────── can start immediately
+
+Phase B (niche Runtime)
+    ├── B.1 (Signal Gen) ─────── can start immediately
+    ├── B.2 (Assessment) ────── needs B.1
+    ├── B.3 (Outcomes) ──────── needs B.2
+    └── B.4 (Calibration) ───── needs B.3
+
+Phase C (SYN Workflow)
+    ├── C.1 (Triggers) ──────── needs B.4
+    ├── C.2 (Queue) ─────────── needs C.1
+    └── C.3 (VS Code UI) ────── needs A.3 + C.2
+
+Phase D (Conformance) ──────── parallel, any time
+Phase E (1.0) ─────────────── after A+B+C+D substantially done
+```
+
+**Recommended sprint order (for a small team):**
+
+1. **Week 1–2:** A.1 + A.5 (get basic VS Code extension working)
+2. **Week 2–3:** B.1 (signal generator — git watcher)
+3. **Week 3–4:** B.2 + A.2 (assessment engine + niche panel)
+4. **Week 4–5:** B.3 + B.4 (outcomes + calibration detection)
+5. **Week 5–6:** C.1 + C.2 (SYN triggers + queue)
+6. **Week 6–7:** A.3 + C.3 (SYN webview — the crowning feature)
+7. **Week 7–8:** D (conformance + CI cleanup)
+8. **Week 8–9:** E (1.0 stabilization + ship)
+
+---
+
+## For the Next Agent
+
+When you pick up this work:
+
+1. **Read this file first.**
+2. **Read `statuz新构想.md`** for the philosophical grounding.
+3. **Read `ROADMAP.md`** to see what's already checked off.
+4. **Check `packages/vscode-extension/`** — the skeleton is there, it builds, it produces a `.vsix`. Start from that.
+5. **Check `packages/coordination/`** — the signal/SYN REST API exists. The runtime engine (Phase B) should write to the same file formats the coordination pool reads.
+6. **Use `spec/niche/*.schema.json`** as your contract — the runtime engine must produce output that validates against these schemas.
+7. **Use `examples/niche-example/`** as your reference — the demo shows the complete chain. Your engine should automate what the demo shows manually.
+8. **Keep Core simple** — do not add niche/SYN fields to `statuz.yaml`. They live in `.statuz/niche/`.
+9. **All new code = TypeScript** (consistent with existing packages).
+10. **Write your own working memory note** when you finish a meaningful chunk.
+
+### Key Files to Know
+
+```
+Statuz Protocol Specification    → SPEC.md
+Project Vision (Chinese)          → statuz新构想.md
+Development Rules for Agents      → AGENTS.md
+JSON Schemas (contract)           → spec/niche/*.schema.json
+Reference Examples                → examples/niche-example/
+VS Code Extension (start here)    → packages/vscode-extension/src/
+Coordination Pool (REST API)      → packages/coordination/src/
+```
+
+---
+
+*This plan is a living document. If you discover a better order, update it. If a task turns out to be harder than expected, split it. The goal is not to follow the plan blindly — it's to ship niche and SYN as real, working features.*

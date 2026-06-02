@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname, resolve, basename } from "node:path";
+import { dirname, resolve } from "node:path";
 import YAML from "yaml";
 import AjvImport from "ajv";
 import addFormatsImport from "ajv-formats";
@@ -28,24 +28,244 @@ function loadYaml(path: string): unknown {
   }
 }
 
-function loadSchema(): Record<string, unknown> {
-  const candidates = [
-    resolve(process.cwd(), "spec/statuz.schema.json"),
-    resolve(dirname(import.meta.dirname), "../../spec/statuz.schema.json"),
-    resolve(dirname(import.meta.dirname), "../../../spec/statuz.schema.json")
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      try {
-        return JSON.parse(readFileSync(candidate, "utf8"));
-      } catch {
-        continue;
+const STATUZ_SCHEMA = {
+  "$id": "https://oasiscompany.org/schemas/statuz-0.1.schema.json",
+  "title": "Statuz 0.1",
+  "description": "AI Agent Runtime Status Protocol document",
+  "type": "object",
+  "required": [
+    "statuz_version",
+    "identity",
+    "current_state"
+  ],
+  "properties": {
+    "statuz_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "identity": {
+      "type": "object",
+      "required": [
+        "agent_name",
+        "project_name"
+      ],
+      "properties": {
+        "agent_name": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "role": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "responsibilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "goal": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string"
+        },
+        "secondary": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "current_state": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "last_checkpoint": {
+          "type": "string"
+        },
+        "next_action": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "progress": {
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "relations": {
+      "type": "object",
+      "properties": {
+        "related_agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_projects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agent_graph": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "type"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "rules": {
+      "type": "object",
+      "properties": {
+        "should": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "should_not": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "summary"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "next_action": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
       }
     }
-  }
-  console.error("Error: Could not find statuz.schema.json. Try running from the project root.");
-  process.exit(1);
-}
+  },
+  "additionalProperties": true
+};
 
 function createInitialStatus(agent: string, project: string): StatuzDocument {
   return {
@@ -148,10 +368,9 @@ program
   .action((file) => {
     const filePath = resolve(process.cwd(), file);
     const doc = loadYaml(filePath);
-    const schema = loadSchema();
     const ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(ajv);
-    const validate = ajv.compile(schema);
+    const validate = ajv.compile(STATUZ_SCHEMA);
     const ok = validate(doc);
     if (!ok) {
       console.error(`Error: Invalid Statuz file: ${filePath}`);

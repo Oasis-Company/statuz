@@ -386,6 +386,20 @@ That sentence is Statuz.
 
 ---
 
+## 📚 Documentation Map
+
+| Document | Purpose |
+|----------|---------|
+| **[ROOT_README.md](ROOT_README.md)** | Repository overview with architecture and package status |
+| **[SPEC.md](SPEC.md)** | Core Protocol specification (Core, niche, SYN layers) |
+| **[ADAPTERS.md](ADAPTERS.md)** | External Adapters guide (CLI, SDK, MCP, VS Code, Cloud) |
+| **[CLAUDE_CODE_INTEGRATION.md](CLAUDE_CODE_INTEGRATION.md)** | Complete user journey for Claude Code agents |
+| **[ROADMAP.md](ROADMAP.md)** | Development plan and staged priorities |
+| **[examples/](examples/)** | Ready-to-use Statuz file templates |
+| **[docs/](docs/)** | Architecture decisions and smoke tests |
+
+---
+
 ## 🤝 Contributors
 
 This project is maintained by:

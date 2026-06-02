@@ -1,238 +1,275 @@
-<div align="center">
-  <img src="assets/statuz-logo.svg" alt="Statuz Logo" width="100" />
-</div>
+# Statuz Core Protocol Specification
 
-# Statuz 0.1 Specification Draft
+> **The open standard for AI agent situated alignment.**
 
-Status: Draft 0.1  
-Owner: Oasis Company  
-Scope: AI Agent Runtime Status Protocol
+---
 
-## 1. Purpose
+## 🎯 What is the Statuz Protocol?
 
-Statuz defines a small, portable, machine-readable status format for AI agents.
+The Statuz Protocol is an **open, file-based standard** for AI agents to express their current state, ecological position, and strategic alignment needs.
 
-The goal is to let an agent recover, explain, transfer, and coordinate its current state across:
+It answers three questions:
+- **Who am I?** (Identity & Role)
+- **Where am I?** (Current State & Ecosystem Position)
+- **When do I need human direction?** (SYN Triggers)
 
-- sessions;
-- tasks;
-- tools;
-- IDEs;
-- products;
-- organizations;
-- agent teams;
-- long-running creative or engineering workflows.
+---
 
-## 2. Core distinction
+## 📁 Protocol Files
 
-Statuz is different from memory.
+### Core File: `.statuz/statuz.yaml`
 
-Memory answers:
-
-> What is known?
-
-Statuz answers:
-
-> What is happening now?
-
-A memory system may contain millions of embeddings, facts, files, notes, and transcripts. A Statuz object should be compact enough to load at the beginning of a session.
-
-## 3. Canonical file locations
-
-An implementation SHOULD support at least one of the following locations:
-
-```text
-.statuz/statuz.yaml
-.statuz/status.yaml
-statuz.yaml
-statuz/status.yaml
-```
-
-For project-local agents, `.statuz/statuz.yaml` is recommended.
-
-For shared workspace agents, `statuz/status.yaml` is acceptable.
-
-## 4. Required top-level fields
-
-A valid Statuz 0.1 document MUST include:
+The primary runtime status file that every AI agent project should include.
 
 ```yaml
 statuz_version: "0.1"
-identity: {}
-current_state: {}
-```
-
-A useful Statuz document SHOULD include:
-
-```yaml
-role: {}
-goal: {}
-progress: {}
-relations: {}
-rules: {}
-checkpoints: []
-```
-
-## 5. Top-level object
-
-```yaml
-statuz_version: "0.1"
-updated_at: "2026-05-27T12:00:00Z"
 
 identity:
   agent_name: dev-agent
-  agent_id: optional-stable-id
-  project_name: example-project
-  organization: Oasis Company
-  environment: local-dev
+  project_name: my-project
+  organization: my-org
+  environment: development
 
 role:
-  name: implementation-assistant
+  name: coding-assistant
   responsibilities:
-    - implement code
-    - preserve architecture
+    - implement features
+    - write tests
+    - maintain code quality
   boundaries:
-    - do not deploy without user approval
+    - do not modify production directly
+    - escalate security issues
 
 current_state:
   stage: implementation
-  task: add status persistence
+  task: add user authentication
   status: in_progress
-  last_checkpoint: schema drafted
-  next_action: implement validation
+  last_checkpoint: "cp-042"
+  next_action: implement login endpoint
 
 progress:
   completed:
-    - created schema draft
+    - created database schema
+    - set up authentication middleware
   blocked_by:
-    - choose persistence backend
+    - waiting for API design review
   open_questions:
-    - should status be YAML or JSON by default?
+    - should we use JWT or session-based auth?
 
 relations:
   related_agents:
+    - review-agent
     - doc-agent
   related_projects:
-    - MuseRock
+    - shared-lib
+    - auth-service
   related_files:
-    - apps/api/src/memory
+    - src/auth/login.ts
+    - src/auth/register.ts
   related_tools:
+    - claude-code
     - git
-    - test-runner
 
 rules:
   should:
-    - read Statuz at session start
-    - write checkpoint after important decisions
+    - read .statuz/statuz.yaml at session start
+    - write checkpoint after meaningful progress
+    - update current_state.task when switching tasks
   should_not:
-    - overwrite existing checkpoints without appending history
+    - store secrets or API keys
+    - skip tests
+    - merge without review
 
 checkpoints:
-  - id: cp-001
-    at: "2026-05-27T12:00:00Z"
-    summary: Created initial Statuz draft.
-    next_action: Implement CLI validation.
+  - id: cp-042
+    at: 2026-06-02T10:30:00Z
+    summary: implemented login endpoint, tests passing
+    next_action: implement logout endpoint
 ```
 
-## 6. Status values
+---
 
-The `current_state.status` field SHOULD use one of:
+## 🌍 Three-Layer Architecture
 
-- `idle`
-- `in_progress`
-- `blocked`
-- `waiting_for_user`
-- `waiting_for_tool`
-- `completed`
-- `paused`
-- `failed`
+### Layer 1: Core (Runtime Status)
+**What it tracks:** Identity, current task, progress, next action.
 
-Custom values MAY be used, but tools SHOULD preserve unknown values instead of rejecting them.
+| Field | Purpose |
+|-------|---------|
+| `identity` | Who is this agent? What project? |
+| `role` | What are its responsibilities and boundaries? |
+| `current_state` | What is it doing right now? |
+| `progress` | What has been completed? What is blocked? |
+| `relations` | What is connected to this project? |
+| `rules` | What should/should not it do? |
+| `checkpoints` | History of meaningful progress points |
 
-## 7. Stage values
+### Layer 2: niche (Ecological Position)
+**What it tracks:** Where this project stands in the ecosystem.
 
-`current_state.stage` is domain-specific.
+| File | Purpose |
+|-------|---------|
+| `niche/manifest.yaml` | Project's ecological identity and purpose |
+| `niche/signals/*.yaml` | Changes detected in the ecosystem |
+| `niche/assessments/*.yaml` | Impact analysis of signals |
+| `niche/contexts/*.yaml` | Context records of calibration sessions |
+| `niche/calibrations/*.yaml` | Calibration proposals |
 
-Examples:
+**See also:** [niche Schema Reference](spec/niche/)
 
-- software: `planning`, `implementation`, `testing`, `review`, `release`;
-- writing: `prime`, `drafting`, `reflection`, `revision`;
-- research: `scoping`, `searching`, `reading`, `synthesizing`, `writing`;
-- support: `triage`, `investigation`, `resolution`, `followup`.
+### Layer 3: SYN (Strategic Synchronization)
+**What it tracks:** When human direction is required.
 
-## 8. Checkpoints
+| File | Purpose |
+|-------|---------|
+| `niche/syn/*.yaml` | Strategic decision requests and resolutions |
 
-Checkpoints are compact decision records. They SHOULD NOT be full transcripts.
+---
 
-A checkpoint SHOULD contain:
+## 🔄 The Statuz Loop
 
-- `id`;
-- `at`;
-- `summary`;
-- `decision` when relevant;
-- `evidence` when relevant;
-- `next_action`.
-
-## 9. Agent coordination
-
-`relations.related_agents` names other agents that may be relevant to the current state.
-
-A multi-agent system MAY extend this with relationship metadata:
-
-```yaml
-relations:
-  agent_graph:
-    - from: dev-agent
-      to: qa-agent
-      type: requests_validation_from
-    - from: doc-agent
-      to: dev-agent
-      type: consumes_output_from
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   Agent Session Start                                       │
+│   ┌─────────────────────────────────────────────────┐     │
+│   │ 1. READ .statuz/statuz.yaml                     │     │
+│   │    → "I am dev-agent, working on auth..."      │     │
+│   └─────────────────────────────────────────────────┘     │
+│                          │                                 │
+│                          ▼                                 │
+│   ┌─────────────────────────────────────────────────┐     │
+│   │ 2. EXECUTE task                                  │     │
+│   │    → Implement login endpoint                    │     │
+│   └─────────────────────────────────────────────────┘     │
+│                          │                                 │
+│                          ▼                                 │
+│   ┌─────────────────────────────────────────────────┐     │
+│   │ 3. WRITE checkpoint                              │     │
+│   │    → "completed: login endpoint"                 │     │
+│   └─────────────────────────────────────────────────┘     │
+│                          │                                 │
+│                          ▼                                 │
+│   ┌─────────────────────────────────────────────────┐     │
+│   │ 4. CHECK niche signals                           │     │
+│   │    → "auth-lib changed, impact?"                 │     │
+│   └─────────────────────────────────────────────────┘     │
+│                          │                                 │
+│                          ▼                                 │
+│   ┌─────────────────────────────────────────────────┐     │
+│   │ 5. EVALUATE SYN triggers                        │     │
+│   │    → "Should I ask human about architecture?"   │     │
+│   └─────────────────────────────────────────────────┘     │
+│                          │                                 │
+│                          ▼                                 │
+│   Agent Session End (or Interrupted)                       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 10. Reading and writing rules
+---
 
-A Statuz-aware agent SHOULD:
+## 📋 Schema Reference
 
-1. read Statuz at session start;
-2. summarize the recovered state to the user when helpful;
-3. update Statuz after meaningful progress;
-4. append checkpoints rather than overwriting history;
-5. keep Statuz compact;
-6. avoid storing secrets;
-7. avoid storing private personal data unless explicitly required and approved.
+### Core Schemas
 
-## 11. Security and privacy
+| Schema | File | Purpose |
+|--------|------|---------|
+| Statuz Core | [statuz.schema.json](spec/statuz.schema.json) | Runtime status validation |
+| niche Manifest | [niche-manifest.schema.json](spec/niche/niche-manifest.schema.json) | Ecological identity |
+| niche Signal | [niche-signal.schema.json](spec/niche/niche-signal.schema.json) | Ecosystem change signals |
+| niche Assessment | [niche-assessment.schema.json](spec/niche/niche-assessment.schema.json) | Impact analysis |
+| niche Context | [niche-context.schema.json](spec/niche/niche-context.schema.json) | Calibration records |
+| niche Calibration | [niche-calibration.schema.json](spec/niche/niche-calibration.schema.json) | Calibration proposals |
+| niche SYN | [niche-syn.schema.json](spec/niche/niche-syn.schema.json) | Strategic requests |
 
-Statuz files may contain sensitive task context. Implementations SHOULD:
+---
 
-- avoid secrets;
-- support `.gitignore` patterns for private local status;
-- allow project owners to decide whether `.statuz/` is committed;
-- separate public role/status data from private runtime data.
+## 🔧 Validation
 
-## 12. Compatibility
+### Validate a Statuz file
 
-Statuz may be used with:
+```bash
+# Using CLI
+statuz validate .statuz/statuz.yaml
 
-- CLI agents;
-- IDE agents;
-- MCP servers;
-- Agent Skills;
-- writing agents;
-- research agents;
-- customer-support agents;
-- multi-agent orchestration frameworks.
+# Using SDK
+import { Statuz } from '@statuz/sdk-ts';
+const statuz = new Statuz();
+const result = await statuz.validate('.statuz/statuz.yaml');
+```
 
-## 13. Non-goals for 0.1
+### Common Validation Errors
 
-Statuz 0.1 does not define:
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `statuz_version must be "0.1"` | Wrong version | Use `"0.1"` |
+| `identity.agent_name is required` | Missing field | Add required fields |
+| `current_state.status must be string` | Wrong type | Use string value |
 
-- a network protocol;
-- a vector store;
-- a complete permissions model;
-- a dashboard API;
-- a mandatory database;
-- a universal ontology for every possible agent.
+---
 
-Those may appear in later versions.
+## 🚀 Quick Start
+
+### 1. Initialize a project
+
+```bash
+npm install -g @statuz/statuz
+statuz init --agent "my-agent" --project "my-project"
+```
+
+### 2. Agent reads at session start
+
+```bash
+statuz resume .statuz/statuz.yaml
+```
+
+### 3. Agent writes after progress
+
+```bash
+# Manual checkpoint
+statuz checkpoint --summary "implemented login" --next "implement logout"
+```
+
+### 4. Validate before committing
+
+```bash
+statuz validate .statuz/statuz.yaml
+```
+
+---
+
+## 📖 For More Information
+
+- **[CLAUDE_CODE_INTEGRATION.md](CLAUDE_CODE_INTEGRATION.md)** - How AI agents should use Statuz
+- **[ADAPTERS.md](ADAPTERS.md)** - Tools and implementations
+- **[TUTORIAL.md](docs/TUTORIAL.md)** - Step-by-step guide
+
+---
+
+## 🔄 Versioning Policy
+
+The Statuz Protocol uses semantic versioning for schemas:
+
+- **Major version** (1.0): Breaking changes to structure
+- **Minor version** (0.2): Backward-compatible additions
+- **Patch version** (0.1.1): Bug fixes, clarifications
+
+Current version: **0.1** (stable)
+
+---
+
+## 🤝 Contributing to the Protocol
+
+To propose changes to the protocol:
+
+1. Open an issue describing the proposed change
+2. Provide use cases and examples
+3. Include JSON Schema updates if applicable
+4. Show backward compatibility impact
+
+---
+
+## 📄 License
+
+Apache-2.0
