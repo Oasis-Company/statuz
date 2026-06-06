@@ -1,0 +1,31 @@
+# Example: A single Arrow
+# Demonstrates the atomic unit of the 66 topological layer
+
+id: "arrow-auth-dep"
+source: "api-gateway"
+target: "auth-service"
+type: "dependency"
+description: "API Gateway requires Auth Service for request authentication"
+
+properties:
+  reason: "All incoming requests must be validated before routing to backend services"
+  criticality: "critical"
+  weight: 1.0
+
+type_properties:
+  dependency_type: "hard"
+  failure_mode: "All API requests return 401 Unauthorized if auth service is unavailable"
+
+temporal:
+  effective_from: "2026-01-01T00:00:00Z"
+  # effective_until: null  # indefinite
+
+tags:
+  - "authentication"
+  - "critical-path"
+
+metadata:
+  discovered_at: "2026-06-06T10:30:00Z"
+  confidence: 1.0
+  detector_id: "manual-entry"
+  discovery_method: "manual"

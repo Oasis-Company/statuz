@@ -1,0 +1,28 @@
+# Example: A single StatuNode
+# Demonstrates a node in the 66 topological layer
+
+id: "auth-service"
+type: "component"
+name: "Authentication Service"
+description: "Handles user authentication, token issuance, and session management for all API requests"
+
+properties:
+  technology: "Node.js / Express"
+  interface_type: "api"
+
+labels:
+  - "backend"
+  - "security"
+  - "shared-service"
+
+tags:
+  - "v1.2.0"
+  - "production"
+
+status: "active"
+
+metadata:
+  created_at: "2026-01-15T08:00:00Z"
+  updated_at: "2026-06-01T14:30:00Z"
+  created_by: "dev-team"
+  source: "manual"

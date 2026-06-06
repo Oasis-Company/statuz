@@ -1,0 +1,113 @@
+# Example: Custom StatuNode Types
+# Demonstrates extensibility — you are not limited to the 7 built-in types
+
+arrow_map_version: "0.1.0"
+id: "org:custom-infrastructure-v1"
+name: "Custom Infrastructure Topology"
+niche_category: "infrastructure"
+version: "1.0.0"
+status: "draft"
+  description: "Example of custom node types for a Kubernetes-based infrastructure"
+
+nodes:
+  # Built-in type: component
+  - id: "api-gateway"
+    type: "component"
+    name: "API Gateway"
+    properties:
+      technology: "Kong"
+      interface_type: "api"
+
+  # Custom type: microservice:service
+  - id: "user-service"
+    type: "microservice:service"
+    name: "User Service"
+    description: "A microservice in the service mesh"
+    properties:
+      # Custom properties for microservice:service type
+      service_mesh: "istio"
+      namespace: "production"
+      replicas: 3
+      circuit_breaker: true
+      retry_policy: "3x exponential"
+
+  # Custom type: k8s:deployment
+  - id: "user-deployment"
+    type: "k8s:deployment"
+    name: "User Service Deployment"
+    description: "Kubernetes deployment for User Service"
+    properties:
+      # Custom properties for k8s:deployment type
+      kind: "Deployment"
+      api_version: "apps/v1"
+      strategy: "RollingUpdate"
+      max_surge: "25%"
+      max_unavailable: "0"
+
+  # Custom type: org:squad
+  - id: "platform-squad"
+    type: "org:squad"
+    name: "Platform Squad"
+    description: "Cross-functional team owning platform services"
+    properties:
+      # Custom properties for org:squad type
+      squad_size: 8
+      reporting_line: "Engineering"
+      product_owner: "alice@example.com"
+      tech_lead: "bob@example.com"
+
+  # Custom type: cloud:bucket
+  - id: "assets-bucket"
+    type: "cloud:bucket"
+    name: "Static Assets S3 Bucket"
+    properties:
+      # Custom properties for cloud:bucket type
+      provider: "aws"
+      region: "us-east-1"
+      storage_class: "STANDARD"
+      versioning: true
+      encryption: "AES256"
+
+arrows:
+  - id: "arrow-gateway-user"
+    source: "api-gateway"
+    target: "user-service"
+    type: "information_flow"
+    properties:
+      reason: "Gateway routes user requests"
+      criticality: "high"
+    type_properties:
+      protocol: "HTTP/REST"
+
+  - id: "arrow-user-deployment"
+    source: "user-service"
+    target: "user-deployment"
+    type: "dependency"
+    properties:
+      reason: "Service requires deployment to run"
+      criticality: "critical"
+    type_properties:
+      dependency_type: "hard"
+
+  - id: "arrow-squad-resp"
+    source: "platform-squad"
+    target: "user-service"
+    type: "responsibility"
+    properties:
+      reason: "Platform squad owns user service"
+      criticality: "high"
+
+  - id: "arrow-bucket-assets"
+    source: "user-service"
+    target: "assets-bucket"
+    type: "resource_transfer"
+    properties:
+      reason: "User service stores avatars in S3"
+      criticality: "medium"
+    type_properties:
+      resource_type: "storage"
+      allocation: "100GB"
+
+metadata:
+  created_at: "2026-06-06T00:00:00Z"
+  author: "Platform Team"

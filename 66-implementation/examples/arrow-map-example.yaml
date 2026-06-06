@@ -1,0 +1,272 @@
+# Example: A complete Arrow Map
+# Demonstrates a microservice backend topology using the 66 layer
+
+arrow_map_version: "0.1.0"
+id: "niche:microservice-backend-v1"
+name: "Microservice Backend Topology"
+description: >
+  A reusable topology for a typical microservice backend architecture.
+  Includes API gateway, authentication, core services, and database layers.
+  Can be instantiated across multiple projects.
+
+niche_category: "microservice-backend"
+version: "1.0.0"
+status: "stable"
+
+namespaces:
+  statuz: "https://statuz.org/nodes/"
+  local: "./"
+
+storage:
+  canonical_path: "~/.statuz/maps/niche:microservice-backend-v1@1.0.0.yaml"
+  registry: "https://statuz.org/maps/"
+  local_cache: "~/.statuz/maps/"
+
+nodes:
+  - id: "api-gateway"
+    type: "component"
+    name: "API Gateway"
+    description: "Entry point for all API requests. Handles routing, rate limiting, and initial auth checks."
+    properties:
+      technology: "Kong / Nginx"
+      interface_type: "api"
+    labels: ["infrastructure", "edge"]
+    status: "active"
+
+  - id: "auth-service"
+    type: "component"
+    name: "Authentication Service"
+    description: "Handles user authentication, token issuance, and session validation."
+    properties:
+      technology: "Node.js / Express"
+      interface_type: "api"
+    labels: ["backend", "security"]
+    status: "active"
+
+  - id: "user-service"
+    type: "component"
+    name: "User Service"
+    description: "Manages user profiles, preferences, and account data."
+    properties:
+      technology: "Python / FastAPI"
+      interface_type: "api"
+    labels: ["backend", "domain"]
+    status: "active"
+
+  - id: "order-service"
+    type: "component"
+    name: "Order Service"
+    description: "Handles order creation, processing, and lifecycle management."
+    properties:
+      technology: "Go"
+      interface_type: "api"
+    labels: ["backend", "domain"]
+    status: "active"
+
+  - id: "user-db"
+    type: "component"
+    name: "User Database"
+    description: "PostgreSQL database for user data."
+    properties:
+      technology: "PostgreSQL 15"
+      interface_type: "service"
+    labels: ["database", "persistent"]
+    status: "active"
+
+  - id: "order-db"
+    type: "component"
+    name: "Order Database"
+    description: "PostgreSQL database for order data."
+    properties:
+      technology: "PostgreSQL 15"
+      interface_type: "service"
+    labels: ["database", "persistent"]
+    status: "active"
+
+  - id: "dev-team"
+    type: "person"
+    name: "Backend Development Team"
+    description: "Team responsible for maintaining backend services."
+    properties:
+      role: "Backend Engineering"
+      timezone: "UTC+8"
+    labels: ["team", "backend"]
+    status: "active"
+
+  - id: "api-spec"
+    type: "knowledge"
+    name: "API Specification"
+    description: "OpenAPI specification for all public endpoints."
+    properties:
+      knowledge_type: "specification"
+      source_url: "https://docs.example.com/api"
+    labels: ["documentation", "contract"]
+    status: "active"
+
+  - id: "compute-budget"
+    type: "resource"
+    name: "AWS Compute Budget"
+    description: "Monthly compute budget for all backend services."
+    properties:
+      resource_type: "compute"
+      allocation: "$5000/month"
+      provider: "AWS"
+    labels: ["budget", "infrastructure"]
+    status: "active"
+
+arrows:
+  - id: "arrow-gateway-auth"
+    source: "api-gateway"
+    target: "auth-service"
+    type: "dependency"
+    description: "API Gateway delegates authentication to Auth Service"
+    properties:
+      reason: "All requests must be authenticated before routing"
+      criticality: "critical"
+      weight: 1.0
+    type_properties:
+      dependency_type: "hard"
+      failure_mode: "All requests rejected with 401"
+
+  - id: "arrow-gateway-user"
+    source: "api-gateway"
+    target: "user-service"
+    type: "information_flow"
+    description: "API Gateway routes user-related requests to User Service"
+    properties:
+      reason: "User endpoints are handled by User Service"
+      criticality: "high"
+      weight: 0.8
+    type_properties:
+      direction: "unidirectional"
+      information_type: "REST API requests"
+      protocol: "HTTP/JSON"
+
+  - id: "arrow-gateway-order"
+    source: "api-gateway"
+    target: "order-service"
+    type: "information_flow"
+    description: "API Gateway routes order-related requests to Order Service"
+    properties:
+      reason: "Order endpoints are handled by Order Service"
+      criticality: "high"
+      weight: 0.8
+    type_properties:
+      direction: "unidirectional"
+      information_type: "REST API requests"
+      protocol: "HTTP/JSON"
+
+  - id: "arrow-user-db"
+    source: "user-service"
+    target: "user-db"
+    type: "dependency"
+    description: "User Service depends on User Database"
+    properties:
+      reason: "User data must be persisted"
+      criticality: "critical"
+      weight: 1.0
+    type_properties:
+      dependency_type: "hard"
+      failure_mode: "User operations fail with 500"
+
+  - id: "arrow-order-db"
+    source: "order-service"
+    target: "order-db"
+    type: "dependency"
+    description: "Order Service depends on Order Database"
+    properties:
+      reason: "Order data must be persisted"
+      criticality: "critical"
+      weight: 1.0
+    type_properties:
+      dependency_type: "hard"
+      failure_mode: "Order operations fail with 500"
+
+  - id: "arrow-team-resp"
+    source: "dev-team"
+    target: "api-gateway"
+    type: "responsibility"
+    description: "Backend team is responsible for API Gateway uptime"
+    properties:
+      reason: "Team owns all backend infrastructure"
+      criticality: "high"
+      weight: 0.9
+    type_properties:
+      responsibility_scope: "Deployment, monitoring, and incident response"
+      escalation_path: "page on-call engineer"
+
+  - id: "arrow-team-auth"
+    source: "dev-team"
+    target: "auth-service"
+    type: "responsibility"
+    description: "Backend team is responsible for Auth Service"
+    properties:
+      reason: "Team owns authentication infrastructure"
+      criticality: "critical"
+      weight: 1.0
+
+  - id: "arrow-spec-validate"
+    source: "api-spec"
+    target: "api-gateway"
+    type: "validation"
+    description: "API Spec validates API Gateway contract compliance"
+    properties:
+      reason: "Gateway must conform to published API contract"
+      criticality: "high"
+      weight: 0.8
+    type_properties:
+      validation_type: "test"
+      required: true
+
+  - id: "arrow-budget-transfer"
+    source: "compute-budget"
+    target: "api-gateway"
+    type: "resource_transfer"
+    description: "Compute budget allocated to API Gateway infrastructure"
+    properties:
+      reason: "Gateway needs compute resources to serve traffic"
+      criticality: "medium"
+      weight: 0.5
+    type_properties:
+      resource_type: "compute"
+      allocation: "$800/month"
+
+  - id: "arrow-user-order"
+    source: "user-service"
+    target: "order-service"
+    type: "information_flow"
+    description: "User Service sends user context to Order Service"
+    properties:
+      reason: "Orders need user identity and profile data"
+      criticality: "medium"
+      weight: 0.6
+    type_properties:
+      direction: "unidirectional"
+      information_type: "user context"
+      protocol: "gRPC"
+
+invariants:
+  - description: "Every service component must have at least one dependency arrow"
+    severity: "error"
+  - description: "Database components must have exactly one incoming dependency from a service"
+    severity: "warning"
+  - description: "Critical components must have a responsibility arrow assigned"
+    severity: "error"
+
+templates:
+  - name: "project_name"
+    description: "Name of the project instantiating this topology"
+    required: true
+  - name: "team_name"
+    description: "Name of the team responsible for this instance"
+    default: "Backend Team"
+  - name: "database_tier"
+    description: "Database tier (shared or dedicated)"
+    default: "dedicated"
+
+metadata:
+  created_at: "2026-06-06T00:00:00Z"
+  updated_at: "2026-06-06T00:00:00Z"
+  author: "Statuz Core Team"
+  organization: "Statuz Project"
+  license: "MIT"

@@ -1,0 +1,49 @@
+# Example: How a project references an Arrow Map
+# Arrow Maps are independent of projects. This file lives in .statuz/statuz.yaml
+
+statuz_version: "0.1"
+
+identity:
+  agent_name: "backend-agent"
+  project_name: "my-ecommerce-app"
+  organization: "MyOrg"
+
+# Arrow Map reference — the map itself is stored in a registry, not in this file
+arrow_map:
+  map_id: "niche:microservice-backend-v1"
+  version: "1.0.0"
+  instance_id: "my-ecommerce-backend"
+  registry: "https://statuz.org/maps/"
+  local_cache: "~/.statuz/maps/niche:microservice-backend-v1@1.0.0.yaml"
+
+  # Template parameters for this instance
+  parameters:
+    project_name: "my-ecommerce-app"
+    team_name: "Platform Team"
+    database_tier: "dedicated"
+
+  # Project-specific extensions (optional)
+  extensions:
+    nodes:
+      - id: "payment-service"
+        type: "microservice:service"  # Custom node type
+        name: "Payment Service"
+        description: "Handles payment processing via Stripe"
+        properties:
+          service_mesh: "istio"
+          circuit_breaker: true
+          payment_provider: "stripe"
+    arrows:
+      - id: "arrow-payment-gateway"
+        source: "api-gateway"
+        target: "payment-service"
+        type: "information_flow"
+        properties:
+          reason: "Payment requests routed to Payment Service"
+          criticality: "critical"
+
+current_state:
+  stage: "implementation"
+  task: "integrate-payment-service"
+  status: "in_progress"
+  next_action: "add payment arrow to Arrow Map"

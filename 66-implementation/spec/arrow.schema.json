@@ -1,0 +1,223 @@
+{
+  "$id": "https://statuz.org/schemas/66/arrow.schema.json",
+  "title": "66 Arrow Schema",
+  "description": "JSON Schema for a directed relationship (Arrow) between two StatuNodes in the 66 topological layer",
+  "type": "object",
+  "required": [
+    "id",
+    "source",
+    "target",
+    "type"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this arrow within its Arrow Map",
+      "examples": ["arrow-001", "dep-auth-service"]
+    },
+    "source": {
+      "type": "string",
+      "description": "ID of the originating StatuNode. May be a URI (statuz:node:<id>) or a local ID resolved within the map's namespace",
+      "examples": ["statuz:node:auth-service", "doc-agent"]
+    },
+    "target": {
+      "type": "string",
+      "description": "ID of the receiving StatuNode. May be a URI or a local ID",
+      "examples": ["statuz:node:user-db", "api-gateway"]
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "dependency",
+        "information_flow",
+        "responsibility",
+        "validation",
+        "resource_transfer",
+        "influence",
+        "constraint"
+      ],
+      "description": "The semantic meaning of this relationship. Each type has defined executable semantics."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable explanation of what this arrow represents"
+    },
+    "properties": {
+      "type": "object",
+      "description": "Type-specific metadata for this arrow. Structure varies by arrow type.",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Why this arrow exists"
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium",
+          "description": "How severely the source would be affected if this arrow were broken"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5,
+          "description": "Numeric strength of the relationship (0.0 = weak, 1.0 = strong)"
+        }
+      },
+      "additionalProperties": true
+    },
+    "type_properties": {
+      "type": "object",
+      "description": "Extended properties specific to the arrow type",
+      "oneOf": [
+        {
+          "$comment": "dependency type properties",
+          "properties": {
+            "dependency_type": {
+              "type": "string",
+              "enum": ["hard", "soft", "optional"],
+              "default": "hard",
+              "description": "hard = source cannot function without target; soft = degraded functionality; optional = nice to have"
+            },
+            "failure_mode": {
+              "type": "string",
+              "description": "What happens when the target is unavailable"
+            }
+          }
+        },
+        {
+          "$comment": "information_flow type properties",
+          "properties": {
+            "direction": {
+              "type": "string",
+              "enum": ["unidirectional", "bidirectional"],
+              "default": "unidirectional"
+            },
+            "information_type": {
+              "type": "string",
+              "description": "What kind of information flows (e.g., 'events', 'commands', 'queries', 'config')"
+            },
+            "protocol": {
+              "type": "string",
+              "description": "The protocol or format used (e.g., 'REST', 'gRPC', 'WebSocket', 'YAML')"
+            }
+          }
+        },
+        {
+          "$comment": "responsibility type properties",
+          "properties": {
+            "responsibility_scope": {
+              "type": "string",
+              "description": "What the source is responsible for regarding the target"
+            },
+            "escalation_path": {
+              "type": "string",
+              "description": "Who to contact if the source cannot fulfill this responsibility"
+            }
+          }
+        },
+        {
+          "$comment": "validation type properties",
+          "properties": {
+            "validation_type": {
+              "type": "string",
+              "enum": ["approval", "review", "test", "audit"],
+              "description": "What kind of validation the source performs"
+            },
+            "required": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether validation is mandatory before target changes"
+            }
+          }
+        },
+        {
+          "$comment": "resource_transfer type properties",
+          "properties": {
+            "resource_type": {
+              "type": "string",
+              "description": "What kind of resource (e.g., 'compute', 'budget', 'storage', 'tokens')"
+            },
+            "allocation": {
+              "type": "string",
+              "description": "How much or what portion is transferred"
+            }
+          }
+        },
+        {
+          "$comment": "influence type properties",
+          "properties": {
+            "influence_mechanism": {
+              "type": "string",
+              "description": "How the source influences the target (e.g., 'policy', 'culture', 'incentives')"
+            }
+          }
+        },
+        {
+          "$comment": "constraint type properties",
+          "properties": {
+            "constraint_type": {
+              "type": "string",
+              "enum": ["temporal", "spatial", "logical", "policy"],
+              "description": "The nature of the constraint"
+            },
+            "constraint_expression": {
+              "type": "string",
+              "description": "A machine-readable expression of the constraint (if applicable)"
+            }
+          }
+        }
+      ]
+    },
+    "temporal": {
+      "type": "object",
+      "description": "Optional time bounds for when this arrow is active",
+      "properties": {
+        "effective_from": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this arrow becomes active"
+        },
+        "effective_until": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this arrow expires (null = indefinite)"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional tags for filtering and categorization"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata (discovered_at, confidence, detector_id, etc.)",
+      "properties": {
+        "discovered_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence that this arrow actually exists (1.0 = confirmed, 0.0 = speculative)"
+        },
+        "detector_id": {
+          "type": "string",
+          "description": "ID of the detector that discovered this arrow"
+        },
+        "discovery_method": {
+          "type": "string",
+          "enum": ["manual", "inferred", "detected", "imported"],
+          "default": "manual"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
