@@ -275,14 +275,15 @@ arrows:
 - Define `statu-node.schema.json`
 - Define `arrow-map.schema.json`
 - Create example YAML files
-- **Status:** IN PROGRESS
+- **Status:** ✅ COMPLETED
 
 ### Phase 2: CLI Integration
 
 - `statuz arrow-map init` — Create a new Arrow Map
 - `statuz arrow-map validate` — Validate an Arrow Map
 - `statuz arrow-map detect` — Run the detector to discover arrows
-- `statuz arrow-map instantiate <map-id>` — Instantiate a map in current project
+- `statuz arrow-map instantiate <map-id>` — Instantiate a map in current project (future)
+- **Status:** ✅ CLI MVP COMPLETED
 
 ### Phase 3: Runtime Engine
 

@@ -7,14 +7,16 @@
 
 ---
 
-> ⚠️ **Status: Early Design Phase**
+> 🔧 **Status: Implementation in Progress**
 >
-> This directory contains the foundational specifications for the next evolution of Statuz.
+> This directory contains the 66 layer implementation for Statuz.
 > What you see here is not an incremental update. It is a new layer.
 >
 > **Arrow Maps. StatuNodes. Niche Topologies.**
 >
-> The 66 Manifesto declared the vision. This is where we build it.
+> The 66 Manifesto declared the vision. Now we're building it.
+>
+> **See `docs/CLI_USAGE.md` to get started with the CLI commands!**
 
 ---
 

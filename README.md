@@ -115,12 +115,16 @@ npm install @statuz/mcp-server
 
 ---
 
-## 🏗️ Three-Layer Architecture
+## 🏗️ Four-Layer Architecture
 
-Statuz defines three layers of situated alignment—**all required** for a complete system:
+Statuz defines four layers of situated alignment—building from concrete runtime to reusable topology:
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
+│  🔮  66 (Arrow Maps)                                           │
+│  Reusable, executable topologies — What is the invisible       │
+│  architecture that makes me possible?                          │
+├───────────────────────────────────────────────────────────────┤
 │  🔄  SYN (Human Governance & Strategic Synchronization)       │
 │  When must I request human direction? How do I present        │
 │  strategic options with evidence? How do I record decisions?  │
@@ -140,6 +144,7 @@ Statuz defines three layers of situated alignment—**all required** for a compl
 | **Statuz Core** | Compact runtime status | ✅ Stable (0.5.0) |
 | **niche** | Ecological position & long-term calibration | ⚙️ Working Draft (0.5.0) |
 | **SYN** | Human governance for strategic decisions | ⚙️ Working Draft (0.5.0) |
+| **66** | Topological abstraction with Arrow Maps | 🔧 Implementation (0.1.0-draft) |
 
 ---
 
@@ -397,6 +402,7 @@ That sentence is Statuz.
 | **[ROADMAP.md](ROADMAP.md)** | Development plan and staged priorities |
 | **[examples/](examples/)** | Ready-to-use Statuz file templates |
 | **[docs/](docs/)** | Architecture decisions and smoke tests |
+| **[66-implementation/](66-implementation/)** | Topological layer (Arrow Maps) implementation |
 
 ---
 
