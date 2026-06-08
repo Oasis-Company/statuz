@@ -8,6 +8,7 @@ import addFormatsImport from "ajv-formats";
 const Ajv = AjvImport as any;
 const addFormats = addFormatsImport as any;
 import type { StatuzDocument } from "./types.js";
+import { arrowMapCommand } from "./arrow-map/command.js";
 
 const program = new Command();
 
@@ -407,5 +408,7 @@ program
     if (state.last_checkpoint) console.log(`Last CP:  ${state.last_checkpoint}`);
     if (state.next_action) console.log(`Next:     ${state.next_action}`);
   });
+
+program.addCommand(arrowMapCommand);
 
 program.parse(process.argv);
