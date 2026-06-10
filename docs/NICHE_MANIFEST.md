@@ -4,6 +4,8 @@
 
 # Statuz NICHE_MANIFEST - Technical Charter
 
+> **Statuz is a Runtime that keeps users, agents, projects, and niches in continuous Reality Synchronization.**
+
 > **Status:** Working Draft  
 > **Version:** 1.0  
 > **Authors:** Statuz Core Team  
@@ -257,7 +259,7 @@ The following can be auto-adjusted if explicit policy allows:
 **Statuz is NOT a transport protocol.** It does not move messages between agents. For agent-to-agent communication, consider:
 
 - **MCP (Model Context Protocol):** For tool access and local operations
-- **A2A (Agent-to-Agent):** For cross-agent communication (future)
+- **A2A (Agent-to-Agent):** For cross-agent communication (future — see Hard Rules below)
 
 **Statuz CAN work with these protocols:**
 - MCP tools can read/write Statuz files
@@ -265,6 +267,22 @@ The following can be auto-adjusted if explicit policy allows:
 - SYN requests can trigger cross-agent coordination
 
 **See also:** [ADR 0003: Protocol Boundaries](adr/0003-protocol-boundaries.md)
+
+### 6.1.1 Hard Rules (Non-Negotiable)
+
+The following rules are **project hard constraints** defined in ADR 0003. They override any feature request, deadline pressure, or individual preference.
+
+**Rule 1: Statuz Is NOT a Transport Protocol — EVER**
+Statuz will never implement message transport, network protocols, message queues, or event buses. Signal Bus is explicitly a **companion infrastructure**, not part of the Statuz protocol.
+
+**Rule 2: Statuz Is NOT a Replacement for MCP**
+Statuz will never replace, duplicate, or compete with MCP. Statuz can be accessed **through** MCP, never **instead of** MCP.
+
+**Rule 3: Statuz Is NOT a Replacement for A2A — A2A Compatibility Is RESERVED, Not Implemented**
+Statuz will never implement the A2A protocol. A2A compatibility fields (`a2a_compatible`, `a2a_agent_card`) are **reserved placeholders only** and must remain dormant until A2A reaches stable 1.0. No A2A protocol implementation in any package. No A2A task handshake, agent card serving, or task negotiation code. A2A integration may only be reconsidered after ALL subsystems reach >80% usability AND A2A 1.0 is published.
+
+**Rule 4: Priority Hierarchy Is Immutable**
+Subsystem usability takes absolute priority over protocol compatibility features. Current priority: Core 0.1 > Signal Bus > Arrow Map > niche > SYN > VS Code > **A2A compatibility (FROZEN)**. No work on priority N+1 until priority N reaches >80% usability.
 
 ### 6.2 What Statuz Is Not (Continued)
 

@@ -85,6 +85,69 @@ Agent A <───┘
    └── Statuz defines what "niche context" is and why it's relevant
 ```
 
+## Hard Rules (Non-Negotiable)
+
+The following rules are **project hard constraints**. They override any feature request, deadline pressure, or individual preference. Violating these rules requires an ADR amendment approved by the project principal.
+
+### Rule 1: Statuz Is NOT a Transport Protocol — EVER
+
+**Statement:** Statuz will never implement message transport, network protocols, message queues, or event buses.
+
+**Rationale:** Transport is a solved problem with dedicated protocols. Statuz's value is in semantics. Building transport would bloat the protocol, dilute focus, and compete with better-funded efforts.
+
+**Enforcement:**
+- No transport-related code in `packages/sdk-ts` core
+- No message queue implementations in protocol packages
+- Signal Bus (`packages/signal-bus`) is explicitly a **companion infrastructure**, not part of the Statuz protocol
+- Any PR adding transport logic to core packages is rejected automatically
+
+### Rule 2: Statuz Is NOT a Replacement for MCP
+
+**Statement:** Statuz will never replace, duplicate, or compete with MCP (Model Context Protocol).
+
+**Rationale:** MCP provides tool access and local file operations. Statuz provides runtime status semantics. They are complementary layers.
+
+**Enforcement:**
+- MCP tools in `packages/mcp-server` are the **only** MCP integration point
+- No MCP server implementation in other packages
+- No MCP protocol re-implementation in Statuz code
+- Statuz can be accessed **through** MCP, never **instead of** MCP
+
+### Rule 3: Statuz Is NOT a Replacement for A2A — A2A Compatibility Is RESERVED, Not Implemented
+
+**Statement:** Statuz will never implement the A2A (Agent-to-Agent) protocol. A2A compatibility fields (`a2a_compatible`, `a2a_agent_card`) are **reserved placeholders only** and must remain dormant until A2A reaches stable 1.0.
+
+**Rationale:**
+- A2A is not yet mature (no stable 1.0 as of 2026-06-10)
+- Implementing against a moving target guarantees rework
+- Statuz's niche/SYN/Arrow Map subsystems are at 15-40% usability — these are the priority
+- Signal Bus already provides HTTP/JSON for cross-agent communication
+
+**Enforcement:**
+- `a2a_compatible` and `a2a_agent_card` fields may exist in types/schemas but must not be used in any logic
+- No A2A protocol implementation in any package
+- No A2A task handshake, agent card serving, or task negotiation code
+- A2A integration may only be reconsidered after ALL subsystems reach >80% usability AND A2A 1.0 is published
+- Any PR implementing A2A protocol logic is rejected automatically
+
+### Rule 4: Priority Hierarchy Is Immutable
+
+**Statement:** Subsystem usability takes absolute priority over protocol compatibility features.
+
+**Current priority order (highest to lowest):**
+1. Core 0.1 stability (current: ~90%)
+2. Signal Bus infrastructure (current: ~60%)
+3. Arrow Map usability (current: ~40%)
+4. niche usability (current: ~15%)
+5. SYN usability (current: ~20%)
+6. VS Code extension polish
+7. **A2A compatibility (FROZEN until further notice)**
+
+**Enforcement:**
+- No work on priority N+1 until priority N reaches >80% usability
+- Usability measured by the Production Readiness Plan checklist tiers
+- Any request to bump A2A above frozen priority requires project principal approval
+
 ## Consequences
 
 1. **Statuz remains focused**
@@ -93,13 +156,14 @@ Agent A <───┘
 
 2. **Clear integration points**
    - MCP for local access
-   - A2A for cross-agent transport
+   - A2A for cross-agent transport (future, when mature)
    - Statuz for the semantics
 
 3. **Implementation flexibility**
    - MCP servers can provide Statuz tools without needing to understand niche deeply
-   - A2A can carry Statuz objects without needing to parse them
+   - A2A can carry Statuz objects without needing to parse them (when implemented externally)
 
 4. **Future-proofing**
    - If MCP or A2A evolve, Statuz semantics stay stable
    - Can adopt new transports without changing core protocol
+   - Hard rules prevent scope creep during pressure

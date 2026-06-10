@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://statuz-protocol.org/schemas/bus-signal-0.1.schema.json",
+  "title": "Bus Signal",
+  "description": "Signal envelope for Signal Bus transport layer (NOT part of Statuz protocol). HARD RULE (ADR 0003): A2A fields are RESERVED placeholders — do NOT use in logic. A2A integration is FROZEN until: (1) ALL subsystems >80% usable, (2) A2A 1.0 published.",
+  "type": "object",
+  "required": ["id", "type", "source", "payload", "timestamp", "channel"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique signal identifier"
+    },
+    "type": {
+      "type": "string",
+      "description": "Signal type for routing and filtering"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source agent ID"
+    },
+    "target": {
+      "type": "string",
+      "description": "Target agent ID (optional for broadcast)"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Signal payload",
+      "additionalProperties": true
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp"
+    },
+    "channel": {
+      "type": "string",
+      "description": "Channel this signal belongs to"
+    },
+    "priority": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Optional priority (higher = more urgent)"
+    },
+    "a2a_compatible": {
+      "type": "boolean",
+      "description": "RESERVED: A2A compatibility flag (dormant until A2A 1.0). HARD RULE (ADR 0003): Do NOT use in logic."
+    },
+    "agent_card_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "RESERVED: A2A agent card URL (dormant until A2A 1.0). HARD RULE (ADR 0003): Do NOT use in logic."
+    }
+  },
+  "additionalProperties": false
+}
