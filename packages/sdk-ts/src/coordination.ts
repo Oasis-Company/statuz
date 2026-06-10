@@ -83,18 +83,7 @@ export class CoordinationClient {
   async register(info: AgentInfo): Promise<AgentRecord> {
     this.agentInfo = info;
     
-    const response = await this.client.register({
-      agent_id: info.agent_id,
-      name: info.name,
-      project: info.project,
-      organization: info.organization,
-      capabilities: info.capabilities,
-      arrow_maps: info.arrow_maps,
-    });
-
-    this.registeredAgentId = response.agent.id;
-
-    // Start heartbeat
+    // Use registerWithHeartbeat directly if heartbeat interval is set
     if (this.heartbeatIntervalMs > 0) {
       const heartbeat = await this.client.registerWithHeartbeat(
         {
@@ -108,8 +97,30 @@ export class CoordinationClient {
         this.heartbeatIntervalMs
       );
       this.heartbeatStop = heartbeat.stop;
+      this.registeredAgentId = info.agent_id;
+      return {
+        id: info.agent_id,
+        name: info.name,
+        project: info.project,
+        organization: info.organization,
+        capabilities: info.capabilities,
+        arrow_maps: info.arrow_maps,
+        status: 'online',
+        last_heartbeat: new Date().toISOString(),
+      };
     }
 
+    // Register without heartbeat
+    const response = await this.client.register({
+      agent_id: info.agent_id,
+      name: info.name,
+      project: info.project,
+      organization: info.organization,
+      capabilities: info.capabilities,
+      arrow_maps: info.arrow_maps,
+    });
+
+    this.registeredAgentId = response.agent.id;
     return response.agent;
   }
 

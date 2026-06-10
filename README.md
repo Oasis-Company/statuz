@@ -63,11 +63,18 @@ Most agent tools focus on "what to do next." Statuz focuses on **where you stand
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-**The niche layer tracks:**
+**The niche layer declares:**
+- 🎯 **Position** (who I am, what I do, what I don't do)
+- 🌐 **Boundaries** (clear does/does_not separation)
+- 🎲 **Strategic bets** (key architectural decisions)
+- 📊 **Success signals** (how to measure alignment)
+
+**The calibration layer monitors:**
 - 🔗 **Project relationships** (what depends on what, who collaborates with whom)
 - 🔄 **Environment changes** (what's shifting in the ecosystem)
 - 📊 **Impact assessment** (which changes actually affect this agent)
-- 🎯 **Calibration triggers** (when it's time to reconsider boundaries)
+- 🎯 **Drift detection** (declared vs. observed behavior)
+- ⚠️ **SYN triggers** (when to escalate to human)
 
 ---
 
@@ -144,7 +151,8 @@ Statuz defines four layers of situated alignment—building from concrete runtim
 | Layer | Purpose | Status |
 |-------|---------|--------|
 | **Statuz Core** | Compact runtime status | ✅ Stable (0.5.0) |
-| **niche** | Ecological position & long-term calibration | ⚙️ Working Draft (0.5.0) |
+| **niche** | Ecological position declaration | ⚙️ Working Draft (0.5.0) |
+| **Calibration** | Drift detection (declared vs. observed) | ⚙️ Working Draft (0.5.0) |
 | **SYN** | Human governance for strategic decisions | ⚙️ Working Draft (0.5.0) |
 | **66** | Topological abstraction with Arrow Maps | 🔧 Implementation (0.1.0-draft) |
 
@@ -328,9 +336,14 @@ The core runtime status layer that answers: who am I, what am I doing, where am 
 - VS Code Extension 0.5.0 - in-editor validation and tree view
 
 ### 🌟 Statuz niche (0.5.0 - Working Draft)
-**Our secret weapon!** The ecological positioning and long-term calibration layer that answers: where do I stand in the ecosystem, what changes affect me, and when do I need to recalibrate.
+**Our secret weapon!** The ecological positioning layer that declares: who I am, what I do, what I don't do, and what success looks like.
 
-**Status:** Working draft. Schemas and documentation are complete; production tooling (VS Code) is available.
+**Status:** Working draft. Schemas and documentation are complete.
+
+### ⚙️ Statuz Calibration (0.5.0 - Working Draft)
+The drift detection layer that monitors the gap between declared niche and observed behavior. Answers: am I doing what I said I would do?
+
+**Status:** Working draft. Schemas and documentation are complete.
 
 ### ⚙️ Statuz SYN (0.5.0 - Working Draft)
 The human governance interface for strategic synchronization requests when position, boundaries, or authority require renewal.

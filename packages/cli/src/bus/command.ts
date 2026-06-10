@@ -6,6 +6,7 @@
 
 import { Command } from 'commander';
 import { SignalBusClient } from '@statuz/signal-bus';
+import { SignalBusServer } from '@statuz/signal-bus';
 
 export function busCommand(): Command {
   const bus = new Command();
@@ -14,12 +15,39 @@ export function busCommand(): Command {
     .description('Signal Bus management commands')
     .option('--url <url>', 'Signal Bus server URL', 'http://localhost:7373');
 
+  // Start server
+  bus
+    .command('start')
+    .description('Start the Signal Bus server')
+    .option('--port <port>', 'Port to listen on', '7373')
+    .option('--host <host>', 'Host to bind to', 'localhost')
+    .action(async (options) => {
+      try {
+        const server = new SignalBusServer({
+          port: parseInt(options.port),
+          host: options.host,
+        });
+        await server.start();
+        console.log(`Signal Bus server started on http://${options.host}:${options.port}`);
+        console.log('Press Ctrl+C to stop');
+        
+        process.on('SIGINT', () => {
+          server.stop();
+          process.exit(0);
+        });
+      } catch (error) {
+        console.error('Error: Could not start Signal Bus');
+        console.error((error as Error).message);
+        process.exit(1);
+      }
+    });
+
   // Health check
   bus
     .command('health')
     .description('Check Signal Bus health')
     .action(async (options) => {
-      const client = new SignalBusClient({ baseUrl: options.parent?.url() ?? 'http://localhost:7373' });
+      const client = new SignalBusClient({ baseUrl: options.parent?.url ?? 'http://localhost:7373' });
       try {
         const health = await client.health();
         console.log('=== Signal Bus Health ===');
@@ -42,7 +70,7 @@ export function busCommand(): Command {
     .option('--status <status>', 'Filter by status (online, offline, busy, idle)')
     .option('--limit <number>', 'Limit results', '50')
     .action(async (options) => {
-      const client = new SignalBusClient({ baseUrl: options.parent?.url() ?? 'http://localhost:7373' });
+      const client = new SignalBusClient({ baseUrl: options.parent?.url ?? 'http://localhost:7373' });
       try {
         const agents = await client.listAgents({
           status: options.status as any,
@@ -82,7 +110,7 @@ export function busCommand(): Command {
     .option('--capabilities <caps...>', 'Capabilities')
     .option('--arrow-maps <maps...>', 'Arrow Map IDs')
     .action(async (options) => {
-      const client = new SignalBusClient({ baseUrl: options.parent?.url() ?? 'http://localhost:7373' });
+      const client = new SignalBusClient({ baseUrl: options.parent?.url ?? 'http://localhost:7373' });
       try {
         const result = await client.register({
           agent_id: options.id,
@@ -116,7 +144,7 @@ export function busCommand(): Command {
     .option('--status <status>', 'Filter by status')
     .option('--limit <number>', 'Limit results', '20')
     .action(async (options) => {
-      const client = new SignalBusClient({ baseUrl: options.parent?.url() ?? 'http://localhost:7373' });
+      const client = new SignalBusClient({ baseUrl: options.parent?.url ?? 'http://localhost:7373' });
       try {
         const result = await client.discover({
           arrow_map: options.arrowMap,
@@ -154,7 +182,7 @@ export function busCommand(): Command {
     .requiredOption('--channel <channel>', 'Channel name', 'default')
     .option('--payload <json>', 'Payload as JSON string')
     .action(async (options) => {
-      const client = new SignalBusClient({ baseUrl: options.parent?.url() ?? 'http://localhost:7373' });
+      const client = new SignalBusClient({ baseUrl: options.parent?.url ?? 'http://localhost:7373' });
       try {
         let payload: Record<string, unknown> = {};
         if (options.payload) {
@@ -193,7 +221,7 @@ export function busCommand(): Command {
     .requiredOption('--from <from>', 'Sender identifier')
     .option('--priority <number>', 'Priority (0-100)', '50')
     .action(async (options) => {
-      const client = new SignalBusClient({ baseUrl: options.parent?.url() ?? 'http://localhost:7373' });
+      const client = new SignalBusClient({ baseUrl: options.parent?.url ?? 'http://localhost:7373' });
       try {
         const signal = await client.submitBackflow(
           options.agent,

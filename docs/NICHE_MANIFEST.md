@@ -80,30 +80,47 @@ The minimal situation layer. Answers:
 
 ### 2.2 niche
 
-The ecological positioning layer. Answers:
+The ecological positioning layer. Declares where the agent stands in the ecosystem.
+
+**Answers:**
 - Where do I stand in the ecosystem?
-- What changes are happening around me?
-- What changes actually affect me?
-- Should I take action? Why?
-- Who should I collaborate with?
+- What is my declared role and boundaries?
+- What do I do? What do I NOT do?
+- What are my strategic bets?
 
 **Files:**
-- `.statuz/niche/manifest.yaml`
-- `.statuz/niche/signals/`
-- `.statuz/niche/assessments/`
-- `.statuz/niche/contexts/`
-- `.statuz/niche/outcomes/`
-- `.statuz/niche/calibrations/`
+- `.statuz/niche/manifest.yaml` — Declared position (static declaration)
 
-### 2.3 SYN
+**Note:** niche is a declaration, not a dashboard. Drift detection and calibration are handled by the separate Calibration subsystem (see below).
 
-The human synchronization layer. Answers:
+### 2.3 Calibration (Drift Detection)
+
+The calibration layer monitors the gap between declared position (niche) and observed behavior.
+
+**Answers:**
+- What changes are happening around me?
+- What changes actually affect me?
+- Is my observed behavior aligned with my declared niche?
+- Should I recalibrate? What is the evidence?
+
+**Files:**
+- `.statuz/niche/calibrations/` — Drift proposals and evidence
+
+**Note:** Calibration compares niche (declaration) against observed behavior. It does NOT modify niche directly — modifications require SYN (human approval).
+
+### 2.4 SYN
+
+The human synchronization layer. Escalates strategic decisions to human principals.
+
+**Answers:**
 - When must I request human direction?
 - How do I present strategic options with evidence?
 - How do I record decisions and track accountability?
 
 **Files:**
-- `.statuz/niche/syn/`
+- `.statuz/niche/syn/` — SYN requests and resolutions
+
+**Trigger:** SYN is triggered by Calibration when drift exceeds threshold, or by Agent judgment for strategic decisions.
 
 ---
 
@@ -157,27 +174,27 @@ The fact that an agent repeatedly takes certain actions does not automatically m
 ### 4.1 Overview
 
 ```
-niche manifest       → Declared position (what I say I do)
+niche manifest       → Declared position (what I say I do) — STATIC
 niche signal         → Environmental event (something happened)
 niche assessment     → Relevance judgment (does it affect me?)
 niche context        → Collaboration payload (here's what I need)
 niche outcome        → Result record (what happened)
-niche calibration    → Drift proposal (I notice something off)
-SYN request          → Human escalation (I need direction)
-SYN resolution       → Human decision (here's what we agreed)
+calibration          → Drift proposal (declared vs. observed) — MONITORING
+SYN request          → Human escalation (I need direction) — GOVERNANCE
+SYN resolution       → Human decision (here's what we agreed) — GOVERNANCE
 ```
 
 ### 4.2 Object Relationships
 
 ```text
-manifest → declares position
+manifest → declares position (static)
 signal → may trigger assessment
 assessment → references signal
 context → references assessments
 outcome → may trigger calibration
-calibration → compares manifest vs. observed
-SYN → triggered by calibration (or agent judgment)
-resolution → updates manifest (after approval)
+calibration → compares manifest vs. observed (monitoring)
+SYN → triggered by calibration (or agent judgment) (governance)
+resolution → updates manifest (after human approval) (governance)
 ```
 
 ### 4.3 Minimal Disclosure Principle

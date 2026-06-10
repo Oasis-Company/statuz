@@ -72,5 +72,5 @@ export function isSynRequest(doc: SynDocument): doc is SynRequest {
 
 /** Type guard for SynResolution. */
 export function isSynResolution(doc: SynDocument): doc is SynResolution {
-  return "syn_request_id" in doc;
+  return "syn_resolution_version" in doc;
 }

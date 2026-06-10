@@ -57,7 +57,6 @@ export type {
   NicheOutcome,
   OutcomeDetails
 } from "./niche/types.js";
-export { isSynRequest, isSynResolution } from "./syn/types.js";
 
 // SYN types
 export type {
@@ -68,6 +67,7 @@ export type {
   SynResolution,
   SynDocument
 } from "./syn/types.js";
+export { isSynRequest, isSynResolution } from "./syn/types.js";
 
 // Arrow Map (66) types
 export type {

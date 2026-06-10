@@ -360,10 +360,12 @@ for (const directive of directives) {
 - Pattern-based discovery
 
 ### Phase 3 (Future)
-- A2A protocol compatibility
 - Signal encryption
 - Load balancing
 - Service mesh integration
+- **A2A protocol compatibility — FROZEN per ADR 0003 Hard Rules**
+  - A2A fields are RESERVED placeholders only
+  - Integration blocked until: (1) ALL subsystems >80% usable, (2) A2A 1.0 published
 
 ## Glossary
 
