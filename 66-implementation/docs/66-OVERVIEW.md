@@ -1,5 +1,7 @@
 # 66 Overview: The Topological Shift
 
+> **Statuz is a Runtime that keeps users, agents, projects, and niches in continuous Reality Synchronization.**
+
 > **Status:** Design Phase  
 > **Version:** 0.1.0-draft  
 > **Last Updated:** 2026-06-06

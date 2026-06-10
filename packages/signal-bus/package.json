@@ -1,7 +1,7 @@
 {
-  "name": "@statuz/sdk-ts",
-  "version": "0.5.0",
-  "description": "TypeScript SDK for the Statuz AI Agent Runtime Status Protocol",
+  "name": "@statuz/signal-bus",
+  "version": "0.1.0",
+  "description": "Signal Bus companion infrastructure for Statuz — HTTP-based signal transport and agent discovery",
   "author": "ceaserzhao (Oasis Company)",
   "contributors": [
     {
@@ -26,10 +26,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@statuz/signal-bus": "file:../signal-bus",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
-    "yaml": "^2.7.0"
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -41,16 +39,14 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/statuz-protocol/statuz.git",
-    "directory": "packages/sdk-ts"
+    "directory": "packages/signal-bus"
   },
   "keywords": [
     "statuz",
-    "ai-agent",
-    "agent-status",
-    "runtime-status",
-    "agent-protocol",
-    "sdk",
-    "typescript"
+    "signal-bus",
+    "agent-discovery",
+    "multi-agent",
+    "backflow"
   ],
   "bugs": {
     "url": "https://github.com/statuz-protocol/statuz/issues"
@@ -60,6 +56,7 @@
     "access": "public"
   },
   "files": [
-    "dist"
+    "dist",
+    "schemas"
   ]
 }

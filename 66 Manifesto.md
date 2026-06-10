@@ -1,5 +1,7 @@
 # 66 Manifesto
 
+> **Statuz is a Runtime that keeps users, agents, projects, and niches in continuous Reality Synchronization.**
+
 ## The Sixth Sense of Organizations
 
 Statuz was never created to manage projects.

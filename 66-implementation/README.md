@@ -7,6 +7,8 @@
 
 ---
 
+> **Statuz is a Runtime that keeps users, agents, projects, and niches in continuous Reality Synchronization.**
+
 > 🔧 **Status: Implementation in Progress**
 >
 > This directory contains the 66 layer implementation for Statuz.

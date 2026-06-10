@@ -1,0 +1,14 @@
+arrow_map_version: 0.1.0
+id: project:1781002147491
+name: New Arrow Map
+description: Created by statuz arrow-map init
+version: 1.0.0
+status: draft
+nodes:
+  - id: project-root
+    type: project
+    name: Current Project
+    description: Root node for this project
+arrows: []
+storage:
+  local_cache: ./.statuz/arrow-maps/

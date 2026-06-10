@@ -1,5 +1,5 @@
 {
-  "$id": "https://oasiscompany.org/schemas/statuz-0.1.schema.json",
+  "$id": "https://statuz.org/schemas/statuz-0.1.schema.json",
   "title": "Statuz 0.1",
   "description": "AI Agent Runtime Status Protocol document",
   "type": "object",
@@ -208,7 +208,8 @@
         ],
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^cp-[a-zA-Z0-9_-]+$"
           },
           "at": {
             "type": "string",

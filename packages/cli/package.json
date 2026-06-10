@@ -23,6 +23,7 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@statuz/signal-bus": "file:../signal-bus",
     "commander": "^12.1.0"
   },
   "devDependencies": {

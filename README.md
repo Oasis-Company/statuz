@@ -21,6 +21,8 @@
 
 > **Memory lets an AI remember the past. Statuz lets an AI understand where it stands, what matters now, and when human direction must be renewed.**
 
+**Statuz is a Runtime that keeps users, agents, projects, and niches in continuous Reality Synchronization.**
+
 Statuz is the **situated alignment ecosystem for AI agents and their human principals**. It provides an open, verifiable, extensible stack for expressing:
 - who the agent is and what role it is playing;
 - what the agent is currently doing;

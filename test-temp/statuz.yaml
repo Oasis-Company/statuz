@@ -1,0 +1,39 @@
+statuz_version: "0.1"
+updated_at: 2026-06-08T14:27:07.172Z
+identity:
+  agent_name: test-agent
+  project_name: test-project
+  environment: local-dev
+role:
+  name: assistant-agent
+  responsibilities:
+    - help the user make progress
+  boundaries:
+    - do not store secrets in Statuz
+current_state:
+  stage: initialization
+  task: initialize Statuz
+  status: idle
+  last_checkpoint: Statuz file created
+  next_action: define the agent's current goal
+progress:
+  completed:
+    - created initial Statuz file
+  blocked_by: []
+  open_questions: []
+relations:
+  related_agents: []
+  related_projects: []
+  related_files: []
+  related_tools: []
+rules:
+  should:
+    - read Statuz at session start
+    - write checkpoint after meaningful progress
+  should_not:
+    - store API keys, tokens, passwords, or secrets
+checkpoints:
+  - id: cp-001
+    at: 2026-06-08T14:27:07.173Z
+    summary: Initialized Statuz.
+    next_action: Define current task and next action.
