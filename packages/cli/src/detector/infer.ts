@@ -30,7 +30,7 @@ function inferTransitive(arrowMap: ArrowMap): InferredArrow[] {
 
       // Check if A→C already exists
       const exists = arrows.some(
-        (a) =>
+        (a: Arrow) =>
           a.source === ab.source &&
           a.target === bc.target &&
           a.type === "dependency"
@@ -75,7 +75,7 @@ function inferSymmetry(arrowMap: ArrowMap): InferredArrow[] {
     if (arrow.type !== "validation") continue;
 
     const exists = arrows.some(
-      (a) =>
+      (a: Arrow) =>
         a.source === arrow.target &&
         a.target === arrow.source &&
         a.type === "information_flow"
@@ -115,7 +115,7 @@ function inferCompleteness(arrowMap: ArrowMap): InferredArrow[] {
 
   // Find nodes with no incoming arrows (potential orphans)
   for (const node of arrowMap.nodes) {
-    const hasIncoming = arrowMap.arrows.some((a) => a.target === node.id);
+    const hasIncoming = arrowMap.arrows.some((a: Arrow) => a.target === node.id);
 
     if (!hasIncoming && node.type !== "project") {
       const arrow: Arrow = {

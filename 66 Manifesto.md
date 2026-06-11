@@ -62,11 +62,9 @@ The future of Statuz is not to describe projects.
 
 The future of Statuz is to discover the reusable topologies that allow projects to survive.
 
-A niche is not an object.
+niche is an ecological position — a relationship structure.
 
-A niche is a relationship structure.
-
-A niche is the invisible architecture beneath visible activity.
+niche is the invisible architecture beneath visible activity.
 
 ---
 

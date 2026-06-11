@@ -17,16 +17,11 @@
 
 Statuz **niche** (Ecological Positioning) extends Statuz Core with a structured layer for expressing where an agent stands in the ecosystem, what changes affect it, and when calibration or human direction is required.
 
-**niche is not:**
-- A long-term memory database
-- An agent-to-agent transport protocol
-- A project management tool
-- A static configuration file
+**niche is an ecological position.** It declares where the agent stands in the ecosystem.
 
-**niche is:**
 - A living record of ecological position
 - A signal processing layer for environmental awareness
-- A calibration framework for strategic drift
+- A calibration framework for strategic alignment
 - A human governance interface (SYN) for critical decisions
 
 ---
@@ -91,7 +86,7 @@ The ecological positioning layer. Declares where the agent stands in the ecosyst
 **Files:**
 - `.statuz/niche/manifest.yaml` — Declared position (static declaration)
 
-**Note:** niche is a declaration, not a dashboard. Drift detection and calibration are handled by the separate Calibration subsystem (see below).
+**Note:** niche is an ecological position declaration. Calibration and drift detection are handled by the separate Calibration subsystem (see below).
 
 ### 2.3 Calibration (Drift Detection)
 

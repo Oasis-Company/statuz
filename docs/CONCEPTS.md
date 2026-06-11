@@ -53,18 +53,11 @@ Example:
 
 ## Niche (Ecological Position)
 
-A **declaration** of where the agent stands in the ecosystem.
+**niche is an ecological position.** It declares where the agent stands in the ecosystem.
 
-**What niche is:**
-- A living record of ecological position
 - A declaration of boundaries (what I do / what I don't do)
 - A statement of strategic bets
 - A definition of success signals
-
-**What niche is NOT:**
-- A drift detection dashboard
-- A monitoring system
-- A dynamic metric
 
 **Example:**
 ```yaml
@@ -78,7 +71,7 @@ declared_position:
 
 ## Calibration (Drift Detection)
 
-The **monitoring** layer that compares declared niche against observed behavior.
+The **MONITORING** layer that compares declared niche against observed behavior.
 
 **What calibration is:**
 - A drift detection system
@@ -131,14 +124,14 @@ syn_request:
 
 ```
 ┌─────────────────────────────────────────┐
-│  niche (DECLARATION)                    │
+│  niche (Ecological Position)            │
 │  "I am a payment service"               │
 │  "I do NOT handle auth"                 │
 └─────────────┬───────────────────────────┘
               │
               ▼
 ┌─────────────────────────────────────────┐
-│  Calibration (MONITORING)               │
+│  Calibration (Monitoring)               │
 │  "Observed: 60% time on auth"           │
 │  "Declared: 0% time on auth"            │
 │  "Drift: 0.42 > threshold 0.25"         │
@@ -147,7 +140,7 @@ syn_request:
               │
               ▼
 ┌─────────────────────────────────────────┐
-│  SYN (GOVERNANCE)                       │
+│  SYN (Governance)                       │
 │  "Should auth be split out?"            │
 │  Human decides: "Yes"                   │
 │  Resolution updates niche               │

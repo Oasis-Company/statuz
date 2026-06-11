@@ -187,7 +187,7 @@ All schemas are located in `spec/niche/`:
 
 ## Learning Points
 
-1. **niche is not just status**: It's about ecological awareness and governance
+1. **niche is an ecological position**: It declares where the agent stands in the ecosystem
 2. **Assessments require reasoning**: Every assessment explains *why* it's relevant
 3. **Calibration needs evidence**: Drift detection is based on outcomes, not assumptions
 4. **SYN is for humans**: Agents suggest, humans decide

@@ -11,6 +11,8 @@
  * - niche-syn.schema.json
  */
 
+export type { ValidationResult } from "../types.js";
+
 export type NicheVersion = "1.0";
 
 /**

@@ -5,6 +5,8 @@
  * @see {@link spec/niche/niche-syn.schema.json}
  */
 
+export type { ValidationResult } from "../types.js";
+
 export type SynVersion = "1.0";
 
 /**
@@ -72,5 +74,5 @@ export function isSynRequest(doc: SynDocument): doc is SynRequest {
 
 /** Type guard for SynResolution. */
 export function isSynResolution(doc: SynDocument): doc is SynResolution {
-  return "syn_resolution_version" in doc;
+  return "syn_resolution_version" in doc && !("type" in doc && (doc as SynRequest).type === "human_decision_required");
 }

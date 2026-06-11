@@ -9,6 +9,16 @@
 export { Statuz } from "./statuz.js";
 export { CoordinationClient } from "./coordination.js";
 
+// niche IO classes
+export { NicheManifestIO } from "./niche/manifest.js";
+
+// SYN IO classes
+export { SynRequestIO } from "./syn/request.js";
+export { SynResolutionIO } from "./syn/resolution.js";
+
+// Arrow Map IO classes
+export { ArrowMapIO } from "./arrow-map/arrow-map.js";
+
 // Core types
 export type {
   StatuzDocument,

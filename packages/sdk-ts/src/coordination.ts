@@ -106,6 +106,7 @@ export class CoordinationClient {
         capabilities: info.capabilities,
         arrow_maps: info.arrow_maps,
         status: 'online',
+        registered_at: new Date().toISOString(),
         last_heartbeat: new Date().toISOString(),
       };
     }

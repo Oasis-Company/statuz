@@ -7,6 +7,8 @@
  * @see {@link 66-implementation/spec/statu-node.schema.json}
  */
 
+export type { ValidationResult } from "../types.js";
+
 export type ArrowMapVersion = "0.1.0";
 export type ArrowMapStatus = "draft" | "experimental" | "stable" | "deprecated" | "archived";
 export type ArrowType =
