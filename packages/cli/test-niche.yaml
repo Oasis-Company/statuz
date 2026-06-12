@@ -1,0 +1,18 @@
+niche_version: "1.0"
+id: niche-3877073
+declared_position:
+  project_name: test-project
+  purpose: Updated purpose for testing
+  does:
+    - write code
+    - run tests
+    - review PRs
+  does_not:
+    - deploy to production
+evidence_window_days: 30
+drift_thresholds:
+  task_drift: 0.3
+  collaboration_drift: 0.2
+  boundary_drift: 0.1
+syn_policy:
+  auto_trigger: true

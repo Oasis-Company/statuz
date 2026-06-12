@@ -1,0 +1,48 @@
+# Niche Manifest Example
+# Statuz ecological position declaration for the Statuz project itself
+
+niche_version: "1.0"
+id: "niche-statuz-main"
+
+declared_position:
+  project_name: "statuz"
+  purpose: "AI agent runtime status protocol — portable, inspectable, resumable"
+  does:
+    - "define runtime status schema"
+    - "validate YAML documents"
+    - "track agent checkpoints"
+    - "manage leases and responsibilities"
+    - "detect drift between declared and observed behavior"
+  does_not:
+    - "store long-term memory"
+    - "replace databases"
+    - "run MCP servers in P0"
+    - "build web dashboards in P0"
+
+strategic_bets:
+  - "YAML-first, file-based protocol"
+  - "Three-layer stack: Core / niche / SYN"
+  - "Drift detection via Calibration Engine"
+
+success_signals:
+  - "agents can resume from statuz.yaml without chat history"
+  - "developers can validate statuz files with CLI"
+  - "drift is detected before it becomes divergence"
+
+relevant_signals:
+  - "vcs:commit:packages/**"
+  - "vcs:commit:spec/**"
+  - "issue:opened"
+  - "issue:closed"
+
+evidence_window_days: 30
+
+drift_thresholds:
+  task_drift: 0.25
+  collaboration_drift: 0.2
+  boundary_drift: 0.1
+
+syn_policy:
+  auto_trigger: true
+  required_approvers:
+    - "human-lead"

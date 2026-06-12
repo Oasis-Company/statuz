@@ -18,6 +18,7 @@ export { SynResolutionIO } from "./syn/resolution.js";
 
 // Arrow Map IO classes
 export { ArrowMapIO } from "./arrow-map/arrow-map.js";
+export { ArrowProposalIO } from "./arrow-map/proposal.js";
 
 // Core types
 export type {
@@ -109,3 +110,34 @@ export type {
   MapStorage,
   MapMetadata
 } from "./arrow-map/types.js";
+export type {
+  ProposalVersion,
+  ProposalType,
+  ProposalStatus,
+  ProposalAction,
+  ProposalTarget,
+  NodeChange,
+  ArrowChange,
+  ProposalChange,
+  ReviewComment,
+  ArrowProposal
+} from "./arrow-map/proposal-types.js";
+
+// Calibration Engine (drift detection)
+export { CalibrationEngine } from "./calibration/engine.js";
+export type {
+  EvidenceItem,
+  DriftResult,
+  CalibrationResult,
+  CalibrationOptions
+} from "./calibration/types.js";
+
+// Lease Manager (time-boxed responsibility)
+export { LeaseManager } from "./lease/manager.js";
+export type {
+  Lease,
+  LeaseAcceptance,
+  LeaseReport,
+  LeaseScope,
+  LeaseCheckpoint
+} from "./lease/types.js";

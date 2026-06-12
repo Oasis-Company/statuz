@@ -1,0 +1,198 @@
+{
+  "$id": "https://statuz.org/schemas/66/arrow-proposal.schema.json",
+  "title": "Arrow Proposal Schema",
+  "description": "JSON Schema for Arrow Proposal — a proposed change to an Arrow Map topology",
+  "type": "object",
+  "required": [
+    "proposal_version",
+    "proposal_id",
+    "source_map_id",
+    "type",
+    "changes",
+    "status",
+    "author",
+    "rationale",
+    "timestamp"
+  ],
+  "properties": {
+    "proposal_version": {
+      "type": "string",
+      "const": "0.1",
+      "description": "Proposal schema version"
+    },
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^prop-[0-9]{4}$",
+      "description": "Unique proposal ID (e.g., prop-0001)"
+    },
+    "source_map_id": {
+      "type": "string",
+      "description": "ID of the Arrow Map this proposal modifies"
+    },
+    "target_map_id": {
+      "type": "string",
+      "description": "Optional target map ID for merge proposals"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["add_node", "remove_node", "update_node", "add_arrow", "remove_arrow", "update_arrow", "merge"],
+      "description": "Type of proposed change"
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/proposal_change"
+      },
+      "description": "List of changes to apply"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "reviewed", "approved", "rejected", "applied"],
+      "default": "pending",
+      "description": "Current status of the proposal"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author of the proposal"
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Reason for the proposed change"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the proposal was created"
+    },
+    "review_comments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/review_comment"
+      },
+      "description": "Comments from reviewers"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Additional metadata"
+    }
+  },
+  "definitions": {
+    "proposal_change": {
+      "type": "object",
+      "required": ["action", "target"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["add", "remove", "update"],
+          "description": "Action to perform"
+        },
+        "target": {
+          "type": "string",
+          "enum": ["node", "arrow"],
+          "description": "Target type"
+        },
+        "node": {
+          "$ref": "#/definitions/node_change"
+        },
+        "arrow": {
+          "$ref": "#/definitions/arrow_change"
+        }
+      }
+    },
+    "node_change": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Node ID"
+        },
+        "type": {
+          "type": "string",
+          "description": "Node type"
+        },
+        "name": {
+          "type": "string",
+          "description": "Node name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Node description"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "deprecated", "planned"]
+        }
+      }
+    },
+    "arrow_change": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Arrow ID"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["dependency", "information_flow", "responsibility", "validation", "resource_transfer", "influence", "constraint"]
+        },
+        "from": {
+          "type": "string",
+          "description": "Source node ID"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target node ID"
+        },
+        "description": {
+          "type": "string",
+          "description": "Arrow description"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"]
+        }
+      }
+    },
+    "review_comment": {
+      "type": "object",
+      "required": ["by", "comment", "timestamp"],
+      "properties": {
+        "by": {
+          "type": "string",
+          "description": "Reviewer identifier"
+        },
+        "comment": {
+          "type": "string",
+          "description": "Review comment"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the comment was made"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

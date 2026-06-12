@@ -1,0 +1,22 @@
+# Arrow Proposal Example - Update Node
+# Proposal to update an existing node's properties
+
+proposal_version: "0.1"
+proposal_id: "prop-0003"
+source_map_id: "arrow-map-statuz"
+type: "update_node"
+status: "reviewed"
+author: "ops-team"
+rationale: "Updating the status of the legacy service to deprecated"
+timestamp: "2026-06-12T16:00:00Z"
+changes:
+  - action: "update"
+    target: "node"
+    node:
+      id: "service-legacy"
+      status: "deprecated"
+      description: "Legacy service - scheduled for removal"
+review_comments:
+  - by: "arch-team"
+    comment: "Review complete - ready for approval"
+    timestamp: "2026-06-12T16:30:00Z"

@@ -1,0 +1,43 @@
+{
+  "$id": "https://statuz.org/schemas/lease/lease-acceptance.schema.json",
+  "title": "Lease Acceptance Schema",
+  "description": "JSON Schema for Statuz Lease Acceptance — agent acknowledgment of a lease assignment",
+  "type": "object",
+  "required": [
+    "acceptance_version",
+    "lease_id",
+    "accepted_by",
+    "accepted_at"
+  ],
+  "properties": {
+    "acceptance_version": {
+      "type": "string",
+      "const": "0.1",
+      "description": "Schema version, must be 0.1"
+    },
+    "lease_id": {
+      "type": "string",
+      "pattern": "^ls-[0-9]{3}$",
+      "description": "Reference to the Lease being accepted (e.g., ls-001)"
+    },
+    "accepted_by": {
+      "type": "string",
+      "description": "Agent ID accepting the lease"
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when acceptance was recorded"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes or conditions of acceptance"
+    },
+    "estimated_completion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Agent's estimated completion time (optional)"
+    }
+  },
+  "additionalProperties": true
+}

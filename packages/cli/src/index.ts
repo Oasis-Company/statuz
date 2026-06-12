@@ -9,7 +9,12 @@ const Ajv = AjvImport as any;
 const addFormats = addFormatsImport as any;
 import type { StatuzDocument } from "./types.js";
 import { arrowMapCommand } from "./arrow-map/command.js";
+import { arrowProposalCommand } from "./arrow-proposal/command.js";
 import { busCommand } from "./bus/command.js";
+import { calibrationCommand } from "./calibration/command.js";
+import { leaseCommand } from "./lease/command.js";
+import { nicheCommand } from "./niche/command.js";
+import { synCommand } from "./syn/command.js";
 
 const program = new Command();
 
@@ -412,5 +417,10 @@ program
 
 program.addCommand(arrowMapCommand);
 program.addCommand(busCommand());
+program.addCommand(calibrationCommand());
+program.addCommand(leaseCommand());
+program.addCommand(nicheCommand());
+program.addCommand(arrowProposalCommand());
+program.addCommand(synCommand());
 
 program.parse(process.argv);

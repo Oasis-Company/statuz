@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@statuz/signal-bus": "file:../signal-bus",
+    "@statuz/sdk-ts": "file:../sdk-ts",
     "commander": "^12.1.0"
   },
   "devDependencies": {

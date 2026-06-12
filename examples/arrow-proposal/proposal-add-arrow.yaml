@@ -1,0 +1,25 @@
+# Arrow Proposal Example - Add Arrow
+# Proposal to add a dependency relationship between nodes
+
+proposal_version: "0.1"
+proposal_id: "prop-0002"
+source_map_id: "arrow-map-statuz"
+type: "add_arrow"
+status: "approved"
+author: "dev-team"
+rationale: "Establishing dependency from payment agent to order service"
+timestamp: "2026-06-12T14:30:00Z"
+changes:
+  - action: "add"
+    target: "arrow"
+    arrow:
+      id: "arrow-payment-order"
+      type: "dependency"
+      from: "agent-payment"
+      to: "service-order"
+      description: "Payment agent depends on order service for order data"
+      criticality: "high"
+review_comments:
+  - by: "lead-dev"
+    comment: "Approved - this dependency makes sense for the payment workflow"
+    timestamp: "2026-06-12T15:00:00Z"
