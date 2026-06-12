@@ -15,6 +15,7 @@ import { calibrationCommand } from "./calibration/command.js";
 import { leaseCommand } from "./lease/command.js";
 import { nicheCommand } from "./niche/command.js";
 import { synCommand } from "./syn/command.js";
+import { userActionCommand } from "./user-action/command.js";
 
 const program = new Command();
 
@@ -421,6 +422,7 @@ program.addCommand(calibrationCommand());
 program.addCommand(leaseCommand());
 program.addCommand(nicheCommand());
 program.addCommand(arrowProposalCommand());
+program.addCommand(userActionCommand());
 program.addCommand(synCommand());
 
 program.parse(process.argv);

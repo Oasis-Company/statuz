@@ -1,0 +1,77 @@
+{
+  "$id": "https://statuz.org/schemas/user-action/user-action.schema.json",
+  "title": "User Action Schema",
+  "description": "JSON Schema for Statuz User Action — tracking user interactions with AI agents",
+  "type": "object",
+  "required": [
+    "user_action_version",
+    "action_id",
+    "timestamp",
+    "action_type",
+    "user_id",
+    "agent_id"
+  ],
+  "properties": {
+    "user_action_version": {
+      "type": "string",
+      "const": "0.1",
+      "description": "Schema version"
+    },
+    "action_id": {
+      "type": "string",
+      "pattern": "^ua-[0-9]{4}$",
+      "description": "Unique action ID (e.g., ua-0001)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the action occurred"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": ["click", "input", "submit", "confirm", "reject", "pause", "resume", "select", "navigate", "search", "export", "import", "delete", "create", "update"],
+      "description": "Type of user action"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Anonymous user identifier"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Agent identifier"
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string"
+        },
+        "screen": {
+          "type": "string"
+        },
+        "element": {
+          "type": "string"
+        },
+        "view": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true,
+      "description": "Contextual information about the action"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Action-specific data"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Additional metadata"
+    }
+  },
+  "additionalProperties": false
+}

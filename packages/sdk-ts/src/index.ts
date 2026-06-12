@@ -141,3 +141,15 @@ export type {
   LeaseScope,
   LeaseCheckpoint
 } from "./lease/types.js";
+
+// User Action Tracker
+export { UserActionTracker } from "./user-action/tracker.js";
+export type {
+  UserActionVersion,
+  UserActionType,
+  UserActionContext,
+  UserAction,
+  UserActionQuery,
+  UserActionStats,
+  UserActionExportOptions
+} from "./user-action/types.js";

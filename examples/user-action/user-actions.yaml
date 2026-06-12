@@ -1,0 +1,92 @@
+# User Actions Example
+# Collection of user interactions with AI agents
+
+- user_action_version: "0.1"
+  action_id: "ua-0001"
+  timestamp: "2026-06-12T09:00:00Z"
+  action_type: "click"
+  user_id: "user-alice"
+  agent_id: "agent-support"
+  context:
+    screen: "dashboard"
+    element: "new-task-button"
+    workflow: "task-creation"
+
+- user_action_version: "0.1"
+  action_id: "ua-0002"
+  timestamp: "2026-06-12T09:01:00Z"
+  action_type: "input"
+  user_id: "user-alice"
+  agent_id: "agent-support"
+  context:
+    screen: "task-form"
+    element: "task-title"
+  payload:
+    value: "Complete project setup"
+
+- user_action_version: "0.1"
+  action_id: "ua-0003"
+  timestamp: "2026-06-12T09:02:00Z"
+  action_type: "submit"
+  user_id: "user-alice"
+  agent_id: "agent-support"
+  context:
+    screen: "task-form"
+    element: "submit-button"
+    task_id: "task-001"
+
+- user_action_version: "0.1"
+  action_id: "ua-0004"
+  timestamp: "2026-06-12T10:30:00Z"
+  action_type: "confirm"
+  user_id: "user-bob"
+  agent_id: "agent-payment"
+  context:
+    screen: "payment-confirmation"
+    workflow: "checkout"
+  payload:
+    amount: "99.99"
+    currency: "USD"
+
+- user_action_version: "0.1"
+  action_id: "ua-0005"
+  timestamp: "2026-06-12T11:15:00Z"
+  action_type: "search"
+  user_id: "user-alice"
+  agent_id: "agent-knowledge"
+  context:
+    screen: "search-page"
+  payload:
+    query: "API documentation"
+
+- user_action_version: "0.1"
+  action_id: "ua-0006"
+  timestamp: "2026-06-12T14:00:00Z"
+  action_type: "pause"
+  user_id: "user-charlie"
+  agent_id: "agent-workflow"
+  context:
+    task_id: "task-002"
+    workflow: "review-process"
+
+- user_action_version: "0.1"
+  action_id: "ua-0007"
+  timestamp: "2026-06-12T14:30:00Z"
+  action_type: "resume"
+  user_id: "user-charlie"
+  agent_id: "agent-workflow"
+  context:
+    task_id: "task-002"
+    workflow: "review-process"
+
+- user_action_version: "0.1"
+  action_id: "ua-0008"
+  timestamp: "2026-06-12T15:00:00Z"
+  action_type: "reject"
+  user_id: "user-dave"
+  agent_id: "agent-review"
+  context:
+    screen: "approval-page"
+    element: "reject-button"
+  payload:
+    reason: "Requires additional review"
