@@ -9,7 +9,7 @@ This MCP server enables AI agents to interact with Statuz files through the Mode
 **Status**: ✅ Production-ready for Statuz core operations and niche files
 
 - Build: ✅ passes (`tsc`)
-- Tests: ✅ 39/39 passing (12 security + 27 end-to-end tool integration)
+- Tests: ✅ 46/46 passing (12 security + 34 end-to-end tool integration)
 - Smoke test: ✅ 9/9 live JSON-RPC tool calls verified
 
 ## Installation
@@ -88,6 +88,33 @@ Niche files are independent from `statuz.yaml` — they declare the project's ec
 | `statuz_niche_signal_write` | Write a niche signal YAML (ecosystem event) | `filePath`, `type`, `source`, `summary` |
 | `statuz_niche_signal_read` | Read a niche signal file | `filePath` |
 | `statuz_niche_signal_validate` | Validate a niche signal file | `filePath` |
+
+### Niche SYN (Human Sync) Tools
+
+The SYN layer bridges the gap between agents and humans. Use SYN requests to:
+
+- Ask a human to perform an action that agents cannot do themselves (e.g., running SQL in a dashboard, approving a deployment, confirming a design choice).
+- Resume interrupted work — any agent can call `statuz_niche_syn_request_list_pending` to discover what human decisions are still outstanding.
+- Record the final decision — a `syn_resolution` file captures the outcome so the entire team has visibility.
+
+The server validates SYN files against `spec/niche/niche-syn.schema.json`.
+
+| Tool | Description | Required Parameters |
+|------|-------------|-------------------|
+| `statuz_niche_syn_request_create` | Create a SYN request — ask a human for a decision or action | `filePath`, `summary`, `priority`, `source`, `options`, `recommendation` |
+| `statuz_niche_syn_request_read` | Read a SYN request file | `filePath` |
+| `statuz_niche_syn_request_validate` | Validate a SYN request against the schema | `filePath` |
+| `statuz_niche_syn_request_list_pending` | List unresolved SYN requests in a directory, sorted by priority | `directory` |
+| `statuz_niche_syn_resolution_create` | Create a SYN resolution — mark a request as decided | `filePath`, `synRequestId`, `decision`, `decisionSummary`, `rationale`, `principal` |
+| `statuz_niche_syn_resolution_read` | Read a SYN resolution file | `filePath` |
+
+### Typical Workflow
+
+1. Agent needs a human action → calls `statuz_niche_syn_request_create` with options and a recommendation. Also embeds relevant context (SQL snippet, URL, instructions).
+2. Agent pauses related work or continues on independent tasks.
+3. Human performs the action (run SQL in dashboard, etc.) and tells the agent.
+4. Agent calls `statuz_niche_syn_resolution_create` to record the decision, outcome, and next steps.
+5. Next time any agent starts, it calls `statuz_niche_syn_request_list_pending` to see if there are unresolved requests — if none, it resumes normal work.
 
 All file paths are validated against a configurable allowed-roots list to prevent unauthorized file access.
 

@@ -1,7 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Statuz, NicheManifestIO } from "@statuz/sdk-ts";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { resolve, relative, sep, dirname } from "node:path";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
+import { resolve, relative, sep, dirname, basename } from "node:path";
 import YAML from "yaml";
 import AjvImport from "ajv";
 const Ajv = AjvImport as any;
@@ -118,6 +118,35 @@ function getNicheFallbackSchema(schemaName: string): object {
         summary: { type: "string" },
       },
     },
+    "syn": {
+      type: "object",
+      // lenient fallback — external niche-syn.schema.json has strict oneOf rules,
+      // but when the external file is missing we accept any well-formed object
+      // that carries either request or resolution fields.
+      properties: {
+        syn_version: { type: "string" },
+        syn_resolution_version: { type: "string" },
+        id: { type: "string" },
+        type: { type: "string" },
+        source: { type: "string" },
+        timestamp: { type: "string" },
+        priority: { type: "string" },
+        summary: { type: "string" },
+        context: { type: "object" },
+        options: { type: "array" },
+        recommendation: { type: "string" },
+        requested_decision_by: { type: "string" },
+        syn_request_id: { type: "string" },
+        principal: { type: "string" },
+        decision: { type: "string" },
+        decision_summary: { type: "string" },
+        rationale: { type: "string" },
+        effective_date: { type: "string" },
+        next_steps: { type: "array" },
+        audit_trail: { type: "array" },
+      },
+      additionalProperties: true,
+    },
   };
   return fallback[schemaName] ?? { type: "object" };
 }
@@ -176,6 +205,7 @@ function writeYamlFile(filePath: string, data: unknown): void {
 
 let contextWriteCounter = 1;
 let signalWriteCounter = 1;
+let synWriteCounter = 1;
 
 export const statuzTools: Tool[] = [
   {
@@ -510,6 +540,138 @@ export const statuzTools: Tool[] = [
         filePath: {
           type: "string",
           description: "Path to the niche signal YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_syn_request_create",
+    description: "Create a niche SYN request YAML — asking a human for a decision or an external action (e.g., run SQL in a dashboard). Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path for the niche syn-request YAML file",
+        },
+        summary: {
+          type: "string",
+          description: "Brief description of the decision/action needed",
+        },
+        priority: {
+          type: "string",
+          description: "Urgency level (low, medium, high, critical)",
+        },
+        source: {
+          type: "string",
+          description: "Who/what triggered this request",
+        },
+        options: {
+          type: "array",
+          description: "Available options for the human",
+        },
+        recommendation: {
+          type: "string",
+          description: "Recommended option id",
+        },
+        context: {
+          type: "object",
+          description: "Optional context data (sql_script, url, instructions, etc.)",
+        },
+      },
+      required: ["filePath", "summary", "priority", "source", "options", "recommendation"],
+    },
+  },
+  {
+    name: "statuz_niche_syn_request_read",
+    description: "Read and parse a niche SYN request YAML file. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche syn-request YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_syn_request_validate",
+    description: "Validate a niche SYN request YAML file against its schema. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche syn-request YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_syn_request_list_pending",
+    description: "List all pending (unresolved) niche SYN request files in a directory, so an agent can resume from where the previous session left off.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        directory: {
+          type: "string",
+          description: "Directory path to scan for syn-request files",
+        },
+      },
+      required: ["directory"],
+    },
+  },
+  {
+    name: "statuz_niche_syn_resolution_create",
+    description: "Create a niche SYN resolution YAML — marking a human decision/action as done (e.g., confirming SQL was executed in Supabase dashboard). Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path for the niche syn-resolution YAML file",
+        },
+        synRequestId: {
+          type: "string",
+          description: "ID of the syn-request this resolves",
+        },
+        decision: {
+          type: "string",
+          description: "Option id that was chosen",
+        },
+        decisionSummary: {
+          type: "string",
+          description: "Brief summary of the decision outcome",
+        },
+        rationale: {
+          type: "string",
+          description: "Explanation of why this decision was made",
+        },
+        principal: {
+          type: "string",
+          description: "Human who made the decision",
+        },
+        nextSteps: {
+          type: "array",
+          description: "Optional next steps after the decision",
+        },
+      },
+      required: ["filePath", "synRequestId", "decision", "decisionSummary", "rationale", "principal"],
+    },
+  },
+  {
+    name: "statuz_niche_syn_resolution_read",
+    description: "Read and parse a niche SYN resolution YAML file. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche syn-resolution YAML file",
         },
       },
       required: ["filePath"],
@@ -1089,6 +1251,218 @@ export function getTools() {
         return {
           success: false,
           error: `Niche signal validation failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_syn_request_create: async (args: {
+      filePath: string;
+      summary: string;
+      priority: string;
+      source: string;
+      options: unknown[];
+      recommendation: string;
+      context?: object;
+    }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const synRequest: Record<string, unknown> = {
+          syn_version: "1.0",
+          id: `syn-${String(synWriteCounter++).padStart(3, "0")}`,
+          type: "human_decision_required",
+          source: args.source,
+          timestamp: new Date().toISOString(),
+          priority: args.priority,
+          summary: args.summary,
+          context: args.context ?? {},
+          options: args.options,
+          recommendation: args.recommendation,
+        };
+        writeYamlFile(safePath, synRequest);
+        return {
+          success: true,
+          data: {
+            message: `Created niche syn-request at ${args.filePath}`,
+            id: synRequest.id,
+            document: synRequest,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to create niche syn-request: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_syn_request_read: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const data = readYamlFile(safePath);
+        return {
+          success: true,
+          data,
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to read niche syn-request: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_syn_request_validate: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const data = readYamlFile(safePath);
+        const result = validateAgainstNicheSchema(data, "syn");
+        return {
+          success: result.valid,
+          data: {
+            valid: result.valid,
+            errors: result.errors,
+            path: args.filePath,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Niche syn-request validation failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_syn_request_list_pending: async (args: { directory: string }): Promise<ToolResult> => {
+      try {
+        const safeDir = assertSafePath(args.directory);
+        if (!existsSync(safeDir)) {
+          return {
+            success: true,
+            data: {
+              count: 0,
+              pending: [],
+              message: `Directory ${args.directory} does not exist — no pending syn requests.`,
+            },
+          };
+        }
+        const entries = readdirSync(safeDir);
+        // 1. Collect all syn-request files (files with "syn-" prefix or "syn" in name,
+        //    excluding resolution files).
+        const synRequestFiles: string[] = [];
+        for (const entry of entries) {
+          if (!entry.endsWith(".yaml") && !entry.endsWith(".yml")) continue;
+          if (entry.includes("resolution")) continue;
+          if (entry.startsWith("syn-") || entry.includes("syn-request") || entry.includes("syn_request")) {
+            synRequestFiles.push(resolve(safeDir, entry));
+          }
+        }
+        // 2. For each request, check if there is a corresponding resolution file.
+        const pending: Array<{ filePath: string; id: unknown; summary: unknown; priority: unknown; recommendation: unknown }> = [];
+        for (const filePath of synRequestFiles) {
+          try {
+            const doc = readYamlFile(filePath) as Record<string, unknown>;
+            const id = doc.id as string | undefined;
+            if (!id) continue;
+            // Check for matching resolution in same directory.
+            const baseDir = dirname(filePath);
+            const baseName = basename(filePath).replace(/\.(ya?ml)$/, "");
+            const hasResolution =
+              existsSync(resolve(baseDir, `${baseName}-resolution.yaml`)) ||
+              existsSync(resolve(baseDir, `${id}-resolution.yaml`)) ||
+              entries.some((e: string) => {
+                if (!e.endsWith(".yaml") && !e.endsWith(".yml")) return false;
+                try {
+                  const candidatePath = resolve(baseDir, e);
+                  const candidate = readYamlFile(candidatePath) as Record<string, unknown>;
+                  return candidate.syn_request_id === id;
+                } catch {
+                  return false;
+                }
+              });
+            if (!hasResolution) {
+              pending.push({
+                filePath,
+                id: doc.id,
+                summary: doc.summary,
+                priority: doc.priority,
+                recommendation: doc.recommendation,
+              });
+            }
+          } catch {
+            // skip files that can't be parsed as YAML
+          }
+        }
+        // Sort by priority (critical > high > medium > low)
+        const priorityRank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+        pending.sort((a, b) => {
+          const ra = priorityRank[String(a.priority)] ?? 99;
+          const rb = priorityRank[String(b.priority)] ?? 99;
+          return ra - rb;
+        });
+        return {
+          success: true,
+          data: {
+            count: pending.length,
+            pending,
+            message: pending.length > 0
+              ? `Found ${pending.length} pending syn-request(s).`
+              : `No pending syn-requests — everything is resolved.`,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to list pending syn-requests: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_syn_resolution_create: async (args: {
+      filePath: string;
+      synRequestId: string;
+      decision: string;
+      decisionSummary: string;
+      rationale: string;
+      principal: string;
+      nextSteps?: string[];
+    }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const resolution: Record<string, unknown> = {
+          syn_resolution_version: "1.0",
+          id: `${args.synRequestId}-resolution`,
+          syn_request_id: args.synRequestId,
+          principal: args.principal,
+          timestamp: new Date().toISOString(),
+          decision: args.decision,
+          decision_summary: args.decisionSummary,
+          rationale: args.rationale,
+        };
+        if (args.nextSteps && args.nextSteps.length > 0) {
+          resolution.next_steps = args.nextSteps;
+        }
+        writeYamlFile(safePath, resolution);
+        return {
+          success: true,
+          data: {
+            message: `Created niche syn-resolution at ${args.filePath}`,
+            document: resolution,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to create niche syn-resolution: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_syn_resolution_read: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const data = readYamlFile(safePath);
+        return {
+          success: true,
+          data,
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to read niche syn-resolution: ${err instanceof Error ? err.message : String(err)}`,
         };
       }
     },

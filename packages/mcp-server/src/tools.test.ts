@@ -517,4 +517,200 @@ describe("MCP Tools End-to-End Tests", () => {
       expect((summaryResult.data as any).brief).toContain("workflow-niche");
     });
   });
+
+  describe("niche syn (human sync)", () => {
+    it("statuz_niche_syn_request_create should create a request", async () => {
+      const tools = getTools();
+      const filePath = resolve(TEST_DIR, "syn-request.yaml");
+
+      const result = await tools.statuz_niche_syn_request_create({
+        filePath,
+        summary: "Run CREATE TABLE orders in Supabase dashboard",
+        priority: "high",
+        source: "agent-dev",
+        options: [
+          { id: "opt-done", title: "Done", description: "SQL was executed" },
+          { id: "opt-blocked", title: "Blocked", description: "Could not execute" },
+        ],
+        recommendation: "opt-done",
+        context: {
+          sql_script: "CREATE TABLE orders (id uuid PRIMARY KEY);",
+          dashboard_url: "https://app.supabase.com/project/xxx/sql",
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(existsSync(filePath)).toBe(true);
+      const doc = (result.data as any).document;
+      expect(doc.syn_version).toBe("1.0");
+      expect(doc.id).toMatch(/^syn-\d{3}$/);
+      expect(doc.type).toBe("human_decision_required");
+      expect(doc.priority).toBe("high");
+      expect((result.data as any).id).toMatch(/^syn-\d{3}$/);
+    });
+
+    it("statuz_niche_syn_request_read should return request contents", async () => {
+      const tools = getTools();
+      const filePath = resolve(TEST_DIR, "syn-read-request.yaml");
+
+      await tools.statuz_niche_syn_request_create({
+        filePath,
+        summary: "Request for read test",
+        priority: "medium",
+        source: "agent-tester",
+        options: [{ id: "x", title: "X", description: "test" }],
+        recommendation: "x",
+      });
+
+      const result = await tools.statuz_niche_syn_request_read({ filePath });
+      expect(result.success).toBe(true);
+      expect((result.data as any).summary).toContain("read test");
+      expect((result.data as any).recommendation).toBe("x");
+    });
+
+    it("statuz_niche_syn_request_validate should pass for generated files", async () => {
+      const tools = getTools();
+      const filePath = resolve(TEST_DIR, "syn-validate.yaml");
+
+      await tools.statuz_niche_syn_request_create({
+        filePath,
+        summary: "Validation test",
+        priority: "low",
+        source: "agent-tester",
+        options: [{ id: "a", title: "A", description: "opt" }],
+        recommendation: "a",
+      });
+
+      const result = await tools.statuz_niche_syn_request_validate({ filePath });
+      expect(result.success).toBe(true);
+    });
+
+    it("statuz_niche_syn_resolution_create should mark a request as resolved", async () => {
+      const tools = getTools();
+      const reqPath = resolve(TEST_DIR, "syn-resolution-test.yaml");
+      const createResult = await tools.statuz_niche_syn_request_create({
+        filePath: reqPath,
+        summary: "Resolution test request",
+        priority: "medium",
+        source: "agent-tester",
+        options: [
+          { id: "opt-done", title: "Done", description: "action done" },
+          { id: "opt-skip", title: "Skip", description: "not needed" },
+        ],
+        recommendation: "opt-done",
+      });
+      const requestId = (createResult.data as any).id as string;
+
+      const resPath = resolve(TEST_DIR, `${requestId}-resolution.yaml`);
+      const result = await tools.statuz_niche_syn_resolution_create({
+        filePath: resPath,
+        synRequestId: requestId,
+        decision: "opt-done",
+        decisionSummary: "SQL executed in Supabase dashboard successfully",
+        rationale: "Manual click-run in dashboard, no errors reported",
+        principal: "human@example.com",
+        nextSteps: ["Write API layer", "Add tests"],
+      });
+
+      expect(result.success).toBe(true);
+      expect(existsSync(resPath)).toBe(true);
+      const doc = (result.data as any).document;
+      expect(doc.syn_resolution_version).toBe("1.0");
+      expect(doc.decision).toBe("opt-done");
+      expect(doc.principal).toBe("human@example.com");
+      expect((doc.next_steps as string[]).length).toBeGreaterThan(0);
+    });
+
+    it("statuz_niche_syn_resolution_read should return resolution contents", async () => {
+      const tools = getTools();
+      const filePath = resolve(TEST_DIR, "syn-res-read.yaml");
+      const requestId = "syn-tester-res";
+
+      await tools.statuz_niche_syn_resolution_create({
+        filePath,
+        synRequestId: requestId,
+        decision: "opt-done",
+        decisionSummary: "done",
+        rationale: "because",
+        principal: "tester",
+      });
+
+      const result = await tools.statuz_niche_syn_resolution_read({ filePath });
+      expect(result.success).toBe(true);
+      expect((result.data as any).syn_request_id).toBe(requestId);
+    });
+
+    it("statuz_niche_syn_request_list_pending should list only unresolved requests", async () => {
+      const tools = getTools();
+      const base = resolve(TEST_DIR, "syn-pending");
+
+      // request A — leave pending
+      await tools.statuz_niche_syn_request_create({
+        filePath: resolve(base, "syn-pending-a.yaml"),
+        summary: "Request A (pending)",
+        priority: "high",
+        source: "agent-tester",
+        options: [{ id: "x", title: "X", description: "test" }],
+        recommendation: "x",
+      });
+
+      // request B — resolve it
+      const bResult = await tools.statuz_niche_syn_request_create({
+        filePath: resolve(base, "syn-pending-b.yaml"),
+        summary: "Request B (resolved)",
+        priority: "low",
+        source: "agent-tester",
+        options: [{ id: "y", title: "Y", description: "test" }],
+        recommendation: "y",
+      });
+      const bId = (bResult.data as any).id as string;
+      await tools.statuz_niche_syn_resolution_create({
+        filePath: resolve(base, `${bId}-resolution.yaml`),
+        synRequestId: bId,
+        decision: "y",
+        decisionSummary: "done",
+        rationale: "done",
+        principal: "tester",
+      });
+
+      // request C — leave pending, critical
+      await tools.statuz_niche_syn_request_create({
+        filePath: resolve(base, "syn-pending-c.yaml"),
+        summary: "Request C (pending, critical)",
+        priority: "critical",
+        source: "agent-tester",
+        options: [{ id: "z", title: "Z", description: "test" }],
+        recommendation: "z",
+      });
+
+      const result = await tools.statuz_niche_syn_request_list_pending({ directory: base });
+      expect(result.success).toBe(true);
+
+      const data = result.data as any;
+      expect(data.count).toBe(2);
+      expect(data.pending.length).toBe(2);
+      // critical should come before high
+      expect(data.pending[0].priority).toBe("critical");
+      expect(data.pending[0].summary).toContain("Request C");
+      expect(data.pending[1].priority).toBe("high");
+      expect(data.pending[1].summary).toContain("Request A");
+    });
+
+    it("statuz_niche_syn_request_list_pending should handle empty/non-existent directory", async () => {
+      const tools = getTools();
+      const empty = resolve(TEST_DIR, "syn-pending-empty");
+
+      // Non-existent directory — should succeed with 0 pending
+      const result1 = await tools.statuz_niche_syn_request_list_pending({ directory: empty });
+      expect(result1.success).toBe(true);
+      expect((result1.data as any).count).toBe(0);
+
+      // Empty directory — should also succeed with 0
+      const dir1 = resolve(TEST_DIR, "syn-pending-empty2");
+      mkdirSync(dir1, { recursive: true });
+      const result2 = await tools.statuz_niche_syn_request_list_pending({ directory: dir1 });
+      expect(result2.success).toBe(true);
+      expect((result2.data as any).count).toBe(0);
+    });
+  });
 });
