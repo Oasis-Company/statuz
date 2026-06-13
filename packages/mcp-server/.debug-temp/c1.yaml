@@ -1,0 +1,7 @@
+context_version: "1.0"
+id: ctx-001
+from_agent: a
+to_agent: b
+timestamp: 2026-06-13T06:54:01.148Z
+summary: s
+requested_action: r

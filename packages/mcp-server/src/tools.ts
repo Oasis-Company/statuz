@@ -1,7 +1,10 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { Statuz } from "@statuz/sdk-ts";
-import { existsSync } from "node:fs";
-import { resolve, relative, sep } from "node:path";
+import { Statuz, NicheManifestIO } from "@statuz/sdk-ts";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { resolve, relative, sep, dirname } from "node:path";
+import YAML from "yaml";
+import AjvImport from "ajv";
+const Ajv = AjvImport as any;
 
 const DEFAULT_STATUZ_PATH = ".statuz/statuz.yaml";
 
@@ -21,9 +24,9 @@ export function setAllowedRoots(roots: string[]) {
   allowedRoots = roots.map(root => resolve(root));
 }
 
-function assertSafePath(filePath: string): string {
+export function assertSafePath(filePath: string): string {
   const resolvedPath = resolve(filePath);
-  
+
   for (const root of allowedRoots) {
     const rel = relative(root, resolvedPath);
     if (!rel.startsWith("..") && !rel.startsWith("." + sep)) {
@@ -35,7 +38,7 @@ function assertSafePath(filePath: string): string {
       return resolvedPath;
     }
   }
-  
+
   throw new Error("Path is outside allowed roots");
 }
 
@@ -48,6 +51,131 @@ export interface ToolResult {
   data?: unknown;
   error?: string;
 }
+
+// --- niche schema loading infrastructure ---
+const nicheSchemaCache: Record<string, object> = {};
+
+function tryLoadNicheSchemaFromDisk(schemaName: string): object | null {
+  const candidates = [
+    resolve(process.cwd(), `spec/niche/niche-${schemaName}.schema.json`),
+    resolve(dirname(import.meta.dirname ?? ""), "../../../spec/niche/niche-" + schemaName + ".schema.json"),
+    resolve(dirname(import.meta.dirname ?? ""), "../../spec/niche/niche-" + schemaName + ".schema.json"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      try {
+        return JSON.parse(readFileSync(candidate, "utf-8"));
+      } catch {
+        continue;
+      }
+    }
+  }
+  return null;
+}
+
+function getNicheFallbackSchema(schemaName: string): object {
+  // Minimal fallback schemas — used when external schema files are unavailable
+  const fallback: Record<string, object> = {
+    manifest: {
+      type: "object",
+      required: ["niche_version", "declared_position"],
+      properties: {
+        niche_version: { type: "string" },
+        declared_position: {
+          type: "object",
+          required: ["project_name", "purpose", "does", "does_not"],
+          properties: {
+            project_name: { type: "string" },
+            purpose: { type: "string" },
+            does: { type: "array" },
+            does_not: { type: "array" },
+          },
+        },
+      },
+    },
+    context: {
+      type: "object",
+      required: ["context_version", "id", "from_agent", "to_agent", "timestamp", "summary", "requested_action"],
+      properties: {
+        context_version: { type: "string" },
+        id: { type: "string" },
+        from_agent: { type: "string" },
+        to_agent: { type: "string" },
+        timestamp: { type: "string" },
+        summary: { type: "string" },
+        requested_action: { type: "string" },
+      },
+    },
+    signal: {
+      type: "object",
+      required: ["signal_version", "id", "type", "source", "timestamp", "summary"],
+      properties: {
+        signal_version: { type: "string" },
+        id: { type: "string" },
+        type: { type: "string" },
+        source: { type: "string" },
+        timestamp: { type: "string" },
+        summary: { type: "string" },
+      },
+    },
+  };
+  return fallback[schemaName] ?? { type: "object" };
+}
+
+function loadNicheSchema(schemaName: string): object {
+  if (nicheSchemaCache[schemaName]) {
+    return nicheSchemaCache[schemaName];
+  }
+  const diskSchema = tryLoadNicheSchemaFromDisk(schemaName);
+  const schema = diskSchema ?? getNicheFallbackSchema(schemaName);
+  nicheSchemaCache[schemaName] = schema;
+  return schema;
+}
+
+function validateAgainstNicheSchema(data: unknown, schemaName: string): { valid: boolean; errors?: string[] } {
+  try {
+    const schema = loadNicheSchema(schemaName);
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(schema);
+    if (validate(data)) {
+      return { valid: true };
+    }
+    return {
+      valid: false,
+      errors: (validate.errors || []).map((e: any) => `${e.instancePath || "(root)"}: ${e.message || "unknown error"}`),
+    };
+  } catch (err) {
+    return {
+      valid: false,
+      errors: [`Schema validation failed: ${err instanceof Error ? err.message : String(err)}`],
+    };
+  }
+}
+
+function readYamlFile(filePath: string): any {
+  if (!existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+  const raw = readFileSync(filePath, "utf-8");
+  try {
+    return YAML.parse(raw);
+  } catch (err) {
+    throw new Error(`Invalid YAML in file: ${filePath}`);
+  }
+}
+
+function writeYamlFile(filePath: string, data: unknown): void {
+  const dir = dirname(filePath);
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+    // directory already exists — ok
+  }
+  writeFileSync(filePath, YAML.stringify(data), "utf-8");
+}
+
+let contextWriteCounter = 1;
+let signalWriteCounter = 1;
 
 export const statuzTools: Tool[] = [
   {
@@ -106,6 +234,7 @@ export const statuzTools: Tool[] = [
           description: "Dot-notation path to the field to update (e.g., 'current_state.status')",
         },
         value: {
+          type: "string",
           description: "New value for the field",
         },
       },
@@ -199,6 +328,191 @@ export const statuzTools: Tool[] = [
           description: "Name of the project",
         },
       },
+    },
+  },
+  // --- niche tools ---
+  {
+    name: "statuz_niche_manifest_read",
+    description: "Read and parse a niche manifest YAML file (ecological position declaration). Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche manifest YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_manifest_validate",
+    description: "Validate a niche manifest YAML file against its schema. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche manifest YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_manifest_init",
+    description: "Create a minimal valid niche manifest YAML file with declared position. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path for the new niche manifest file",
+        },
+        projectName: {
+          type: "string",
+          description: "Name of the project",
+        },
+        purpose: {
+          type: "string",
+          description: "Project purpose / ecological positioning",
+        },
+      },
+      required: ["filePath", "projectName", "purpose"],
+    },
+  },
+  {
+    name: "statuz_niche_manifest_summary",
+    description: "Produce a human-readable summary of a niche manifest: declared position, strategic bets, success signals. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche manifest YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_context_read",
+    description: "Read and parse a niche context YAML file (collaboration payload between agents). Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche context YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_context_write",
+    description: "Write a niche context YAML file (collaboration payload between agents). Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path for the niche context YAML file",
+        },
+        id: {
+          type: "string",
+          description: "Unique identifier for this context",
+        },
+        fromAgent: {
+          type: "string",
+          description: "Source agent name",
+        },
+        toAgent: {
+          type: "string",
+          description: "Target agent name",
+        },
+        summary: {
+          type: "string",
+          description: "Summary of the collaboration request",
+        },
+        requestedAction: {
+          type: "string",
+          description: "Action requested from the target agent",
+        },
+      },
+      required: ["filePath", "fromAgent", "toAgent", "summary", "requestedAction"],
+    },
+  },
+  {
+    name: "statuz_niche_context_validate",
+    description: "Validate a niche context YAML file against its schema. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche context YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_signal_read",
+    description: "Read and parse a niche signal YAML file (ecosystem event). Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche signal YAML file",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
+  {
+    name: "statuz_niche_signal_write",
+    description: "Write a niche signal YAML file (ecosystem event). Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path for the niche signal YAML file",
+        },
+        id: {
+          type: "string",
+          description: "Unique identifier for this signal",
+        },
+        type: {
+          type: "string",
+          description: "Signal type (e.g., dependency_update, api_change, new_release)",
+        },
+        source: {
+          type: "string",
+          description: "Source of the signal (e.g., npm/github/manual)",
+        },
+        summary: {
+          type: "string",
+          description: "Summary of the ecosystem event",
+        },
+      },
+      required: ["filePath", "type", "source", "summary"],
+    },
+  },
+  {
+    name: "statuz_niche_signal_validate",
+    description: "Validate a niche signal YAML file against its schema. Operates on niche files, independent from statuz.yaml.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Path to the niche signal YAML file",
+        },
+      },
+      required: ["filePath"],
     },
   },
 ];
@@ -523,6 +837,258 @@ export function getTools() {
         return {
           success: false,
           error: message,
+        };
+      }
+    },
+    // --- niche manifest tools ---
+    statuz_niche_manifest_read: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const manifest = NicheManifestIO.read(safePath);
+        return {
+          success: true,
+          data: manifest,
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to read niche manifest: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_manifest_validate: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const result = NicheManifestIO.validateFile(safePath);
+        return {
+          success: result.valid,
+          data: {
+            valid: result.valid,
+            errors: result.errors,
+            path: args.filePath,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Niche manifest validation failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_manifest_init: async (args: { filePath: string; projectName: string; purpose: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+
+        if (existsSync(safePath)) {
+          return {
+            success: false,
+            error: `File already exists: ${args.filePath}`,
+          };
+        }
+
+        const manifest: { niche_version: "1.0"; declared_position: { project_name: string; purpose: string; does: string[]; does_not: string[] } } = {
+          niche_version: "1.0" as const,
+          declared_position: {
+            project_name: args.projectName,
+            purpose: args.purpose,
+            does: [],
+            does_not: [],
+          },
+        };
+
+        NicheManifestIO.write(safePath, manifest);
+
+        return {
+          success: true,
+          data: {
+            message: `Created niche manifest at ${args.filePath}`,
+            projectName: args.projectName,
+            purpose: args.purpose,
+            document: manifest,
+          },
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: message,
+        };
+      }
+    },
+    statuz_niche_manifest_summary: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const manifest = NicheManifestIO.read(safePath);
+        const dp: any = manifest.declared_position || {};
+        const lines: string[] = [
+          "=== Niche Manifest Summary ===",
+          `Project:  ${dp.project_name ?? "(not set)"}`,
+          `Purpose:  ${dp.purpose ?? "(not set)"}`,
+          "",
+          "Does:",
+          ...((dp.does as any[] || []).map((item: any) => `  - ${item}`) || ["  (none)"]),
+          "",
+          "Does Not:",
+          ...((dp.does_not as any[] || []).map((item: any) => `  - ${item}`) || ["  (none)"]),
+        ];
+        if (manifest.strategic_bets && Array.isArray(manifest.strategic_bets) && manifest.strategic_bets.length > 0) {
+          lines.push("", "Strategic Bets:");
+          for (const bet of manifest.strategic_bets) {
+            lines.push(`  - ${bet}`);
+          }
+        }
+        if (manifest.success_signals && Array.isArray(manifest.success_signals) && manifest.success_signals.length > 0) {
+          lines.push("", "Success Signals:");
+          for (const sig of manifest.success_signals) {
+            lines.push(`  - ${sig}`);
+          }
+        }
+        if (manifest.drift_thresholds && typeof manifest.drift_thresholds === "object") {
+          lines.push("", "Drift Thresholds:");
+          const dt: any = manifest.drift_thresholds;
+          if (dt.task_drift !== undefined) lines.push(`  task_drift: ${dt.task_drift}`);
+          if (dt.collaboration_drift !== undefined) lines.push(`  collaboration_drift: ${dt.collaboration_drift}`);
+          if (dt.boundary_drift !== undefined) lines.push(`  boundary_drift: ${dt.boundary_drift}`);
+        }
+        return {
+          success: true,
+          data: {
+            brief: lines.join("\n"),
+            manifest: manifest,
+          },
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: message,
+        };
+      }
+    },
+    // --- niche context tools ---
+    statuz_niche_context_read: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const data = readYamlFile(safePath);
+        return {
+          success: true,
+          data: data,
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to read niche context: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_context_write: async (args: { filePath: string; id?: string; fromAgent: string; toAgent: string; summary: string; requestedAction: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        let contextId = args.id || `ctx-${String(contextWriteCounter++).padStart(3, "0")}`;
+        const context = {
+          context_version: "1.0" as const,
+          id: contextId,
+          from_agent: args.fromAgent,
+          to_agent: args.toAgent,
+          timestamp: new Date().toISOString(),
+          summary: args.summary,
+          requested_action: args.requestedAction,
+        };
+        writeYamlFile(safePath, context);
+        return {
+          success: true,
+          data: {
+            message: `Wrote niche context to ${args.filePath}`,
+            document: context,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to write niche context: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_context_validate: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const data = readYamlFile(safePath);
+        const result = validateAgainstNicheSchema(data, "context");
+        return {
+          success: result.valid,
+          data: {
+            valid: result.valid,
+            errors: result.errors,
+            path: args.filePath,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Niche context validation failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    // --- niche signal tools ---
+    statuz_niche_signal_read: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const data = readYamlFile(safePath);
+        return {
+          success: true,
+          data: data,
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to read niche signal: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_signal_write: async (args: { filePath: string; id?: string; type: string; source: string; summary: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        let signalId = args.id || `sig-${String(signalWriteCounter++).padStart(3, "0")}`;
+        const signal = {
+          signal_version: "1.0" as const,
+          id: signalId,
+          type: args.type,
+          source: args.source,
+          timestamp: new Date().toISOString(),
+          summary: args.summary,
+        };
+        writeYamlFile(safePath, signal);
+        return {
+          success: true,
+          data: {
+            message: `Wrote niche signal to ${args.filePath}`,
+            document: signal,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to write niche signal: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+    statuz_niche_signal_validate: async (args: { filePath: string }): Promise<ToolResult> => {
+      try {
+        const safePath = assertSafePath(args.filePath);
+        const data = readYamlFile(safePath);
+        const result = validateAgainstNicheSchema(data, "signal");
+        return {
+          success: result.valid,
+          data: {
+            valid: result.valid,
+            errors: result.errors,
+            path: args.filePath,
+          },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Niche signal validation failed: ${err instanceof Error ? err.message : String(err)}`,
         };
       }
     },

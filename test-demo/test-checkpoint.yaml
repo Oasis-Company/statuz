@@ -1,0 +1,53 @@
+statuz_version: "0.1"
+updated_at: 2026-06-12T07:23:37.508Z
+identity:
+  agent_name: dev-agent
+  project_name: example-project
+  organization: Oasis Company
+  environment: local-dev
+role:
+  name: implementation-assistant
+  responsibilities:
+    - implement code
+    - preserve existing architecture
+    - explain tradeoffs
+  boundaries:
+    - do not deploy without explicit user approval
+current_state:
+  stage: implementation
+  task: add Statuz support to the project
+  status: in_progress
+  last_checkpoint: Implemented checkpoint command
+  next_action: Fix CLI schema sync issue
+progress:
+  completed:
+    - created initial schema draft
+    - wrote basic example
+  blocked_by: []
+  open_questions:
+    - should the project commit .statuz by default?
+relations:
+  related_agents:
+    - doc-agent
+  related_files:
+    - spec/statuz.schema.json
+    - README.md
+  related_tools:
+    - git
+    - node
+rules:
+  should:
+    - read Statuz at session start
+    - write checkpoint after important decisions
+  should_not:
+    - store secrets in Statuz
+checkpoints:
+  - id: cp-001
+    at: 2026-05-27T12:00:00Z
+    summary: Created the first Statuz example.
+    next_action: Implement validator.
+  - id: cp-002
+    at: 2026-06-12T07:23:37.508Z
+    summary: Implemented checkpoint command
+    decision: Use commander.js for CLI framework
+    next_action: Fix CLI schema sync issue
