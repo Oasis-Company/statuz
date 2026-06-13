@@ -1,0 +1,12 @@
+syn_version: "1.0"
+id: syn-001
+type: human_decision_required
+source: tester
+timestamp: 2026-06-13T09:02:23.442Z
+priority: low
+summary: test
+options:
+  - id: a
+    title: A
+    description: opt
+recommendation: a
