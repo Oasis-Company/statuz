@@ -4,13 +4,13 @@
 
 # Roadmap
 
-> Updated 2026-05-30 - Based on positioning calibration
+> Updated 2026-06-14 - Ecosystem Architecture Upgrade
 >
 > **Positioning Statement:** Statuz is an AI Agent **Situated Alignment Ecosystem** = Protocol + Toolchain + Best Practices Documentation
 >
-> **Three-Layer Architecture:** Core + niche + SYN = Statuz, all required
+> **Four-Layer Architecture:** Core + niche + SYN + 66 (Arrow Maps) = Statuz, all required
 >
-> **Current Goal:** 1.0 Stable (Complete)
+> **Current Goal:** 1.1 Ecosystem Architecture (Arrow Map Cluster + Status Keeper)
 
 ---
 
@@ -151,3 +151,63 @@
 ### 1.0.5 Dashboard Prototype (Optional)
 - [ ] Lightweight Statuz status viewer
 - [ ] Niche status overview
+
+---
+
+## 1.1 — Ecosystem Architecture (IN PROGRESS)
+
+**Goal:** Enable global niche awareness at organization level
+
+**Priorities:** Arrow Map Cluster + Status Keeper + Arrow Description Mandatory
+
+### 1.1.1 Arrow Description Mandatory
+- [x] Arrow schema updated: description is required field
+- [x] Detector generates descriptions for all detected arrows
+- [x] Arrow Proposal workflow requires description input
+- [x] Example files updated with meaningful descriptions
+- [x] Documentation updated (66-OVERVIEW.md, CLI_USAGE.md)
+
+### 1.1.2 Arrow Map Cluster
+- [x] Arrow Map Cluster schema created
+- [x] Cross-map arrow schema defined (from_map, to_map, description required)
+- [x] Example cluster file created
+- [x] ArrowMapClusterIO implemented in SDK
+- [x] SPEC.md updated with Layer 4.1: Arrow Map Cluster
+- [x] ADR 0007: Arrow Map Cluster documented
+- [ ] Cluster CLI commands (init/show/validate/arrow-add)
+- [ ] Cluster tests
+
+### 1.1.3 Status Keeper
+- [x] Status Keeper schema created
+- [x] Status Keeper engine implemented (runChecks, generateReport)
+- [x] Check types: file_exists, checkpoint_freshness, arrow_map_valid, niche_manifest_valid, cluster_valid
+- [x] Severity levels: critical, warning, info
+- [x] Health report generation
+- [x] ADR 0008: Status Keeper documented
+- [ ] Status Keeper CLI commands (run/show-report)
+- [ ] Integration with agent session start
+
+### 1.1.4 Calibration Engine Rewrite (P2)
+- [ ] Tag-based matching algorithm (replace string includes)
+- [ ] Actionable recommendation generation
+- [ ] Arrow Map integration (calibration → propose arrows)
+- [ ] niche types updated with tags[] field
+
+**Not Yet:** Full Calibration Engine rewrite (deferred to 1.2)
+
+---
+
+## Future Phases (Post 1.1)
+
+### 1.2 — Calibration Engine Improvements
+- Structured tag schema for declared_position
+- Tag extraction from checkpoint summary
+- Drift calculation formula (unmatched_tags / total_checkpoint_tags)
+- Specific recommendations with evidence citations
+- Arrow Map integration (calibration → Arrow Map proposals)
+
+### 1.3 — Multi-Agent Coordination
+- SignalBus production-ready
+- Cross-agent niche awareness
+- Real-time ecosystem signals
+- Agent discovery and registry

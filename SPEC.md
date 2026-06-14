@@ -89,7 +89,7 @@ checkpoints:
 
 ---
 
-## 🌍 Three-Layer Architecture
+## 🌍 Four-Layer Architecture
 
 ### Layer 1: Core (Runtime Status)
 **What it tracks:** Identity, current task, progress, next action.
@@ -123,6 +123,57 @@ checkpoints:
 | File | Purpose |
 |-------|---------|
 | `niche/syn/*.yaml` | Strategic decision requests and resolutions |
+
+### Layer 4: 66 — Arrow Maps (Global Niche Awareness)
+**What it tracks:** How projects relate to each other across the ecosystem.
+
+> **Core Principle:** Arrow Maps are designed for **global niche awareness**, not visualization. An Arrow Map's elements are **names** — project or component references (e.g., "APP A" → "APP A web", "auth-service" → "auth-db"). A name is a pointer to a project; it does not contain the project itself. The purpose of an Arrow Map is to give agents an **efficient graph for retrieval** — so they can answer "what connects to what" and "where does this project fit" without reading hundreds of files. Visual diagrams in IDE extensions or dashboards are merely **visual mappings** of the underlying Arrow Map — the YAML file is the canonical data structure.
+
+| File/Concept | Purpose |
+|-------|---------|
+| Arrow Map (stored in registry, referenced by ID) | Named, versioned topology of how projects connect |
+| Arrow (atomic unit) | A directional relationship between two named nodes |
+| StatuNode (atomic unit) | A named project or component reference |
+| `statuz arrow-map` CLI commands | Map creation, validation, progressive discovery |
+| Arrow Proposal | Proposed change to the map topology, reviewed before apply |
+
+**Design implication:** Arrow Maps grow progressively through the agent-human dialogue. They are not generated once by an automated detector and then frozen. A detector serves as a **suggestion tool** — it can propose candidate arrows from `package.json`, `docker-compose.yml`, or source code imports, but each candidate goes through the Arrow Proposal workflow (review → approve → apply) before being accepted into the map.
+
+**Relationship to niche:** The niche manifest declares **what** a project does (its ecological position). The Arrow Map shows **how** that project connects to others. A niche's `declared_position.does_not` ("we don't manage databases") implies that in the Arrow Map, there should be a `dependency` or `information_flow` arrow pointing to an external database node, not a `responsibility` arrow claiming ownership. Niche and Arrow Map are complementary: niche = single-project boundary; Arrow Map = cross-project topology.
+
+**See also:** [66 Overview](66-implementation/docs/66-OVERVIEW.md), [Arrow Map Schema](66-implementation/spec/arrow-map.schema.json), [66 Implementation Plan](66-implementation/PLAN.md)
+
+### Layer 4.1: Arrow Map Cluster (Organization-Level Ecosystem)
+
+**What it tracks:** How Arrow Maps relate to each other across an organization.
+
+> **Purpose:** An Arrow Map Cluster enables **global niche awareness at the organization level**. It aggregates multiple Arrow Maps into a single topology view, with cross-map arrows describing relationships between projects. This is the foundation for "company universe ecosystem" understanding — agents can query the cluster to find "who owns auth" or "what depends on this service" across all projects.
+
+| File/Concept | Purpose |
+|-------|---------|
+| Arrow Map Cluster (stored in registry) | Named collection of Arrow Maps + cross-map arrows |
+| Cross-map Arrow | A directional relationship between nodes in different Arrow Maps |
+| `statuz cluster` CLI commands | Cluster creation, validation, cross-map arrow management |
+
+**Key features:**
+- **Maps aggregation** — Multiple Arrow Maps referenced by ID and version
+- **Cross-map arrows** — Arrows with `from_map`/`to_map` fields connecting nodes across projects
+- **Wildcard support** — `from_map: "*"` means "all maps", enabling organization-wide patterns like "all projects depend on shared logging"
+- **Description required** — Every cross-map arrow must explain why the relationship exists
+
+**Example cross-map arrow:**
+```yaml
+cross_map_arrows:
+  - id: "muserock→statuz-sdk"
+    from_map: "muserock"
+    from_node: "creative-state-agent"
+    to_map: "statuz"
+    to_node: "sdk-ts"
+    type: "dependency"
+    description: "MuseRock's creative-state-agent uses Statuz SDK-TS as the state layer for agent continuity"
+```
+
+**See also:** [Arrow Map Cluster Schema](66-implementation/spec/arrow-map-cluster.schema.json), [Cluster Example](66-implementation/examples/arrow-map-cluster-example.yaml)
 
 ---
 

@@ -120,7 +120,8 @@ export class ArrowProposalIO {
         break;
       case "remove":
         map.nodes = map.nodes.filter(n => n.id !== nodeId);
-        map.arrows = map.arrows.filter(a => a.from !== nodeId && a.to !== nodeId);
+        // Remove arrows connected to this node (using source/target, not from/to)
+        map.arrows = map.arrows.filter(a => a.source !== nodeId && a.target !== nodeId);
         break;
       case "update":
         const existingNodeIdx = map.nodes.findIndex(n => n.id === nodeId);

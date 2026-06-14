@@ -1,5 +1,12 @@
 # Example: A complete Arrow Map
-# Demonstrates a microservice backend topology using the 66 layer
+# Demonstrates a microservice backend topology using the 66 layer.
+#
+# Design Principle: Arrow Maps are for GLOBAL NICHE AWARENESS, not visualization.
+# Node IDs below are NAMES (project/component references), not pages or files.
+# E.g., "api-gateway" → "auth-service" means "the API gateway project connects
+# to the auth-service project" — it describes a relationship between named
+# entities. Visual diagrams in IDE extensions or dashboards are visual mappings
+# of this underlying data structure — this file IS the canonical source of truth.
 
 arrow_map_version: "0.1.0"
 id: "niche:microservice-backend-v1"

@@ -1,0 +1,128 @@
+{
+  "$id": "https://statuz.org/schemas/pending-actions.schema.json",
+  "title": "Statuz Pending Actions",
+  "description": "JSON Schema for Statuz Pending Actions — bidirectional human-agent action tracker. Both agent and human can read and write. Agent MUST read this file before making assumptions about external state.",
+  "type": "object",
+  "required": [
+    "pending_actions_version",
+    "updated_at",
+    "pending_actions"
+  ],
+  "properties": {
+    "pending_actions_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version, must be 1.0"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last modification"
+    },
+    "pending_actions": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Ordered list of pending actions requiring human attention",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "requested_by",
+          "assigned_to",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^pa-[0-9]{3}$",
+            "description": "Unique action ID (e.g., pa-001)"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Short, actionable title describing what the human needs to do"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Detailed instructions, including links, account names, or specific steps"
+          },
+          "requested_by": {
+            "type": "string",
+            "enum": ["agent", "human"],
+            "description": "Who initiated this pending action"
+          },
+          "assigned_to": {
+            "type": "string",
+            "enum": ["human", "agent"],
+            "description": "Who is responsible for completing this action"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "done", "blocked", "cancelled"],
+            "description": "Current status of the action. Agent MUST read this field before proceeding. Human is expected to update this field."
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "default": "medium",
+            "description": "How urgently the agent needs this action completed"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the action was created"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional deadline. Agent may escalate if past deadline without resolution."
+          },
+          "human_notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Free-form notes from the human. Agent MUST read and acknowledge these."
+          },
+          "agent_blocked_on": {
+            "type": "array",
+            "minItems": 0,
+            "description": "Specific tasks or capabilities the agent cannot proceed with until this action is resolved",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          },
+          "resolution": {
+            "type": "object",
+            "description": "Filled when the action is resolved (status = done or cancelled)",
+            "properties": {
+              "resolved_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When the action was resolved"
+              },
+              "resolved_by": {
+                "type": "string",
+                "description": "Who resolved it (e.g., 'chkev', 'agent')"
+              },
+              "outcome": {
+                "type": "string",
+                "maxLength": 1000,
+                "description": "What happened — the value, token path, or confirmation"
+              },
+              "notes": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Additional context about the resolution"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

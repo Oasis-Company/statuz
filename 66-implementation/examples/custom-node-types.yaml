@@ -7,7 +7,7 @@ name: "Custom Infrastructure Topology"
 niche_category: "infrastructure"
 version: "1.0.0"
 status: "draft"
-  description: "Example of custom node types for a Kubernetes-based infrastructure"
+description: "Example of custom node types for a Kubernetes-based infrastructure"
 
 nodes:
   # Built-in type: component
@@ -73,16 +73,19 @@ arrows:
     source: "api-gateway"
     target: "user-service"
     type: "information_flow"
+    description: "API Gateway routes user-related requests to User Service microservice"
     properties:
       reason: "Gateway routes user requests"
       criticality: "high"
     type_properties:
+      direction: "unidirectional"
       protocol: "HTTP/REST"
 
   - id: "arrow-user-deployment"
     source: "user-service"
     target: "user-deployment"
     type: "dependency"
+    description: "User Service requires Kubernetes deployment to run in production"
     properties:
       reason: "Service requires deployment to run"
       criticality: "critical"
@@ -93,6 +96,7 @@ arrows:
     source: "platform-squad"
     target: "user-service"
     type: "responsibility"
+    description: "Platform Squad is responsible for User Service development and maintenance"
     properties:
       reason: "Platform squad owns user service"
       criticality: "high"
@@ -101,6 +105,7 @@ arrows:
     source: "user-service"
     target: "assets-bucket"
     type: "resource_transfer"
+    description: "User Service stores user avatar images in S3 assets bucket"
     properties:
       reason: "User service stores avatars in S3"
       criticality: "medium"

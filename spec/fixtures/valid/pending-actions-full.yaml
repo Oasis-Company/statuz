@@ -1,0 +1,98 @@
+pending_actions_version: "1.0"
+updated_at: "2026-06-04T11:45:00Z"
+pending_actions:
+  - id: "pa-001"
+    title: "Generate Supabase service_role key"
+    description: >
+      Go to Supabase Dashboard → Project Settings → API.
+      Copy the `service_role` key. Do NOT use the anon key.
+      Save it to .env as SUPABASE_SERVICE_ROLE_KEY.
+    requested_by: agent
+    assigned_to: human
+    status: done
+    priority: critical
+    created_at: "2026-06-04T10:00:00Z"
+    deadline: "2026-06-04T18:00:00Z"
+    human_notes: "Done. Key is in .env as SUPABASE_SERVICE_ROLE_KEY."
+    agent_blocked_on:
+      - "Cannot initialize Supabase admin client"
+      - "All RLS bypass operations"
+      - "Integration test suite"
+    resolution:
+      resolved_at: "2026-06-04T11:45:00Z"
+      resolved_by: "chkev"
+      outcome: "service_role key generated and stored in .env"
+      notes: "Key is valid and tested with admin client initialization"
+
+  - id: "pa-002"
+    title: "Review database schema migration"
+    description: "Check the proposed migration adds moderator and viewer roles correctly."
+    requested_by: agent
+    assigned_to: human
+    status: in_progress
+    priority: high
+    created_at: "2026-06-04T10:30:00Z"
+    human_notes: "Looking at it now. Have a question about the user_role enum."
+    agent_blocked_on:
+      - "Database migration pending approval"
+
+  - id: "pa-003"
+    title: "Configure Firebase in Google Cloud Console"
+    description: "Enable Firebase Authentication and Firestore for thoth-backend-prod."
+    requested_by: human
+    assigned_to: agent
+    status: pending
+    priority: high
+    created_at: "2026-06-04T11:00:00Z"
+
+  - id: "pa-004"
+    title: "Provide API key for SendGrid"
+    description: "Generate a new API key at SendGrid Dashboard → Settings → API Keys."
+    requested_by: agent
+    assigned_to: human
+    status: blocked
+    priority: medium
+    created_at: "2026-06-04T09:00:00Z"
+    human_notes: "Blocked — SendGrid account requires admin approval. Submitted request to org admin."
+    agent_blocked_on:
+      - "Email notification service initialization"
+
+  - id: "pa-005"
+    title: "Remove deprecated logging library"
+    description: "The old logger was replaced. Clean up the dependency."
+    requested_by: agent
+    assigned_to: human
+    status: cancelled
+    priority: low
+    created_at: "2026-06-04T08:00:00Z"
+    human_notes: "No longer needed — the new logger handles this automatically."
+    resolution:
+      resolved_at: "2026-06-04T08:30:00Z"
+      resolved_by: "chkev"
+      outcome: "Cancelled — new logger library auto-handles log routing"
+
+  - id: "pa-006"
+    title: "Set up staging environment on Vercel"
+    requested_by: agent
+    assigned_to: human
+    status: pending
+    priority: medium
+    created_at: "2026-06-04T11:15:00Z"
+    agent_blocked_on:
+      - "Staging deployment tests"
+      - "Preview URL validation"
+
+  - id: "pa-007"
+    title: "Run CSS smoke test after theme refactor"
+    requested_by: agent
+    assigned_to: human
+    status: done
+    priority: high
+    created_at: "2026-06-04T09:30:00Z"
+    agent_blocked_on:
+      - "Verification that dark mode is not broken"
+      - "Mobile layout regression check"
+    resolution:
+      resolved_at: "2026-06-04T10:15:00Z"
+      resolved_by: "chkev"
+      outcome: "Dark mode verified OK across 12 screens. Mobile layout passes on iPhone SE and Pixel 7."

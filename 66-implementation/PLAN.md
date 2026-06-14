@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Core Design Principle (read before implementing):** Arrow Maps are designed for **global niche awareness**, not visualization. Elements are names (project/component references, e.g., "APP A" → "APP A web"), not pages or files. An Arrow Map is a retrieval-efficient graph for agents to understand project relationships. Visual diagrams in IDE extensions or dashboards are merely **visual mappings** of the underlying Arrow Map — the map is the canonical data structure. "Global" means naming-global (same name = same thing across projects), not physical-global (no server required). Arrows are discovered progressively through the agent-human dialogue. The detector is a **suggestion tool** — it outputs candidates, each must go through Arrow Proposal workflow (review → approve → apply). See `docs/66-OVERVIEW.md` "3. Arrow Map" for the full statement.
+
 **Goal:** Build the 66 layer from design documents to working CLI — starting with Schema validation tests, then a minimal Arrow Map CLI, then the Detector discovery engine.
 
 **Architecture:** The 66 layer is a new topological abstraction above Core and niche. It consists of three JSON Schemas (Arrow, StatuNode, Arrow Map), a CLI for map management, and a Detector for automatic arrow discovery. All code lives in `packages/cli/src/arrow-map/` and `packages/cli/src/detector/`.

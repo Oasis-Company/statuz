@@ -89,6 +89,8 @@ statuz arrow-map validate ./arrow-map.yaml
 
 Discovers arrows in your project through automatic scanning or interactive questioning.
 
+**Important:** The detector is a **suggestion tool**, not a generator. Detected arrows are candidates that must go through the Arrow Proposal workflow (review → approve → apply) before becoming part of the Arrow Map.
+
 ### Usage
 
 ```bash
@@ -103,16 +105,29 @@ statuz arrow-map detect [--auto] [--interactive] [--confidence-threshold <value>
 | `--interactive` | Run only manual interactive detection (asks questions) |
 | `--confidence-threshold <value>` | Minimum confidence for auto-detected arrows (default: 0.7) |
 
-### Examples
+### Auto-Detection Sources
 
-#### Run both auto and interactive detection (default)
-```bash
-statuz arrow-map detect
-```
+The detector scans three sources:
+
+1. **package.json** — Detects npm dependencies with descriptions like:
+   `"Detected from package.json: my-project depends on commander@12.1.0 (production dependency)"`
+
+2. **docker-compose.yml** — Detects service dependencies with descriptions like:
+   `"Detected from docker-compose.yml: api-gateway container depends on auth-service container for startup order"`
+
+3. **Source imports** — Detects module-level imports with descriptions like:
+   `"Detected from source import: main module imports utils module via relative path"`
+
+### Examples
 
 #### Run only auto-detection with custom threshold
 ```bash
 statuz arrow-map detect --auto --confidence-threshold 0.8
+```
+
+#### Run only interactive detection
+```bash
+statuz arrow-map detect --interactive
 ```
 
 ---

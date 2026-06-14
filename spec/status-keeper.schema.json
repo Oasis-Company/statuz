@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://statuz.org/schemas/status-keeper.schema.json",
+  "title": "Status Keeper Configuration",
+  "description": "Configuration for Status Keeper - the component that performs regular health checks on Statuz files.",
+  "type": "object",
+  "required": ["keeper_version", "checks"],
+  "properties": {
+    "keeper_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version for Status Keeper configuration",
+      "default": "1.0.0"
+    },
+    "schedule": {
+      "type": "object",
+      "description": "Schedule configuration for health checks",
+      "properties": {
+        "health_check": {
+          "type": "string",
+          "enum": ["daily", "hourly", "session_start", "manual"],
+          "description": "Frequency of health checks",
+          "default": "session_start"
+        },
+        "checkpoint_check": {
+          "type": "string",
+          "enum": ["daily", "hourly", "session_start", "manual"],
+          "description": "Frequency of checkpoint freshness checks",
+          "default": "session_start"
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^\\d{2}:\\d{2}$",
+          "description": "Time for scheduled checks (HH:MM format, e.g., '09:00' for daily checks)"
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "description": "List of health checks to perform",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["type", "target", "severity"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["file_exists", "checkpoint_freshness", "arrow_map_valid", "niche_manifest_valid", "cluster_valid"],
+            "description": "Type of health check"
+          },
+          "target": {
+            "type": "string",
+            "description": "Target file or path for the check"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "warning", "info"],
+            "description": "Severity level if check fails"
+          },
+          "message": {
+            "type": "string",
+            "description": "Custom message to display if check fails"
+          },
+          "max_age_hours": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum age in hours for checkpoint_freshness check"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this check is enabled",
+            "default": true
+          }
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Output configuration for health reports",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["yaml", "json", "markdown"],
+          "description": "Format for health report output",
+          "default": "yaml"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to write health report",
+          "default": ".statuz/health-report.yaml"
+        },
+        "notify_on_critical": {
+          "type": "boolean",
+          "description": "Notify user immediately on critical-level failures",
+          "default": true
+        },
+        "notify_on_warning": {
+          "type": "boolean",
+          "description": "Notify user on warning-level failures",
+          "default": false
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

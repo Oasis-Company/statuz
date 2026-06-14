@@ -121,6 +121,15 @@ Nodes have **identity** and **properties**, but their meaning emerges from their
 
 ### 3. Arrow Map
 
+**Arrow Maps are designed for global niche awareness.**
+
+This is the single most important design principle. It changes how you should think about everything in the 66 layer:
+
+- **The elements of an Arrow Map are names, not pages or files.** A node's ID is a reference to a project or component (e.g., "APP A" → "APP A web", "auth-service" → "auth-db"). Names are pointers — they do not contain the thing they name.
+- **An Arrow Map is a retrieval-efficient graph, not a visualization.** Its purpose is to let agents understand how projects relate to each other so they can quickly answer "what connects to what" and "where does this project fit." The visual diagrams users see in IDE extensions or dashboards are merely visual mappings of the underlying Arrow Map — the map itself is the canonical data structure. **"Global" here means naming-global (the same name refers to the same thing across all projects), not physical-global (no network server or central database required).** Arrow Maps remain file-based and portable, consistent with Statuz's "first version must work without a server" principle.
+- **Arrows are discovered progressively through the agent-human dialogue.** An Arrow Map is not generated once by a detector and then frozen. It grows as the agent works on the project, reads code, and proposes changes through the Arrow Proposal workflow. The detector is a **suggestion tool** — it outputs candidate arrows (from package.json, docker-compose.yml, source imports), but each candidate must go through the Arrow Proposal workflow (review → approve → apply) before becoming part of the Arrow Map.
+- **Every arrow MUST have a description.** This is a required field in the Arrow schema. The description explains why the arrow exists and what relationship it represents. Without descriptions, an Arrow Map becomes a meaningless graph of connections. Example: `"CLI depends on SDK-TS for YAML file read/write operations and schema validation"` — this tells the reader the semantic meaning of the connection, not just that there is one.
+
 An Arrow Map is a named, versioned collection of nodes and arrows. It is:
 
 - **Portable** — Can be referenced by ID across projects

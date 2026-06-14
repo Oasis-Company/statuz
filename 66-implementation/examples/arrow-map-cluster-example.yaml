@@ -1,0 +1,131 @@
+# Example: Arrow Map Cluster
+# Demonstrates an organization-level ecosystem topology with multiple Arrow Maps
+# and cross-map arrows connecting nodes across different projects.
+#
+# Design Principle: Arrow Map Clusters enable global niche awareness at the
+# organization level. Each map represents a project/system topology, and
+# cross_map_arrows describe relationships between projects. This is the
+# foundation for "company universe ecosystem" understanding.
+
+cluster_version: "1.0.0"
+id: "oasis:company-atlas"
+name: "Oasis Company Ecosystem Atlas"
+description: |
+  Complete topology of Oasis Company's software ecosystem.
+  Includes internal tools, product systems, and shared infrastructure.
+  Enables agents to understand project relationships across the organization.
+
+maps:
+  - map_id: "statuz:core-system"
+    version: "1.0.0"
+    scope: "internal"
+    alias: "statuz"
+    
+  - map_id: "muserock:creative-platform"
+    version: "2.0.0"
+    scope: "product"
+    alias: "muserock"
+    
+  - map_id: "shared:infrastructure"
+    version: "1.5.0"
+    scope: "infrastructure"
+    alias: "infra"
+
+cross_map_arrows:
+  # Product → Internal Tool dependency
+  - id: "muserock→statuz-sdk"
+    from_map: "muserock"
+    from_node: "creative-state-agent"
+    to_map: "statuz"
+    to_node: "sdk-ts"
+    type: "dependency"
+    description: |
+      MuseRock's creative-state-agent uses Statuz SDK-TS as the state layer
+      for agent continuity. The SDK provides YAML file IO, schema validation,
+      and calibration engine integration.
+    criticality: "high"
+    metadata:
+      confidence: 1.0
+      discovery_method: "declared"
+      approved_by: "platform-team"
+      approved_at: "2026-01-15T10:00:00Z"
+
+  # All projects → Shared Infrastructure
+  - id: "all→logging"
+    from_map: "*"
+    from_node: "*"
+    to_map: "infra"
+    to_node: "logging-service"
+    type: "dependency"
+    description: |
+      All projects in the organization depend on the shared logging service
+      for centralized monitoring and observability. Logs are aggregated
+      for debugging, alerting, and audit purposes.
+    criticality: "critical"
+    properties:
+      reason: "Organization-wide logging standard"
+      protocol: "gRPC"
+    metadata:
+      confidence: 1.0
+      discovery_method: "declared"
+
+  # All projects → Shared Auth
+  - id: "all→auth"
+    from_map: "*"
+    from_node: "*"
+    to_map: "infra"
+    to_node: "auth-service"
+    type: "dependency"
+    description: |
+      All projects requiring user authentication depend on the shared
+      auth-service for SSO, token validation, and permission checking.
+    criticality: "critical"
+    properties:
+      reason: "Organization-wide authentication standard"
+      protocol: "OAuth2"
+    metadata:
+      confidence: 1.0
+      discovery_method: "declared"
+
+  # Platform Team Responsibility
+  - id: "platform→statuz"
+    from_map: "infra"
+    from_node: "platform-team"
+    to_map: "statuz"
+    to_node: "cli"
+    type: "responsibility"
+    description: |
+      Platform Team is responsible for developing and maintaining the
+      Statuz CLI tool, which is used across the organization for
+      agent state management.
+    criticality: "high"
+    metadata:
+      confidence: 1.0
+      discovery_method: "declared"
+      approved_by: "engineering-lead"
+
+  # Information flow: Statuz → MuseRock
+  - id: "statuz→muserock-signals"
+    from_map: "statuz"
+    from_node: "signal-bus"
+    to_map: "muserock"
+    to_node: "orchestrator"
+    type: "information_flow"
+    description: |
+      Statuz's signal-bus sends ecosystem signals to MuseRock's orchestrator
+      when agent states change, enabling cross-project coordination.
+    criticality: "medium"
+    properties:
+      signal_type: "state_change"
+      frequency: "real-time"
+    metadata:
+      confidence: 0.85
+      discovery_method: "detected"
+
+cluster_metadata:
+  organization: "Oasis Company"
+  team: "Platform Team"
+  created_at: "2026-01-01T00:00:00Z"
+  last_updated: "2026-06-14T12:00:00Z"
+  contact: "platform-team@oasis.company"
+  documentation_url: "https://docs.oasis.company/ecosystem-atlas"

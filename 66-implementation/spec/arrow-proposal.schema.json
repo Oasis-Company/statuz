@@ -143,6 +143,7 @@
     },
     "arrow_change": {
       "type": "object",
+      "required": ["id", "source", "target", "type", "description"],
       "properties": {
         "id": {
           "type": "string",
@@ -152,17 +153,18 @@
           "type": "string",
           "enum": ["dependency", "information_flow", "responsibility", "validation", "resource_transfer", "influence", "constraint"]
         },
-        "from": {
+        "source": {
           "type": "string",
           "description": "Source node ID"
         },
-        "to": {
+        "target": {
           "type": "string",
           "description": "Target node ID"
         },
         "description": {
           "type": "string",
-          "description": "Arrow description"
+          "description": "REQUIRED. Human-readable explanation of why this arrow should exist",
+          "minLength": 10
         },
         "properties": {
           "type": "object",

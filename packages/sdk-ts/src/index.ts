@@ -19,6 +19,7 @@ export { SynResolutionIO } from "./syn/resolution.js";
 // Arrow Map IO classes
 export { ArrowMapIO } from "./arrow-map/arrow-map.js";
 export { ArrowProposalIO } from "./arrow-map/proposal.js";
+export { ArrowMapClusterIO } from "./arrow-map/cluster.js";
 
 // Core types
 export type {
@@ -123,6 +124,16 @@ export type {
   ArrowProposal
 } from "./arrow-map/proposal-types.js";
 
+// Arrow Map Cluster types
+export type {
+  MapScope,
+  ClusterMapRef,
+  CrossMapArrow,
+  ClusterMetadata,
+  ArrowMapCluster,
+  ClusterOptions
+} from "./arrow-map/cluster-types.js";
+
 // Calibration Engine (drift detection)
 export { CalibrationEngine } from "./calibration/engine.js";
 export type {
@@ -153,3 +164,19 @@ export type {
   UserActionStats,
   UserActionExportOptions
 } from "./user-action/types.js";
+
+// Status Keeper (health checks)
+export { StatusKeeperEngine } from "./status-keeper/engine.js";
+export type {
+  CheckType,
+  SeverityLevel,
+  ScheduleFrequency,
+  OutputFormat,
+  HealthCheck,
+  ScheduleConfig,
+  OutputConfig,
+  StatusKeeperConfig,
+  CheckResult,
+  HealthStatus,
+  HealthReport
+} from "./status-keeper/types.js";

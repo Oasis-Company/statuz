@@ -157,11 +157,6 @@ Do not replace the protocol with a database.
 
 Do not turn Statuz into generic memory.
 
-Do not add embeddings in P0.
-
-Do not add an MCP server in P0.
-
-Do not add a web dashboard in P0.
 
 Do not remove the core thesis.
 

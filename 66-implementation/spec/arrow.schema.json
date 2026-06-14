@@ -7,23 +7,33 @@
     "id",
     "source",
     "target",
-    "type"
+    "type",
+    "description"
   ],
   "properties": {
     "id": {
       "type": "string",
       "description": "Unique identifier for this arrow within its Arrow Map",
-      "examples": ["arrow-001", "dep-auth-service"]
+      "examples": [
+        "arrow-001",
+        "dep-auth-service"
+      ]
     },
     "source": {
       "type": "string",
       "description": "ID of the originating StatuNode. May be a URI (statuz:node:<id>) or a local ID resolved within the map's namespace",
-      "examples": ["statuz:node:auth-service", "doc-agent"]
+      "examples": [
+        "statuz:node:auth-service",
+        "doc-agent"
+      ]
     },
     "target": {
       "type": "string",
       "description": "ID of the receiving StatuNode. May be a URI or a local ID",
-      "examples": ["statuz:node:user-db", "api-gateway"]
+      "examples": [
+        "statuz:node:user-db",
+        "api-gateway"
+      ]
     },
     "type": {
       "type": "string",
@@ -40,7 +50,13 @@
     },
     "description": {
       "type": "string",
-      "description": "Human-readable explanation of what this arrow represents"
+      "description": "REQUIRED. Human-readable explanation of why this arrow exists and what relationship it represents. Every arrow must have a meaningful description for semantic understanding.",
+      "minLength": 10,
+      "examples": [
+        "CLI depends on SDK-TS for YAML file read/write operations and schema validation",
+        "Auth service receives user credentials from API gateway via information_flow",
+        "Platform team is responsible for maintaining shared infrastructure components"
+      ]
     },
     "properties": {
       "type": "object",
@@ -52,7 +68,12 @@
         },
         "criticality": {
           "type": "string",
-          "enum": ["critical", "high", "medium", "low"],
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ],
           "default": "medium",
           "description": "How severely the source would be affected if this arrow were broken"
         },
@@ -68,106 +89,8 @@
     },
     "type_properties": {
       "type": "object",
-      "description": "Extended properties specific to the arrow type",
-      "oneOf": [
-        {
-          "$comment": "dependency type properties",
-          "properties": {
-            "dependency_type": {
-              "type": "string",
-              "enum": ["hard", "soft", "optional"],
-              "default": "hard",
-              "description": "hard = source cannot function without target; soft = degraded functionality; optional = nice to have"
-            },
-            "failure_mode": {
-              "type": "string",
-              "description": "What happens when the target is unavailable"
-            }
-          }
-        },
-        {
-          "$comment": "information_flow type properties",
-          "properties": {
-            "direction": {
-              "type": "string",
-              "enum": ["unidirectional", "bidirectional"],
-              "default": "unidirectional"
-            },
-            "information_type": {
-              "type": "string",
-              "description": "What kind of information flows (e.g., 'events', 'commands', 'queries', 'config')"
-            },
-            "protocol": {
-              "type": "string",
-              "description": "The protocol or format used (e.g., 'REST', 'gRPC', 'WebSocket', 'YAML')"
-            }
-          }
-        },
-        {
-          "$comment": "responsibility type properties",
-          "properties": {
-            "responsibility_scope": {
-              "type": "string",
-              "description": "What the source is responsible for regarding the target"
-            },
-            "escalation_path": {
-              "type": "string",
-              "description": "Who to contact if the source cannot fulfill this responsibility"
-            }
-          }
-        },
-        {
-          "$comment": "validation type properties",
-          "properties": {
-            "validation_type": {
-              "type": "string",
-              "enum": ["approval", "review", "test", "audit"],
-              "description": "What kind of validation the source performs"
-            },
-            "required": {
-              "type": "boolean",
-              "default": true,
-              "description": "Whether validation is mandatory before target changes"
-            }
-          }
-        },
-        {
-          "$comment": "resource_transfer type properties",
-          "properties": {
-            "resource_type": {
-              "type": "string",
-              "description": "What kind of resource (e.g., 'compute', 'budget', 'storage', 'tokens')"
-            },
-            "allocation": {
-              "type": "string",
-              "description": "How much or what portion is transferred"
-            }
-          }
-        },
-        {
-          "$comment": "influence type properties",
-          "properties": {
-            "influence_mechanism": {
-              "type": "string",
-              "description": "How the source influences the target (e.g., 'policy', 'culture', 'incentives')"
-            }
-          }
-        },
-        {
-          "$comment": "constraint type properties",
-          "properties": {
-            "constraint_type": {
-              "type": "string",
-              "enum": ["temporal", "spatial", "logical", "policy"],
-              "description": "The nature of the constraint"
-            },
-            "constraint_expression": {
-              "type": "string",
-              "description": "A machine-readable expression of the constraint (if applicable)"
-            }
-          }
-        }
-      ]
+      "description": "Extended properties specific to the arrow type. For dependency: dependency_type (hard/soft/optional), failure_mode. For information_flow: direction (unidirectional/bidirectional), information_type, protocol. For responsibility: responsibility_scope, escalation_path. For validation: validation_type (approval/review/test/audit), required. For resource_transfer: resource_type, allocation. For influence: influence_mechanism. For constraint: constraint_type (temporal/spatial/logical/policy), constraint_expression.",
+      "additionalProperties": true
     },
     "temporal": {
       "type": "object",
@@ -212,7 +135,12 @@
         },
         "discovery_method": {
           "type": "string",
-          "enum": ["manual", "inferred", "detected", "imported"],
+          "enum": [
+            "manual",
+            "inferred",
+            "detected",
+            "imported"
+          ],
           "default": "manual"
         }
       },

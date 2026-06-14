@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://statuz.org/schemas/arrow-map-cluster.schema.json",
+  "title": "Arrow Map Cluster",
+  "description": "A cluster of Arrow Maps representing an organization-level ecosystem topology. Contains multiple Arrow Maps and cross-map arrows that connect nodes across different maps.",
+  "type": "object",
+  "required": [
+    "cluster_version",
+    "id",
+    "name",
+    "maps",
+    "cross_map_arrows"
+  ],
+  "properties": {
+    "cluster_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version for Arrow Map Cluster",
+      "default": "1.0.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+:[a-z0-9-]+$",
+      "description": "Unique identifier for the cluster (format: scope:name)",
+      "examples": ["oasis:company-atlas", "platform:ecosystem-v1"]
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name for the cluster",
+      "minLength": 3,
+      "examples": ["Oasis Company Ecosystem Atlas", "Platform Team Topology"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional detailed description of what this cluster represents"
+    },
+    "maps": {
+      "type": "array",
+      "description": "Arrow Maps included in this cluster",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["map_id", "version", "scope"],
+        "properties": {
+          "map_id": {
+            "type": "string",
+            "description": "Reference to an Arrow Map by ID"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "description": "Version of the referenced Arrow Map"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["internal", "product", "infrastructure", "shared", "external"],
+            "description": "Scope classification of the Arrow Map"
+          },
+          "alias": {
+            "type": "string",
+            "description": "Optional alias for easier reference in cross_map_arrows"
+          }
+        }
+      }
+    },
+    "cross_map_arrows": {
+      "type": "array",
+      "description": "Arrows connecting nodes across different Arrow Maps in the cluster",
+      "items": {
+        "type": "object",
+        "required": ["id", "from_map", "from_node", "to_map", "to_node", "type", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the cross-map arrow"
+          },
+          "from_map": {
+            "type": "string",
+            "description": "Source Arrow Map ID or alias. Use '*' to indicate all maps"
+          },
+          "from_node": {
+            "type": "string",
+            "description": "Source node ID within the from_map. Use '*' to indicate all nodes"
+          },
+          "to_map": {
+            "type": "string",
+            "description": "Target Arrow Map ID or alias"
+          },
+          "to_node": {
+            "type": "string",
+            "description": "Target node ID within the to_map"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["dependency", "information_flow", "responsibility", "validation", "resource_transfer", "influence", "constraint"],
+            "description": "Type of relationship between the nodes"
+          },
+          "description": {
+            "type": "string",
+            "description": "REQUIRED. Human-readable explanation of why this cross-map arrow exists",
+            "minLength": 10,
+            "examples": [
+              "MuseRock's creative-state-agent uses Statuz SDK-TS as the state layer for agent continuity",
+              "All projects depend on shared logging infrastructure for centralized monitoring"
+            ]
+          },
+          "properties": {
+            "type": "object",
+            "description": "Additional properties specific to this cross-map arrow",
+            "additionalProperties": true
+          },
+          "criticality": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Criticality level of this cross-map relationship"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata about this cross-map arrow",
+            "properties": {
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Confidence level of this arrow (0-1)"
+              },
+              "discovery_method": {
+                "type": "string",
+                "enum": ["declared", "detected", "inferred", "proposal"],
+                "description": "How this arrow was discovered"
+              },
+              "discovered_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When this arrow was discovered/created"
+              },
+              "approved_by": {
+                "type": "string",
+                "description": "Who approved this cross-map arrow"
+              },
+              "approved_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When this arrow was approved"
+              }
+            }
+          }
+        }
+      }
+    },
+    "cluster_metadata": {
+      "type": "object",
+      "description": "Metadata about the cluster itself",
+      "properties": {
+        "organization": {
+          "type": "string",
+          "description": "Organization that owns this cluster"
+        },
+        "team": {
+          "type": "string",
+          "description": "Team responsible for maintaining this cluster"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the cluster was created"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the cluster was last updated"
+        },
+        "contact": {
+          "type": "string",
+          "description": "Contact person or team for this cluster"
+        },
+        "documentation_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to documentation about this cluster"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

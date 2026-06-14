@@ -37,6 +37,7 @@ function scanPackageJson(): DetectedArrow[] {
   const packagePath = resolve(process.cwd(), "package.json");
 
   if (!existsSync(packagePath)) {
+    console.log("  ℹ package.json not found — skipping npm dependency scan");
     return arrows;
   }
 
@@ -44,16 +45,21 @@ function scanPackageJson(): DetectedArrow[] {
   const projectName = pkg.name || "this-project";
 
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  const depCount = Object.keys(deps).length;
+  console.log(`  ✓ Found package.json with ${depCount} dependencies`);
+
   for (const [name, version] of Object.entries(deps)) {
+    const depType = pkg.dependencies?.[name] ? "production" : "development";
     arrows.push({
       arrow: {
         id: `auto-dep-${name}`,
         source: projectName,
         target: name,
         type: "dependency",
+        description: `Detected from package.json: ${projectName} depends on ${name}@${version} (${depType} dependency)`,
         properties: {
           reason: `Dependency in package.json: ${name}@${version}`,
-          criticality: "high",
+          criticality: depType === "production" ? "high" : "medium",
         },
         metadata: {
           confidence: 0.9,
@@ -75,9 +81,11 @@ function scanDockerCompose(): DetectedArrow[] {
   const composePath = resolve(process.cwd(), "docker-compose.yml");
 
   if (!existsSync(composePath)) {
+    console.log("  ℹ docker-compose.yml not found — skipping Docker dependency scan");
     return arrows;
   }
 
+  console.log("  ✓ Found docker-compose.yml");
   const content = readFileSync(composePath, "utf8");
   const dependsOnRegex = /depends_on:\s*\n((?:\s+-\s+(\w+)\s*\n)+)/g;
   let match;
@@ -97,6 +105,7 @@ function scanDockerCompose(): DetectedArrow[] {
               source: serviceName,
               target: depName,
               type: "dependency",
+              description: `Detected from docker-compose.yml: ${serviceName} container depends on ${depName} container for startup order`,
               properties: {
                 reason: `Docker Compose depends_on: ${serviceName} depends on ${depName}`,
                 criticality: "critical",
@@ -123,6 +132,20 @@ function scanImports(): DetectedArrow[] {
   const arrows: DetectedArrow[] = [];
   const srcDirs = ["./src", "./lib", "./apps"];
 
+  let foundDirs = 0;
+  for (const dir of srcDirs) {
+    const fullDir = resolve(process.cwd(), dir);
+    if (!existsSync(fullDir)) continue;
+    foundDirs++;
+  }
+
+  if (foundDirs === 0) {
+    console.log("  ℹ No src/lib/apps directories found — skipping source import scan");
+    return arrows;
+  }
+
+  console.log(`  ✓ Found ${foundDirs} source directories to scan`);
+
   for (const dir of srcDirs) {
     const fullDir = resolve(process.cwd(), dir);
     if (!existsSync(fullDir)) continue;
@@ -143,6 +166,7 @@ function scanImports(): DetectedArrow[] {
             source: sourceModule,
             target: targetModule,
             type: "dependency",
+            description: `Detected from source import: ${sourceModule} module imports ${targetModule} module via relative path`,
             properties: {
               reason: `Import in ${file}: ${sourceModule} imports ${targetModule}`,
               criticality: "medium",

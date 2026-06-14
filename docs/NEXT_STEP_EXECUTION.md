@@ -3,23 +3,35 @@
 > **Status:** Working Draft  
 > **Target:** Small team or individual contributors working in sequence  
 > **Language:** English for code/docs, Chinese for internal discussion  
-> **Last updated:** 2026-06-02
+> **Last updated:** 2026-06-04
 
 ---
 
 ## Where We Are Now (Snapshot)
 
 ```
-Protocol Layer:    ████████████████ 100%   All 7 schemas (Core + niche + SYN) defined
+Protocol Layer:    ████████████████ 100%   Core + niche + SYN + Pending Actions schemas
 Core Tools:        ████████████████ 100%   CLI / SDK-TS / SDK-PY / MCP Server shipped
-Examples:          ████████████████ 100%   niche demo (23/23) + SYN demo (22/22) pass
+Examples:          ████████████████ 100%   niche (23/23) + SYN (22/22) + Pending Actions (7/7)
 VS Code Extension: ████░░░░░░░░░░░░  25%   Skeleton exists, none of the niche/SYN UI
-niche Runtime:     ██░░░░░░░░░░░░░░   0%   Schemas only, no engine
+niche Runtime:     ██░░░░░░░░░░░░░░   5%   Pending Actions schema + fixtures verified
 SYN Workflow:      ██░░░░░░░░░░░░░░   0%   Schemas only, no engine
-Conformance:       ███░░░░░░░░░░░░░  20%   Fixtures exist, no cross-impl tests
+Conformance:       ███░░░░░░░░░░░░░  25%   Pending Actions fixtures + validation done
 ```
 
 **The hard truth:** niche and SYN are real on paper but dead in code. We have beautiful schemas and 45+ validated example files, but no engine that actually watches changes, judges relevance, or presents decisions to humans.
+
+### Recently Delivered: Pending Actions (2026-06-04) ✅
+
+- ✅ `spec/pending-actions.schema.json` — JSON Schema
+- ✅ `docs/PENDING_ACTIONS.md` — Full specification with agent behavior contract
+- ✅ `docs/adr/0006-pending-actions.md` — Architecture Decision Record
+- ✅ `spec/fixtures/valid/` — 2 valid fixtures (minimal, full with 7 actions)
+- ✅ `spec/fixtures/invalid/` — 5 invalid fixtures (wrong version, bad id, missing status, bad status, empty array edge case)
+- ✅ `packages/cli/validate-pending-actions.mjs` — Validation script
+- ✅ **Closed-loop verification: 7/7 passed** (valid fixtures validated, invalid fixtures correctly rejected)
+
+> **Agent contract:** Agent MUST read `.statuz/pending-actions.yaml` before initializing any external service or making assumptions about human-completed prerequisites.
 
 ---
 
