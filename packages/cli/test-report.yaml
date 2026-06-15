@@ -1,0 +1,30 @@
+report_version: "1.0.0"
+generated_at: "2026-06-14T23:12:49.200Z"
+overall_status: "healthy"
+checks_passed: 2
+checks_failed: 0
+critical_issues: 0
+warning_issues: 0
+info_issues: 0
+results:
+  - check_type: "file_exists"
+    target: "test-statuz.yaml"
+    passed: true
+    severity: "critical"
+    message: "test-statuz.yaml exists"
+    details:
+      path: "e:\\ceaserzhao\\github projects\\statuz\\packages\\cli\\test-statuz.yaml"
+      exists: true
+    checked_at: "2026-06-14T23:12:49.196Z"
+  - check_type: "checkpoint_freshness"
+    target: "test-statuz.yaml"
+    passed: true
+    severity: "warning"
+    message: "Last checkpoint is -1h old (within 168h threshold)"
+    details:
+      last_update: "2026-06-15T00:00:00.000Z"
+      age_hours: -1
+      max_age_hours: 168
+    checked_at: "2026-06-14T23:12:49.196Z"
+recommendations:
+  - "All checks passed. Continue monitoring."

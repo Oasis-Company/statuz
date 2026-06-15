@@ -9,10 +9,16 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import * as yaml from "yaml";
 import Ajv from "ajv";
+import addFormatsImport from "ajv-formats";
+const addFormats = addFormatsImport as any;
 import type { ArrowMapCluster, ClusterOptions, CrossMapArrow, ClusterMapRef } from "./cluster-types.js";
 
 export class ArrowMapClusterIO {
-  private static ajv = new Ajv({ allErrors: true });
+  private static ajv = (() => {
+    const instance = new Ajv({ allErrors: true, strict: false });
+    addFormats(instance);
+    return instance;
+  })();
   private static schemaCache: Record<string, unknown> | null = null;
 
   /**
@@ -30,8 +36,9 @@ export class ArrowMapClusterIO {
     for (const candidate of candidates) {
       if (existsSync(candidate)) {
         const schemaContent = readFileSync(candidate, "utf8");
-        this.schemaCache = JSON.parse(schemaContent);
-        return this.schemaCache;
+        const parsed = JSON.parse(schemaContent) as Record<string, unknown>;
+        this.schemaCache = parsed;
+        return parsed;
       }
     }
 

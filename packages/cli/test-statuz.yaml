@@ -1,0 +1,21 @@
+﻿statuz_version: "0.1"
+updated_at: "2026-06-15T00:00:00.000Z"
+identity:
+  agent_name: test-agent
+  project_name: test-project
+current_state:
+  stage: initialization
+  task: test
+  status: idle
+progress:
+  completed: []
+relations:
+  related_agents: []
+  related_projects: []
+  related_files: []
+rules:
+  should: []
+checkpoints:
+  - id: cp-1
+    at: "2026-06-15T00:00:00.000Z"
+    summary: test

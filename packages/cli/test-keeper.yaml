@@ -1,0 +1,27 @@
+keeper_version: "1.0.0"
+schedule:
+  health_check: "session_start"
+  checkpoint_check: "session_start"
+checks:
+  - type: "file_exists"
+    target: ".statuz/statuz.yaml"
+    severity: "critical"
+    message: "statuz.yaml does not exist — agent cannot recover state"
+  - type: "file_exists"
+    target: ".statuz/niche/manifest.yaml"
+    severity: "warning"
+    message: "niche manifest does not exist — cannot perform drift analysis"
+  - type: "checkpoint_freshness"
+    target: ".statuz/statuz.yaml"
+    severity: "warning"
+    max_age_hours: 48
+    message: "checkpoint exceeds 48h threshold — work may have stalled"
+  - type: "arrow_map_valid"
+    target: ".statuz/arrow-map.yaml"
+    severity: "info"
+    message: "Arrow Map validation failed"
+output:
+  format: "yaml"
+  path: ".statuz/health-report.yaml"
+  notify_on_critical: true
+  notify_on_warning: false

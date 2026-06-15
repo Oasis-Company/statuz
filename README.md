@@ -150,7 +150,7 @@ Statuz defines four layers of situated alignment—building from concrete runtim
 
 | Layer | Purpose | Status |
 |-------|---------|--------|
-| **Statuz Core** | Compact runtime status | ✅ Stable (0.5.0) |
+| **Statuz Core** | Compact runtime status + **Pending Actions** (agent ↔ human task tracking) | ✅ Stable (0.5.0) |
 | **niche** | Ecological position declaration | ⚙️ Working Draft (0.5.0) |
 | **Calibration** | Drift detection (declared vs. observed) | ⚙️ Working Draft (0.5.0) |
 | **SYN** | Human governance for strategic decisions | ⚙️ Working Draft (0.5.0) |

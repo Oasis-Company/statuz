@@ -1,9 +1,10 @@
 /**
  * @statuz/sdk-ts — public API
  *
- * Core runtime (Statuz), coordination (Signal Bus), and the three-layer
+ * Core runtime (Statuz), coordination (Signal Bus), and the layered
  * stack: Core (runtime status), niche (ecological position), SYN
- * (human governance), and 66 (Arrow Maps — topological relationships).
+ * (human governance), Pending Actions (agent ↔ human task tracking),
+ * and 66 (Arrow Maps — topological relationships).
  */
 
 export { Statuz } from "./statuz.js";
@@ -133,6 +134,19 @@ export type {
   ArrowMapCluster,
   ClusterOptions
 } from "./arrow-map/cluster-types.js";
+
+// Pending Actions (bidirectional agent ↔ human task tracking)
+export { PendingActionsIO } from "./pending-actions/io.js";
+export type {
+  PendingActionsVersion,
+  PendingActionStatus,
+  PendingActionPriority,
+  PendingActionPrincipal,
+  PendingActionResolution,
+  PendingAction,
+  PendingActionsDocument,
+  PendingActionsSummary,
+} from "./pending-actions/types.js";
 
 // Calibration Engine (drift detection)
 export { CalibrationEngine } from "./calibration/engine.js";

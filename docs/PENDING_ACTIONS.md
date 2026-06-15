@@ -1,9 +1,12 @@
 # Pending Actions
 
-> **Status: Planned** — Schema defined, implementation pending (Phase A of execution plan)
+> **Status: Implemented** — Schema, SDK, and CLI commands are available for use
 >
 > Version: 1.0  
 > Schema: `spec/pending-actions.schema.json`  
+> SDK: `@statuz/sdk-ts` — `PendingActionsIO` class  
+> CLI: `statuz pending-actions` / `statuz pa`  
+> Tests: 24 tests covering add, list, show, update-status, resolve, remove, and validate  
 > ADR: `docs/adr/0006-pending-actions.md`
 
 ---
@@ -291,27 +294,124 @@ The VS Code extension (Phase A of execution plan) will provide:
 
 ---
 
-## CLI Commands (Planned)
+## CLI Commands (Implemented)
+
+### Adding an action (agent → human)
 
 ```bash
-# List all pending actions
-statuz pending list
+# Create a new pending action — the agent assigns the human a task
+statuz pending-actions add \
+  --title "Run npm install in packages/cli" \
+  --description "From the project root, run: npm install. This installs CLI dependencies." \
+  --assigned-to human \
+  --priority high \
+  --blocked-on "Cannot test CLI commands" \
+  --blocked-on "Cannot verify build output"
 
-# Filter by status
-statuz pending list --status pending
-statuz pending list --status critical
+# Short alias (both forms work)
+statuz pa add --title "Review PR #42" --assigned-to human --priority medium
 
-# Mark an action as done
-statuz pending done pa-001 --outcome "Key generated"
+# Output:
+# ✅ Created pa-001: Run npm install in packages/cli
+#    Assigned to: human | Priority: high
+```
 
-# Mark an action as blocked with a note
-statuz pending block pa-002 --note "Waiting for product team"
+### Listing actions (both sides)
 
-# Create a new pending action
-statuz pending create \
-  --title "Generate API key for SendGrid" \
-  --description "Go to SendGrid dashboard → API Keys → Create" \
-  --priority high
+```bash
+# List everything
+statuz pending-actions list
+
+# Filter by status — use this to see what still needs doing
+statuz pending-actions list --status pending
+statuz pending-actions list --status done
+statuz pending-actions list --status blocked
+
+# Filter by priority
+statuz pending-actions list --priority critical
+
+# Filter by assigned-to
+statuz pending-actions list --assigned-to human
+
+# Example output:
+# ID       STATUS    PRI   TITLE
+# ──────────────────────────────────────────────────────────────────
+# pa-001  DONE      HIGH  Run npm install in packages/cli
+# pa-002  PENDING   CRIT  Fix schema validation error
+#
+# Total: 2 | Pending: 1 | Done: 1 | Critical: 1
+```
+
+### Showing details (both sides)
+
+```bash
+# Full details of a single action
+statuz pending-actions show pa-001
+
+# Output:
+# === pa-001 ===
+# Title:         Run npm install in packages/cli
+# Description:   From the project root, run: npm install...
+# Status:        DONE
+# Priority:      high
+# Requested by:  agent
+# Assigned to:   human
+# Created at:    2026-06-15T00:16:44.253Z
+# Blocked on:
+#   - Cannot test CLI commands
+#   - Cannot verify build output
+#
+# Resolution:
+#   Resolved at: 2026-06-15T00:17:06.278Z
+#   Resolved by: ceaserzhao
+#   Outcome:     npm install succeeded, all packages installed
+```
+
+### Updating status (human → agent)
+
+```bash
+# Change to in_progress (e.g., when human starts working on it)
+statuz pending-actions update-status pa-001 --status in_progress
+
+# Change to blocked with a note
+statuz pending-actions update-status pa-002 --status blocked \
+  --notes "VPN access blocked by IT. Submitted ticket #4421"
+
+# Valid statuses: pending, in_progress, done, blocked, cancelled
+```
+
+### Resolving an action (human → agent)
+
+```bash
+# Mark as done with the outcome
+statuz pending-actions resolve pa-001 \
+  --status done \
+  --outcome "npm install completed, 0 vulnerabilities" \
+  --resolved-by "ceaserzhao" \
+  --notes "Dependencies: 284 packages installed in 3.2s"
+
+# Mark as cancelled (no longer needed)
+statuz pending-actions resolve pa-003 \
+  --status cancelled \
+  --outcome "Supabase project no longer needed — using local Postgres instead" \
+  --resolved-by "ceaserzhao"
+```
+
+### Removing an action
+
+```bash
+# Hard delete (prefer resolve --status cancelled instead)
+statuz pending-actions remove pa-999
+```
+
+### Validating the file
+
+```bash
+# Validate against the JSON schema
+statuz pending-actions validate .statuz/pending-actions.yaml
+
+# Output:
+# ✅ Valid pending-actions file: .statuz/pending-actions.yaml
 ```
 
 ---
@@ -336,4 +436,33 @@ Pending Actions is NOT:
 
 ---
 
-*Status: Planned. See `docs/adr/0006-pending-actions.md` for the architectural decision record.*
+*Status: Implemented. See `docs/adr/0006-pending-actions.md` for the architectural decision record.*
+
+---
+
+## Quick Reference — End-to-End Workflow
+
+```bash
+# ── AGENT SIDE: discovers it needs human action ──
+statuz pending-actions add \
+  --title "Configure environment variables" \
+  --description "Copy .env.example to .env and fill in the API keys." \
+  --assigned-to human \
+  --priority high
+
+# ── HUMAN SIDE: reads pending actions ──
+statuz pending-actions list --status pending
+
+# ── HUMAN SIDE: starts working on it ──
+statuz pending-actions update-status pa-001 --status in_progress \
+  --notes "Working through the .env setup now"
+
+# ── HUMAN SIDE: resolves it when done ──
+statuz pending-actions resolve pa-001 --status done \
+  --outcome "All env vars configured. API keys added to .env" \
+  --resolved-by "ceaserzhao"
+
+# ── AGENT SIDE: checks status before proceeding ──
+statuz pending-actions list --status pending
+# No pending critical actions → agent can proceed
+```

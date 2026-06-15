@@ -9,8 +9,8 @@
  * - cluster_valid: Validate Arrow Map Cluster schema
  */
 
-import { existsSync, readFileSync, statSync } from "fs";
-import { resolve } from "path";
+import { existsSync, readFileSync, statSync, mkdirSync, writeFileSync } from "fs";
+import { resolve, dirname } from "path";
 import * as yaml from "yaml";
 import type {
   StatusKeeperConfig,
@@ -19,7 +19,8 @@ import type {
   HealthReport,
   HealthStatus,
   CheckType,
-  SeverityLevel
+  SeverityLevel,
+  OutputFormat
 } from "./types.js";
 
 export class StatusKeeperEngine {
@@ -444,5 +445,128 @@ export class StatusKeeperEngine {
         notify_on_warning: false,
       },
     };
+  }
+
+  /**
+   * Read a Status Keeper configuration from a YAML file
+   */
+  static readConfig(path: string): StatusKeeperConfig {
+    if (!existsSync(path)) {
+      throw new Error(`Status Keeper config file not found: ${path}`);
+    }
+
+    const content = readFileSync(path, "utf8");
+    const doc = yaml.parse(content) as StatusKeeperConfig;
+
+    return doc;
+  }
+
+  /**
+   * Validate a Status Keeper configuration structure
+   */
+  static validateConfig(config: StatusKeeperConfig): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!config.keeper_version) {
+      errors.push("keeper_version is required");
+    }
+
+    if (!config.checks || config.checks.length === 0) {
+      errors.push("at least one check is required");
+      return { valid: false, errors };
+    }
+
+    const validTypes: CheckType[] = ["file_exists", "checkpoint_freshness", "arrow_map_valid", "niche_manifest_valid", "cluster_valid"];
+    const validSeverities: SeverityLevel[] = ["critical", "warning", "info"];
+
+    for (let i = 0; i < config.checks.length; i++) {
+      const check = config.checks[i];
+      if (!validTypes.includes(check.type)) {
+        errors.push(`check[${i}].type "${check.type}" is invalid. Must be one of: ${validTypes.join(", ")}`);
+      }
+      if (!check.target || typeof check.target !== "string") {
+        errors.push(`check[${i}].target is required and must be a string`);
+      }
+      if (!validSeverities.includes(check.severity)) {
+        errors.push(`check[${i}].severity "${check.severity}" is invalid. Must be one of: ${validSeverities.join(", ")}`);
+      }
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
+  /**
+   * Write a health report to a file
+   */
+  static writeReport(path: string, report: HealthReport, format: OutputFormat = "yaml"): void {
+    const outDir = dirname(path);
+    if (outDir && outDir !== "." && !existsSync(outDir)) {
+      mkdirSync(outDir, { recursive: true });
+    }
+
+    let content: string;
+
+    switch (format) {
+      case "json":
+        content = JSON.stringify(report, null, 2);
+        break;
+
+      case "markdown":
+        content = this.formatReportAsMarkdown(report);
+        break;
+
+      case "yaml":
+      default:
+        content = yaml.stringify(report, { defaultKeyType: "PLAIN", defaultStringType: "QUOTE_DOUBLE", lineWidth: 0 });
+        break;
+    }
+
+    writeFileSync(path, content, "utf8");
+  }
+
+  /**
+   * Format a health report as human-readable Markdown
+   */
+  private static formatReportAsMarkdown(report: HealthReport): string {
+    const statusEmoji = report.overall_status === "healthy" ? "✅" : report.overall_status === "degraded" ? "⚠️" : "🔴";
+
+    const lines: string[] = [
+      `# Health Report`,
+      ``,
+      `- Generated: ${report.generated_at}`,
+      `- Overall Status: ${statusEmoji} ${report.overall_status.toUpperCase()}`,
+      `- Checks Passed: ${report.checks_passed}`,
+      `- Checks Failed: ${report.checks_failed}`,
+      `- Critical Issues: ${report.critical_issues}`,
+      `- Warning Issues: ${report.warning_issues}`,
+      ``,
+      `## Detailed Results`,
+      ``,
+    ];
+
+    for (const result of report.results) {
+      const passEmoji = result.passed ? "✅" : "❌";
+      lines.push(`### ${passEmoji} ${result.check_type} — ${result.target}`);
+      lines.push(`- Severity: ${result.severity}`);
+      lines.push(`- Message: ${result.message}`);
+      lines.push(`- Checked at: ${result.checked_at}`);
+      if (result.details) {
+        lines.push(`- Details:`);
+        lines.push("```");
+        lines.push(JSON.stringify(result.details, null, 2));
+        lines.push("```");
+      }
+      lines.push("");
+    }
+
+    if (report.recommendations.length > 0) {
+      lines.push(`## Recommendations`, "");
+      for (const rec of report.recommendations) {
+        lines.push(`- ${rec}`);
+      }
+      lines.push("");
+    }
+
+    return lines.join("\n");
   }
 }

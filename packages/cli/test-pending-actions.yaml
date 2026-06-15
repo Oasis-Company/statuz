@@ -1,0 +1,25 @@
+pending_actions_version: "1.0"
+updated_at: "2026-06-15T00:17:06.279Z"
+pending_actions:
+  - id: "pa-001"
+    created_at: "2026-06-15T00:16:44.253Z"
+    status: "done"
+    title: "Run npm install in packages/cli"
+    description: "Install all dependencies for the CLI package"
+    requested_by: "agent"
+    assigned_to: "human"
+    priority: "high"
+    agent_blocked_on: []
+    resolution:
+      resolved_at: "2026-06-15T00:17:06.278Z"
+      resolved_by: "ceaserzhao"
+      outcome: "npm install succeeded, all packages installed"
+      notes: "Deps installed cleanly"
+  - id: "pa-002"
+    created_at: "2026-06-15T00:16:54.646Z"
+    status: "pending"
+    title: "Fix schema validation error"
+    requested_by: "agent"
+    assigned_to: "agent"
+    priority: "critical"
+    agent_blocked_on: []

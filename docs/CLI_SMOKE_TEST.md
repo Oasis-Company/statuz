@@ -95,12 +95,57 @@ npm run dev -- resume smoke-test/statuz.yaml
 
 **Expected Result:** Shows valid resume output.
 
+### 9. Test Pending Actions
+
+```bash
+# Create a pending action (agent → human task assignment)
+npm run dev -- pending-actions add \
+  --title "Run npm install in packages/cli" \
+  --description "Install dependencies for CLI build" \
+  --assigned-to human \
+  --priority high
+
+**Expected Result:** pa-001 is created and saved to default `.statuz/pending-actions.yaml
+
+# List all pending actions
+npm run dev -- pending-actions list
+
+**Expected Result:** Shows table with pa-001 in PENDING status.
+
+# Update status (human → agent signal)
+npm run dev -- pending-actions update-status pa-001 --status in_progress
+
+# Resolve the action (human confirms completion)
+npm run dev -- pending-actions resolve pa-001 --status done --outcome "npm install succeeded, 0 vulnerabilities" --resolved-by "tester"
+
+# Verify final state
+npm run dev -- pending-actions list
+
+**Expected Result:** pa-001 marked as DONE with resolution metadata.
+
+# Validate the file
+npm run dev -- pending-actions validate
+
+**Expected Result:** File validates successfully against schema.
+
+### 10. Test Short Alias
+
+```bash
+# The short form "pa" works identically to "pending-actions"
+npm run dev -- pa list
+
+# Short form also works for add, show, update-status, resolve, remove, validate
+npm run dev -- pa add --title "Quick test action" --assigned-to human --priority medium
+```
+
 ## Cleanup (Optional)
 
 ```bash
-rm -rf smoke-test
+rm -rf smoke-test .statuz
 ```
 
 ## All Tests Passed?
 
-If all steps execute without errors and produce the expected output, Phase 1 is complete.
+If all steps execute without errors and produce the expected output, the implementation is verified.
+
+## Feature: Pending Actions (agent ↔ human task tracking) is complete.

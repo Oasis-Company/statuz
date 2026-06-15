@@ -12,8 +12,11 @@ import { arrowMapCommand } from "./arrow-map/command.js";
 import { arrowProposalCommand } from "./arrow-proposal/command.js";
 import { busCommand } from "./bus/command.js";
 import { calibrationCommand } from "./calibration/command.js";
+import { clusterCommand } from "./cluster/command.js";
 import { leaseCommand } from "./lease/command.js";
 import { nicheCommand } from "./niche/command.js";
+import { pendingActionsCommand } from "./pending-actions/command.js";
+import { statusKeeperCommand } from "./status-keeper/command.js";
 import { synCommand } from "./syn/command.js";
 import { userActionCommand } from "./user-action/command.js";
 
@@ -259,11 +262,14 @@ program
   });
 
 program.addCommand(arrowMapCommand);
+program.addCommand(clusterCommand);
 program.addCommand(busCommand());
 program.addCommand(calibrationCommand());
 program.addCommand(leaseCommand());
 program.addCommand(nicheCommand());
 program.addCommand(arrowProposalCommand());
+program.addCommand(pendingActionsCommand);
+program.addCommand(statusKeeperCommand());
 program.addCommand(userActionCommand());
 program.addCommand(synCommand());
 
