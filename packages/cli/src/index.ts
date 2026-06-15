@@ -13,12 +13,16 @@ import { arrowProposalCommand } from "./arrow-proposal/command.js";
 import { busCommand } from "./bus/command.js";
 import { calibrationCommand } from "./calibration/command.js";
 import { clusterCommand } from "./cluster/command.js";
+import { dashboardCommand } from "./dashboard/command.js";
+import { agentCommand } from "./agent/command.js";
 import { leaseCommand } from "./lease/command.js";
 import { nicheCommand } from "./niche/command.js";
 import { pendingActionsCommand } from "./pending-actions/command.js";
 import { statusKeeperCommand } from "./status-keeper/command.js";
 import { synCommand } from "./syn/command.js";
 import { userActionCommand } from "./user-action/command.js";
+import { validate, formatErrors, getSchemaTypes } from "@statuz/sdk-ts";
+import type { SchemaType } from "@statuz/sdk-ts";
 
 const program = new Command();
 
@@ -151,35 +155,64 @@ program
     }
   });
 
+function detectSchemaType(filePath: string): SchemaType | null {
+  const fileName = filePath.toLowerCase();
+  const doc = loadYaml(filePath);
+  
+  if (doc && typeof doc === "object") {
+    if ("statuz_version" in doc) return "statuz";
+    if ("cluster_version" in doc) return "cluster";
+    if ("arrow_map_version" in doc) return "arrow-map";
+    if ("proposal_version" in doc) return "syn-proposal";
+    if ("niche_version" in doc) return "niche";
+  }
+  
+  if (fileName.includes("statuz")) return "statuz";
+  if (fileName.includes("cluster")) return "cluster";
+  if (fileName.includes("arrow-map") || fileName.includes("arrow_map")) return "arrow-map";
+  if (fileName.includes("proposal")) return "syn-proposal";
+  if (fileName.includes("niche")) return "niche";
+  
+  return null;
+}
+
 program
   .command("validate")
-  .description("Validate a Statuz YAML file against the schema")
-  .argument("<file>", "path to statuz YAML file")
-  .action((file) => {
+  .description("Validate a Statuz-related YAML file against its schema")
+  .argument("<file>", "path to YAML file")
+  .option("-t, --type <type>", `schema type: ${getSchemaTypes().join(", ")}`, "")
+  .action((file, options) => {
     const filePath = resolve(process.cwd(), file);
     const doc = loadYaml(filePath);
-    let schema: Record<string, unknown>;
-    try {
-      schema = loadStatuzSchema();
-    } catch (err) {
-      console.error(`Error: Could not load schema: ${(err as Error).message}`);
-      process.exit(1);
+    
+    let schemaType: SchemaType;
+    if (options.type) {
+      if (getSchemaTypes().includes(options.type as SchemaType)) {
+        schemaType = options.type as SchemaType;
+      } else {
+        console.error(`Error: Unknown schema type: ${options.type}. Valid types: ${getSchemaTypes().join(", ")}`);
+        process.exit(1);
+      }
+    } else {
+      const detected = detectSchemaType(filePath);
+      if (!detected) {
+        console.error(`Error: Could not detect schema type. Use --type to specify. Valid types: ${getSchemaTypes().join(", ")}`);
+        process.exit(1);
+      }
+      schemaType = detected;
     }
-    const ajv = new Ajv({ allErrors: true, strict: false });
-    addFormats(ajv);
-    const validate = ajv.compile(schema);
-    const ok = validate(doc);
-    if (!ok) {
-      console.error(`Error: Invalid Statuz file: ${filePath}`);
-      if (validate.errors) {
-        for (const err of validate.errors) {
-          const path = err.instancePath || "(root)";
-          console.error(`  ${path}: ${err.message}`);
-        }
+    
+    const result = validate(schemaType, doc);
+    
+    if (!result.valid) {
+      console.error(`Error: Invalid ${schemaType} file: ${filePath}`);
+      if (result.errors) {
+        console.error(formatErrors(result.errors));
       }
       process.exit(1);
     }
-    console.log(`Valid Statuz file: ${filePath}`);
+    
+    console.log(`Valid ${schemaType} file: ${filePath}`);
   });
 
 program
@@ -263,6 +296,8 @@ program
 
 program.addCommand(arrowMapCommand);
 program.addCommand(clusterCommand);
+program.addCommand(dashboardCommand);
+program.addCommand(agentCommand);
 program.addCommand(busCommand());
 program.addCommand(calibrationCommand());
 program.addCommand(leaseCommand());

@@ -1,0 +1,143 @@
+{
+  "$id": "https://statuz.org/schemas/syn-proposal-1.0.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SYN Proposal 1.0",
+  "description": "Structured proposal describing changes the system is suggesting — a project to add to the cluster, arrows to create, and .statuz/ files to initialize.",
+  "type": "object",
+  "required": [
+    "proposal_version",
+    "id",
+    "created_at",
+    "source",
+    "status",
+    "project",
+    "cluster_additions",
+    "statuz_init"
+  ],
+  "properties": {
+    "proposal_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this proposal, e.g. PROP-001"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when the proposal was generated"
+    },
+    "source": {
+      "type": "string",
+      "description": "What generated this proposal, e.g. 'agent-discover'"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending_approval", "approved", "rejected"],
+      "description": "Current lifecycle status of the proposal"
+    },
+    "project": {
+      "type": "object",
+      "required": ["path", "name", "type"],
+      "properties": {
+        "path": { "type": "string" },
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["frontend", "backend", "library", "mobile", "unknown"]
+        },
+        "framework": { "type": "array", "items": { "type": "string" } },
+        "language": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "cluster_additions": {
+      "type": "object",
+      "required": ["maps"],
+      "properties": {
+        "maps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["map_id"],
+            "properties": {
+              "map_id": { "type": "string" },
+              "version": { "type": "string" },
+              "scope": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "cross_map_arrows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from_map", "from_node", "to_map", "to_node", "type", "description"],
+            "properties": {
+              "from_map": { "type": "string" },
+              "from_node": { "type": "string" },
+              "to_map": { "type": "string" },
+              "to_node": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": ["dependency", "information_flow", "responsibility", "validation", "resource_transfer", "influence", "constraint", "type_propagation"]
+              },
+              "description": { "type": "string", "minLength": 5 }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "statuz_init": {
+      "type": "object",
+      "required": ["agent_name", "project_name"],
+      "properties": {
+        "agent_name": { "type": "string" },
+        "project_name": { "type": "string" },
+        "current_state": {
+          "type": "object",
+          "properties": {
+            "stage": { "type": "string" },
+            "status": { "type": "string" },
+            "task": { "type": "string" },
+            "next_action": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "niche": {
+      "type": "object",
+      "properties": {
+        "declared_position": {
+          "type": "object",
+          "properties": {
+            "does": { "type": "array", "items": { "type": "string" } },
+            "does_not": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "arrow_descriptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "arrow_id": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

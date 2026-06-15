@@ -1,0 +1,28 @@
+pending_actions_version: "1.0"
+updated_at: "2026-06-15T01:57:26.085Z"
+pending_actions:
+  - id: "pa-001"
+    created_at: "2026-06-15T01:57:00.978Z"
+    status: "done"
+    title: "Install CLI dependencies"
+    description: "From the project root, run: npm install in packages/cli. This installs all dependencies needed for building and testing."
+    requested_by: "agent"
+    assigned_to: "human"
+    priority: "high"
+    agent_blocked_on:
+      - "Cannot run test suite"
+      - "Cannot verify build output"
+    resolution:
+      resolved_at: "2026-06-15T01:57:26.084Z"
+      resolved_by: "ceaserzhao"
+      outcome: "npm install completed. 284 packages installed in 3.2s, 0 vulnerabilities."
+      notes: "Verified with 'npm run build' — succeeded"
+  - id: "pa-002"
+    created_at: "2026-06-15T01:57:10.588Z"
+    status: "pending"
+    title: "Review schema changes in pending-actions.schema.json"
+    description: "Check that resolution.outcome field is properly defined and not too long."
+    requested_by: "agent"
+    assigned_to: "human"
+    priority: "medium"
+    agent_blocked_on: []

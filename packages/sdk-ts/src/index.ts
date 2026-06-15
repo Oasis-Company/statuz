@@ -16,6 +16,20 @@ export { NicheManifestIO } from "./niche/manifest.js";
 // SYN IO classes
 export { SynRequestIO } from "./syn/request.js";
 export { SynResolutionIO } from "./syn/resolution.js";
+export { SynProposalIO } from "./syn/proposal.js";
+export type {
+  SynProposal,
+  SynProposalClusterAdditions,
+  SynProposalClusterMapAddition,
+  SynProposalCrossMapArrow,
+  SynProposalProject,
+  SynProposalStatuzInit,
+  SynProposalNiche,
+} from "./syn/proposal.js";
+
+// Agent (Phase 0.1 discovery)
+export { ProjectScanner } from "./agent/scanner.js";
+export type { ScanResult, ProjectType, Language, PackageJson } from "./agent/types.js";
 
 // Arrow Map IO classes
 export { ArrowMapIO } from "./arrow-map/arrow-map.js";
@@ -194,3 +208,9 @@ export type {
   HealthStatus,
   HealthReport
 } from "./status-keeper/types.js";
+
+// Schema Registry and Validation
+export { loadSchema, loadAllSchemas, getSchemaVersion, getSchemaTypes } from "./schema/registry.js";
+export type { SchemaType, SchemaInfo } from "./schema/registry.js";
+export { validate, validateSchema, formatErrors } from "./schema/validator.js";
+export type { ValidationError } from "./schema/validator.js";

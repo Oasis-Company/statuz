@@ -1,0 +1,118 @@
+{
+  "$id": "https://statuz.org/schemas/arrow.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Statuz Arrow",
+  "description": "JSON Schema for a directed relationship (Arrow) between two StatuNodes in the Arrow Map topology",
+  "type": "object",
+  "required": [
+    "id",
+    "source",
+    "target",
+    "type",
+    "description"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this arrow within its Arrow Map",
+      "examples": ["arrow-001", "dep-auth-service"]
+    },
+    "source": {
+      "type": "string",
+      "description": "ID of the originating StatuNode. May be a URI or a local ID",
+      "examples": ["statuz:node:auth-service", "doc-agent"]
+    },
+    "target": {
+      "type": "string",
+      "description": "ID of the receiving StatuNode. May be a URI or a local ID",
+      "examples": ["statuz:node:user-db", "api-gateway"]
+    },
+    "type": {
+      "type": "string",
+      "enum": ["dependency", "information_flow", "responsibility", "validation", "resource_transfer", "influence", "constraint"],
+      "description": "The semantic meaning of this relationship"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Human-readable explanation of why this arrow exists"
+    },
+    "properties": {
+      "type": "object",
+      "description": "Type-specific metadata for this arrow.",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Why this arrow exists"
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium",
+          "description": "How severely the source would be affected if this arrow were broken"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5,
+          "description": "Numeric strength of the relationship"
+        }
+      },
+      "additionalProperties": true
+    },
+    "type_properties": {
+      "type": "object",
+      "description": "Extended properties specific to the arrow type.",
+      "additionalProperties": true
+    },
+    "temporal": {
+      "type": "object",
+      "description": "Optional time bounds for when this arrow is active",
+      "properties": {
+        "effective_from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "effective_until": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional tags for filtering and categorization"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "discovered_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence that this arrow actually exists"
+        },
+        "detector_id": {
+          "type": "string",
+          "description": "ID of the detector that discovered this arrow"
+        },
+        "discovery_method": {
+          "type": "string",
+          "enum": ["manual", "inferred", "detected", "imported"],
+          "default": "manual"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

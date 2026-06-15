@@ -1,0 +1,97 @@
+{
+  "$id": "https://statuz.org/schemas/statu-node.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Statuz StatuNode",
+  "description": "JSON Schema for a node in the Arrow Map topology. Everything is a StatuNode — projects, components, files, agents, people, knowledge, resources.",
+  "type": "object",
+  "required": [
+    "id",
+    "type"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this node. May be a URI (statuz:node:<id>) or a local ID",
+      "examples": ["statuz:node:auth-service", "doc-agent", "project-statuz"]
+    },
+    "type": {
+      "type": "string",
+      "description": "The category of this node. Built-in types: project, component, file, agent, person, knowledge, resource. Custom types are allowed and should follow the pattern 'domain:type'.",
+      "examples": [
+        "project",
+        "component",
+        "file",
+        "agent",
+        "person",
+        "knowledge",
+        "resource",
+        "microservice:service",
+        "org:team",
+        "custom:workflow"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of this node's role in the topology"
+    },
+    "properties": {
+      "type": "object",
+      "description": "Type-specific properties for this node.",
+      "properties": {
+        "_node_type_hint": {
+          "type": "string",
+          "description": "Optional hint matching the node type."
+        }
+      },
+      "additionalProperties": true
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional labels for grouping and filtering"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional tags for categorization"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive", "deprecated", "planned"],
+      "default": "active",
+      "description": "Current lifecycle status of this node"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_by": {
+          "type": "string",
+          "description": "Who or what created this node entry"
+        },
+        "source": {
+          "type": "string",
+          "description": "Where this node definition came from"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

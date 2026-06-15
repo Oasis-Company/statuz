@@ -1,0 +1,142 @@
+{
+  "$id": "https://statuz.org/schemas/cluster-1.0.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Statuz Cluster",
+  "description": "JSON Schema for Statuz Cluster configuration - defines the Arrow Map ecosystem topology",
+  "type": "object",
+  "required": [
+    "cluster_version",
+    "id",
+    "maps"
+  ],
+  "properties": {
+    "cluster_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version, must be 1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z-]+:[a-z-]+$",
+      "description": "Unique cluster identifier in scope:name format",
+      "examples": ["oasis:company-atlas", "statuz:core-cluster"]
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Human-readable cluster name"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Brief description of the cluster's purpose"
+    },
+    "maps": {
+      "type": "array",
+      "minItems": 1,
+      "description": "List of Arrow Maps in this cluster",
+      "items": {
+        "type": "object",
+        "required": ["map_id"],
+        "properties": {
+          "map_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Unique identifier for this Arrow Map"
+          },
+          "version": {
+            "type": "string",
+            "default": "1.0.0",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "description": "Semantic version of this map"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["product", "internal", "shared", "third-party"],
+            "default": "product",
+            "description": "Scope/category of this map"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name for this map"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what this map represents"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "cross_map_arrows": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Directed relationships between nodes across different maps in the cluster",
+      "items": {
+        "type": "object",
+        "required": ["from_map", "from_node", "to_map", "to_node", "type", "description"],
+        "properties": {
+          "from_map": {
+            "type": "string",
+            "description": "Source Arrow Map ID"
+          },
+          "from_node": {
+            "type": "string",
+            "description": "Source node ID within the source map"
+          },
+          "to_map": {
+            "type": "string",
+            "description": "Target Arrow Map ID"
+          },
+          "to_node": {
+            "type": "string",
+            "description": "Target node ID within the target map"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["dependency", "information_flow", "responsibility", "validation", "resource_transfer", "influence", "constraint", "type_propagation"],
+            "description": "Type of relationship between nodes"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500,
+            "description": "Human-readable description of this relationship"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["one-way", "bidirectional"],
+            "default": "one-way",
+            "description": "Whether the relationship flows both ways"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when this cluster was created"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when this cluster was last updated"
+        },
+        "author": {
+          "type": "string",
+          "description": "Creator or maintainer of this cluster"
+        },
+        "organization": {
+          "type": "string",
+          "description": "Organization this cluster belongs to"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

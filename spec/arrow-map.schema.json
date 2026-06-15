@@ -1,0 +1,203 @@
+{
+  "$id": "https://statuz.org/schemas/arrow-map-1.0.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Statuz Arrow Map",
+  "description": "JSON Schema for an Arrow Map — a portable, executable description of a niche topology. A collection of StatuNodes and Arrows that captures the living structure of a system.",
+  "type": "object",
+  "required": [
+    "arrow_map_version",
+    "id",
+    "nodes",
+    "arrows"
+  ],
+  "properties": {
+    "arrow_map_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version of the Arrow Map specification"
+    },
+    "id": {
+      "type": "string",
+      "description": "Globally unique identifier for this Arrow Map. Used to reference the map across projects.",
+      "examples": ["niche:backend-service-v1", "org:payment-flow", "statuz:default-agent-topology"]
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name for this Arrow Map"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this topology represents and what it is used for"
+    },
+    "niche_category": {
+      "type": "string",
+      "description": "The category of niche this map describes",
+      "examples": ["microservice-backend", "agent-society", "frontend-spa", "data-pipeline"]
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Semantic version of this specific Arrow Map instance"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "experimental", "stable", "deprecated", "archived"],
+      "default": "draft",
+      "description": "Lifecycle status of this Arrow Map"
+    },
+    "nodes": {
+      "type": "array",
+      "description": "All StatuNodes in this topology",
+      "items": {
+        "$ref": "statu-node.schema.json"
+      },
+      "minItems": 1
+    },
+    "arrows": {
+      "type": "array",
+      "description": "All directed relationships between nodes in this topology",
+      "items": {
+        "$ref": "arrow.schema.json"
+      },
+      "minItems": 0
+    },
+    "namespaces": {
+      "type": "object",
+      "description": "Namespace resolution map for node IDs. Maps short IDs to full URIs.",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Base URI for this namespace"
+      },
+      "examples": [
+        {
+          "statuz": "https://statuz.org/nodes/",
+          "local": "./"
+        }
+      ]
+    },
+    "invariants": {
+      "type": "array",
+      "description": "Topological invariants — rules that must always hold in this map",
+      "items": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the invariant"
+          },
+          "expression": {
+            "type": "string",
+            "description": "Optional machine-readable expression of the invariant"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["error", "warning", "info"],
+            "default": "error",
+            "description": "What happens when this invariant is violated"
+          }
+        }
+      }
+    },
+    "templates": {
+      "type": "array",
+      "description": "Template parameters for instantiating this map. Makes the map reusable across projects.",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Template parameter name"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this parameter represents"
+          },
+          "default": {
+            "description": "Default value if not provided during instantiation"
+          },
+          "required": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this parameter must be provided"
+          }
+        }
+      }
+    },
+    "extends": {
+      "type": "array",
+      "description": "Other Arrow Maps this map extends or composes. Enables map inheritance.",
+      "items": {
+        "type": "object",
+        "required": ["map_id"],
+        "properties": {
+          "map_id": {
+            "type": "string",
+            "description": "ID of the parent Arrow Map"
+          },
+          "version": {
+            "type": "string",
+            "description": "Specific version of the parent map to use"
+          },
+          "override": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this map can override nodes/arrows from the parent"
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "description": "Storage configuration for this Arrow Map. Maps are independent of projects and can be stored in multiple locations.",
+      "properties": {
+        "canonical_path": {
+          "type": "string",
+          "description": "The canonical storage location for this map"
+        },
+        "registry": {
+          "type": "string",
+          "description": "The registry or namespace where this map is published"
+        },
+        "local_cache": {
+          "type": "string",
+          "description": "Local file path where this map is cached when referenced by projects"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Map-level metadata",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "author": {
+          "type": "string",
+          "description": "Who created this map"
+        },
+        "organization": {
+          "type": "string",
+          "description": "Organization this map belongs to"
+        },
+        "license": {
+          "type": "string",
+          "description": "License for this map (if shared publicly)"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to the canonical source of this map"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

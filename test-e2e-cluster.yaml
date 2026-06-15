@@ -1,0 +1,8 @@
+cluster_version: "1.0"
+id: cluster
+name: Ecosystem
+maps:
+  - map_id: taskflow-frontend
+    version: 1.0.0
+    scope: product
+cross_map_arrows: []

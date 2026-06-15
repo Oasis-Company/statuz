@@ -28,9 +28,9 @@ export class ArrowMapClusterIO {
     if (this.schemaCache) return this.schemaCache;
 
     const candidates = [
-      resolve(process.cwd(), "66-implementation/spec/arrow-map-cluster.schema.json"),
-      resolve(dirname(import.meta.dirname), "../../../66-implementation/spec/arrow-map-cluster.schema.json"),
-      resolve(dirname(import.meta.dirname), "../../66-implementation/spec/arrow-map-cluster.schema.json"),
+      resolve(process.cwd(), "spec/cluster.schema.json"),
+      resolve(dirname(import.meta.dirname), "../../../spec/cluster.schema.json"),
+      resolve(dirname(import.meta.dirname), "../../spec/cluster.schema.json"),
     ];
 
     for (const candidate of candidates) {
@@ -42,7 +42,7 @@ export class ArrowMapClusterIO {
       }
     }
 
-    throw new Error("Arrow Map Cluster schema not found. Expected at 66-implementation/spec/arrow-map-cluster.schema.json");
+    throw new Error("Cluster schema not found. Expected at spec/cluster.schema.json");
   }
 
   /**
@@ -63,6 +63,11 @@ export class ArrowMapClusterIO {
    * Write an Arrow Map Cluster to a YAML file
    */
   static write(path: string, cluster: ArrowMapCluster): void {
+    const validation = this.validate(cluster);
+    if (!validation.valid) {
+      throw new Error(`Invalid cluster: ${validation.errors.join("; ")}`);
+    }
+
     const content = yaml.stringify(cluster, {
       defaultKeyType: "PLAIN",
       defaultStringType: "QUOTE_DOUBLE",
