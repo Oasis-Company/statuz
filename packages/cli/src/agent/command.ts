@@ -33,11 +33,24 @@ agentCommand
         if (key) customArrowDescriptions[key.trim()] = rest.join(":").trim();
       }
 
-      const { proposal, outputPath } = generateProposal({
+      const { proposal, outputPath, isDuplicate } = generateProposal({
         projectPath,
         clusterPath: opts.cluster,
         customArrowDescriptions,
       });
+
+      if (isDuplicate) {
+        console.log("   ├─ Project type:", proposal.project.type);
+        const maps = proposal.cluster_additions.maps.length;
+        const arrows = proposal.cluster_additions.cross_map_arrows?.length || 0;
+        console.log("   ├─ New maps suggested:", maps);
+        console.log("   └─ New arrows suggested:", arrows);
+        console.log("");
+        console.log("🔁 Duplicate proposal — detected. Content unchanged.");
+        console.log("   Existing proposal path:", outputPath);
+        console.log("   Tip: To force-regenerate, delete the existing proposal file.");
+        process.exit(0);
+      }
 
       console.log("   ├─ Project type:", proposal.project.type);
       if (proposal.project.framework?.length) {

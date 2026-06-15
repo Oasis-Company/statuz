@@ -214,3 +214,27 @@ export { loadSchema, loadAllSchemas, getSchemaVersion, getSchemaTypes } from "./
 export type { SchemaType, SchemaInfo } from "./schema/registry.js";
 export { validate, validateSchema, formatErrors } from "./schema/validator.js";
 export type { ValidationError } from "./schema/validator.js";
+
+// LLM Integration
+export { LlmClient, FallbackLlmClient } from "./llm/client.js";
+export { OpenAiClient } from "./llm/adapters/openai.js";
+export { AnthropicClient } from "./llm/adapters/anthropic.js";
+export { LlmConfigManager, createLlmClient, getLlmConfig } from "./llm/config.js";
+export { NicheAnalyzer } from "./llm/services/niche-analyzer.js";
+export { ArrowInferrer } from "./llm/services/arrow-inferrer.js";
+export type {
+  LlmProvider,
+  LlmRole,
+  LlmMessage,
+  LlmTool,
+  LlmToolCall,
+  LlmUsage,
+  LlmResponse,
+  LlmStreamChunk,
+  LlmConfig,
+  LlmServiceConfig,
+  NicheAnalysis,
+  ArrowAnalysis,
+  CodeAnalysis,
+  LlmError,
+} from "./llm/types.js";

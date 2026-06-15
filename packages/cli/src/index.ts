@@ -21,6 +21,7 @@ import { pendingActionsCommand } from "./pending-actions/command.js";
 import { statusKeeperCommand } from "./status-keeper/command.js";
 import { synCommand } from "./syn/command.js";
 import { userActionCommand } from "./user-action/command.js";
+import { llmCommand } from "./llm/command.js";
 import { validate, formatErrors, getSchemaTypes } from "@statuz/sdk-ts";
 import type { SchemaType } from "@statuz/sdk-ts";
 
@@ -307,5 +308,6 @@ program.addCommand(pendingActionsCommand);
 program.addCommand(statusKeeperCommand());
 program.addCommand(userActionCommand());
 program.addCommand(synCommand());
+program.addCommand(llmCommand());
 
 program.parse(process.argv);

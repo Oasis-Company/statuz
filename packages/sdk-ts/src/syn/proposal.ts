@@ -73,6 +73,7 @@ export interface SynProposal {
   created_at: string;
   source: string;
   status: "pending_approval" | "approved" | "rejected";
+  content_hash?: string;
   project: SynProposalProject;
   cluster_additions: SynProposalClusterAdditions;
   statuz_init: SynProposalStatuzInit;

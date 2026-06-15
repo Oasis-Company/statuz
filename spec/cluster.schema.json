@@ -16,11 +16,11 @@
       "description": "Schema version, must be 1.0"
     },
     "id": {
-      "type": "string",
-      "pattern": "^[a-z-]+:[a-z-]+$",
-      "description": "Unique cluster identifier in scope:name format",
-      "examples": ["oasis:company-atlas", "statuz:core-cluster"]
-    },
+    "type": "string",
+    "pattern": "^[a-z0-9-]+(:[a-z0-9-]+)*$",
+    "description": "Unique cluster identifier. Recommended: scope:name (e.g. oasis:company-atlas). Simple names also allowed.",
+    "examples": ["oasis:company-atlas", "statuz:core-cluster", "my-project", "dev-cluster"]
+  },
     "name": {
       "type": "string",
       "maxLength": 100,

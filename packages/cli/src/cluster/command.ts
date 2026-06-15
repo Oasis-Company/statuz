@@ -14,7 +14,7 @@ export const clusterCommand = new Command("cluster")
   .addCommand(
     new Command("init")
       .description("Create a new Arrow Map Cluster")
-      .requiredOption("--id <id>", "Cluster ID in format scope:name (e.g. oasis:company-atlas)")
+      .requiredOption("--id <id>", "Cluster ID. Recommended format: scope:name (e.g. oasis:company-atlas). Simple names also allowed.")
       .requiredOption("--name <name>", "Human-readable name for the cluster")
       .option("--description <text>", "Optional description of what this cluster represents")
       .option("--organization <name>", "Organization that owns this cluster")
@@ -33,8 +33,8 @@ export const clusterCommand = new Command("cluster")
           process.exit(1);
         }
 
-        if (!/^[a-z0-9-]+:[a-z0-9-]+$/.test(options.id)) {
-          console.error(`Error: Invalid cluster ID format. Expected scope:name (e.g. oasis:company-atlas), got: ${options.id}`);
+        if (!/^[a-z0-9-]+(:[a-z0-9-]+)*$/.test(options.id)) {
+          console.error(`Error: Invalid cluster ID format. Use lowercase letters, numbers, and hyphens. Recommended: scope:name (e.g. oasis:company-atlas). Got: ${options.id}`);
           process.exit(1);
         }
 

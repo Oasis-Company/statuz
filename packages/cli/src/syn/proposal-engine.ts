@@ -5,9 +5,10 @@
  * Phase 0.1 uses pattern matching only; no LLM.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
 import { join, basename, resolve, dirname } from "path";
 import * as yaml from "yaml";
+import { createHash } from "crypto";
 import { ProjectScanner } from "@statuz/sdk-ts";
 import type { ScanResult } from "@statuz/sdk-ts";
 import { SynProposalIO, type SynProposal, type SynProposalCrossMapArrow, type SynProposalClusterMapAddition } from "@statuz/sdk-ts";
@@ -22,6 +23,7 @@ export interface ProposalEngineOptions {
 export interface ProposalEngineResult {
   proposal: SynProposal;
   outputPath: string;
+  isDuplicate?: boolean;
 }
 
 /** Generate a SYN proposal from project discovery. */
@@ -64,9 +66,46 @@ export function generateProposal(options: ProposalEngineOptions): ProposalEngine
   };
 
   const outputPath = resolve(process.cwd(), ".statuz/syn", `${proposal.id}.yaml`);
+  const hash = computeProposalHash(proposal);
+  proposal.content_hash = hash;
+
+  const existing = findExistingProposalWithHash(hash);
+  if (existing) {
+    return { proposal, outputPath: existing, isDuplicate: true };
+  }
+
   SynProposalIO.write(outputPath, proposal);
 
-  return { proposal, outputPath };
+  return { proposal, outputPath, isDuplicate: false };
+}
+
+function computeProposalHash(proposal: SynProposal): string {
+  const content = {
+    project: proposal.project,
+    cluster_additions: proposal.cluster_additions,
+    statuz_init: proposal.statuz_init,
+    niche: proposal.niche,
+  };
+  return createHash("sha256").update(JSON.stringify(content)).digest("hex").substring(0, 16);
+}
+
+function findExistingProposalWithHash(hash: string): string | null {
+  const synDir = resolve(process.cwd(), ".statuz/syn");
+  if (!existsSync(synDir)) return null;
+
+  const files = readdirSync(synDir).filter(f => f.endsWith(".yaml"));
+  for (const file of files) {
+    try {
+      const content = readFileSync(join(synDir, file), "utf-8");
+      const parsed = yaml.parse(content) as Partial<SynProposal> & { content_hash?: string };
+      if (parsed.content_hash === hash) {
+        return join(synDir, file);
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 /** Apply an approved proposal: update cluster.yaml and create .statuz/ in target project. */

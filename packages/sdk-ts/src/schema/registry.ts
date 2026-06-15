@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 export type SchemaType = "statuz" | "cluster" | "arrow-map" | "syn-proposal" | "niche";
 
@@ -9,6 +10,8 @@ export interface SchemaInfo {
   schema: Record<string, unknown>;
   version: string;
 }
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const SCHEMA_PATHS: Record<SchemaType, string> = {
   statuz: join(__dirname, "../../../../spec/statuz.schema.json"),

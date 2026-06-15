@@ -128,17 +128,17 @@ export class ArrowMapClusterIO {
     team?: string;
   }): ArrowMapCluster {
     return {
-      cluster_version: "1.0.0",
+      cluster_version: "1.0",
       id: options.id,
       name: options.name,
       description: options.description,
       maps: options.maps,
       cross_map_arrows: [],
-      cluster_metadata: {
+      metadata: {
         organization: options.organization,
         team: options.team,
         created_at: new Date().toISOString(),
-        last_updated: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       },
     };
   }
@@ -153,9 +153,9 @@ export class ArrowMapClusterIO {
     }
 
     cluster.cross_map_arrows.push(arrow);
-    cluster.cluster_metadata = {
-      ...cluster.cluster_metadata,
-      last_updated: new Date().toISOString(),
+    cluster.metadata = {
+      ...cluster.metadata,
+      updated_at: new Date().toISOString(),
     };
 
     return cluster;
@@ -166,9 +166,9 @@ export class ArrowMapClusterIO {
    */
   static removeCrossMapArrow(cluster: ArrowMapCluster, arrowId: string): ArrowMapCluster {
     cluster.cross_map_arrows = cluster.cross_map_arrows.filter(a => a.id !== arrowId);
-    cluster.cluster_metadata = {
-      ...cluster.cluster_metadata,
-      last_updated: new Date().toISOString(),
+    cluster.metadata = {
+      ...cluster.metadata,
+      updated_at: new Date().toISOString(),
     };
 
     return cluster;

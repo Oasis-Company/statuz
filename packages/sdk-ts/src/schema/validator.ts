@@ -1,8 +1,8 @@
 import Ajv, { ErrorObject, ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
-import type { SchemaType, SchemaInfo } from "./registry";
-import { loadSchema } from "./registry";
-import type { ValidationResult } from "../types";
+import type { SchemaType, SchemaInfo } from "./registry.js";
+import { loadSchema } from "./registry.js";
+import type { ValidationResult } from "../types.js";
 
 export interface ValidationError {
   path: string;

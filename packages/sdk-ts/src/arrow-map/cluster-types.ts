@@ -49,7 +49,8 @@ export interface ClusterMetadata {
   organization?: string;
   team?: string;
   created_at?: string;
-  last_updated?: string;
+  updated_at?: string;
+  author?: string;
   contact?: string;
   documentation_url?: string;
 }
@@ -64,7 +65,7 @@ export interface ArrowMapCluster {
   description?: string;
   maps: ClusterMapRef[];
   cross_map_arrows: CrossMapArrow[];
-  cluster_metadata?: ClusterMetadata;
+  metadata?: ClusterMetadata;
 }
 
 /**
