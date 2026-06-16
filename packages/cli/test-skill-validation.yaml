@@ -1,0 +1,19 @@
+statuz_version: "0.1"
+updated_at: "2026-06-15T12:00:00Z"
+
+identity:
+  agent_name: test-agent
+  project_name: test-project
+  environment: local-dev
+
+current_state:
+  stage: testing
+  task: "verify schema validation"
+  status: in_progress
+  next_action: "run statuz validate"
+
+checkpoints:
+  - id: cp-001
+    at: "2026-06-15T12:00:00Z"
+    summary: "Testing schema validation."
+    next_action: "Verify validation passes"

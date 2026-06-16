@@ -15,10 +15,10 @@ export function llmCommand(): Command {
 function testCommand(): Command {
   return new Command("test")
     .description("Test LLM connectivity and configuration")
-    .option("--provider <provider>", "LLM provider (openai, anthropic)")
-    .option("--model <model>", "Model name")
+    .option("--provider <provider>", "LLM provider (openai, anthropic, custom). Use 'custom' for OpenAI-compatible APIs like DeepSeek.")
+    .option("--model <model>", "Model name (e.g. gpt-4o-mini, claude-sonnet-4-20250514, deepseek-chat)")
     .option("--api-key <key>", "API key")
-    .option("--base-url <url>", "Base URL for API")
+    .option("--base-url <url>", "Base URL for custom/OpenAI-compatible providers (e.g. https://api.deepseek.com/v1)")
     .action(async (options) => {
       try {
         const configManager = LlmConfigManager.getInstance();

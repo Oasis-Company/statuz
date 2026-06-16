@@ -121,6 +121,8 @@ export class LlmConfigManager {
         return new OpenAiClient(this.config);
       case "anthropic":
         return new AnthropicClient(this.config);
+      case "custom":
+        return new OpenAiClient(this.config);
       default:
         return new OpenAiClient(this.config);
     }

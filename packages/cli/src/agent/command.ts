@@ -23,7 +23,7 @@ agentCommand
   .option("--output <path>", "Override proposal output path")
   .option("--arrow-description <arrow_key:description>", "Custom arrow description, e.g. 'frontend->backend:HTTP client calls REST'", collectPairs, [])
   .option("--auto-approve", "⚠️  Apply immediately without SYN gate — use carefully")
-  .action((projectPath: string, opts: any) => {
+  .action(async (projectPath: string, opts: any) => {
     try {
       console.log("🔍 Scanning:", projectPath);
 
@@ -33,11 +33,15 @@ agentCommand
         if (key) customArrowDescriptions[key.trim()] = rest.join(":").trim();
       }
 
-      const { proposal, outputPath, isDuplicate } = generateProposal({
+      const { proposal, outputPath, isDuplicate, llmEnhanced } = await generateProposal({
         projectPath,
         clusterPath: opts.cluster,
         customArrowDescriptions,
       });
+
+      if (llmEnhanced) {
+        console.log("   ├─ LLM enhancement: enabled");
+      }
 
       if (isDuplicate) {
         console.log("   ├─ Project type:", proposal.project.type);

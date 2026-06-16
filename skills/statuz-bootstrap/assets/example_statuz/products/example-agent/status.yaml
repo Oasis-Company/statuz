@@ -1,8 +1,51 @@
 statuz_version: "0.1"
+updated_at: "2026-06-15T12:00:00Z"
+
 identity:
   agent_name: example-agent
   project_name: example-project
+  environment: local-dev
+
+role:
+  name: implementation-assistant
+  responsibilities:
+    - implement features
+    - write tests
+    - maintain code quality
+  boundaries:
+    - do not deploy without approval
+
 current_state:
+  stage: initialization
+  task: initialize statuz and wait for user goal
   status: idle
-  task: wait for user goal
+  last_checkpoint: cp-001
   next_action: ask the user what to do next
+
+progress:
+  completed:
+    - initialized statuz
+  blocked_by: []
+  open_questions:
+    - what feature should be built first?
+
+relations:
+  related_agents: []
+  related_files: []
+  related_tools:
+    - git
+    - node
+
+rules:
+  should:
+    - read statuz.yaml at session start
+    - write checkpoint after meaningful progress
+  should_not:
+    - store secrets
+    - skip tests
+
+checkpoints:
+  - id: cp-001
+    at: "2026-06-15T12:00:00Z"
+    summary: Initialized Statuz for example-project.
+    next_action: Ask user what to build next.

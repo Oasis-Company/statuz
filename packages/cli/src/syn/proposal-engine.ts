@@ -2,14 +2,17 @@
  * Proposal Engine — converts ScanResult + cluster.yaml into a
  * SYN proposal document.
  *
- * Phase 0.1 uses pattern matching only; no LLM.
+ * Pattern matching runs first as a baseline. When an LLM is available
+ * (enabled + API key configured), it enriches arrow descriptions and
+ * niche positioning statements. LLM failure never breaks the pipeline —
+ * we always fall back to pattern-matched output.
  */
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
 import { join, basename, resolve, dirname } from "path";
 import * as yaml from "yaml";
 import { createHash } from "crypto";
-import { ProjectScanner } from "@statuz/sdk-ts";
+import { ProjectScanner, LlmConfigManager, createLlmClient, type LlmClient } from "@statuz/sdk-ts";
 import type { ScanResult } from "@statuz/sdk-ts";
 import { SynProposalIO, type SynProposal, type SynProposalCrossMapArrow, type SynProposalClusterMapAddition } from "@statuz/sdk-ts";
 
@@ -24,15 +27,239 @@ export interface ProposalEngineResult {
   proposal: SynProposal;
   outputPath: string;
   isDuplicate?: boolean;
+  llmEnhanced?: boolean;
+}
+
+interface LlmArrow {
+  from_map: string;
+  from_node: string;
+  to_map: string;
+  to_node: string;
+  type: string;
+  description: string;
+}
+
+interface LlmArrowResponse {
+  arrows: LlmArrow[];
+}
+
+interface LlmNicheResponse {
+  declared_position: {
+    does: string[];
+    does_not: string[];
+  };
+}
+
+/** @returns An LLM client if configured, otherwise null (never throws). */
+function getLlmClientIfAvailable(): LlmClient | null {
+  try {
+    const configManager = LlmConfigManager.getInstance();
+    configManager.loadFromEnvironment();
+
+    if (configManager.validate().length > 0) return null;
+
+    const client = createLlmClient();
+    return client.isEnabled() ? client : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Tries to parse a JSON response from the LLM. Robust against
+ * markdown-wrapped JSON (` ```json ... ``` `) and leading/trailing text.
+ */
+function parseLlmJson<T>(raw: string): T | null {
+  let candidate = raw.trim();
+
+  const fence = candidate.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) candidate = fence[1].trim();
+
+  const braceOpen = candidate.indexOf("{");
+  const braceClose = candidate.lastIndexOf("}");
+  if (braceOpen !== -1 && braceClose > braceOpen) {
+    candidate = candidate.slice(braceOpen, braceClose + 1);
+  }
+
+  try {
+    return JSON.parse(candidate) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Tries LLM for richer arrows. Returns null (not arrows) on any LLM problem. */
+async function generateArrowsWithLlm(
+  client: LlmClient,
+  scan: ScanResult,
+  siblingMaps: { mapId: string; scope?: string }[],
+): Promise<SynProposalCrossMapArrow[] | null> {
+  const prompt = [
+    "Analyze this project and suggest meaningful cross-project dependency arrows.",
+    "",
+    "New project:",
+    `- Name: ${scan.projectName}`,
+    `- Type: ${scan.projectType}`,
+    `- Frameworks: ${scan.frameworks.join(", ") || "none detected"}`,
+    `- Imports (sample): ${scan.rawImports.slice(0, 5).join(", ") || "none"}`,
+    "",
+    siblingMaps.length > 0
+      ? "Existing ecosystem maps (cluster members —consider only these as valid mapIds):\n" + siblingMaps.map((m) => `  - ${m.mapId} (scope: ${m.scope || "unknown"})`).join("\n")
+      : "No existing ecosystem maps.",
+    "",
+    "Return valid JSON only—no other text—with this shape:",
+    "{",
+    '  "arrows": [',
+    "    {",
+    '      "from_map": "<consumer mapId from the cluster>",',
+    '      "from_node": "<generic node name, e.g. api-client>",',
+    '      "to_map": "<provider mapId from the cluster>",',
+    '      "to_node": "<generic node name, e.g. rest-api>",',
+    '      "type": "dependency | information_flow | responsibility | validation | resource_transfer | influence | constraint",',
+    '      "description": "Concise explanation of the relationship."',
+    "    }",
+    "  ]",
+    "}",
+    "",
+    "Rules:",
+    "- Arrows point FROM consumer TO provider.",
+    "- from_map and to_map MUST be mapIds from the list above (or from the list, if any).",
+    "- If siblingMaps is empty or there is no relationship, return { arrows: [] }.",
+    "- Do not invent arrows without evidence.",
+    "- description must be 30-200 characters.",
+  ].join("\n");
+
+  try {
+    const response = await awaitPromiseOrTimeout(client.chat([{ role: "user", content: prompt }], { maxTokens: 512, temperature: 0.3 }));
+    if (!response || !response.content) return null;
+
+    const parsed = parseLlmJson<LlmArrowResponse>(response.content);
+    if (!parsed || !Array.isArray(parsed.arrows)) return null;
+
+    const validTypes = new Set([
+      "dependency", "information_flow", "responsibility", "validation",
+      "resource_transfer", "influence", "constraint",
+    ]);
+    const existingIds = new Set(siblingMaps.map((m) => m.mapId));
+    existingIds.add(scan.projectName);
+
+    const output: SynProposalCrossMapArrow[] = [];
+    for (const a of parsed.arrows) {
+      if (!a.from_map || !a.to_map || !a.type || !a.description) continue;
+      if (!existingIds.has(a.from_map) || !existingIds.has(a.to_map)) continue;
+      if (a.from_map === a.to_map) continue;
+      const type = validTypes.has(a.type) ? a.type : "dependency";
+      output.push({
+        id: `cma-${a.from_map}-${a.from_node}-${a.to_map}-${a.to_node}`,
+        from_map: a.from_map,
+        from_node: a.from_node || "api-client",
+        to_map: a.to_map,
+        to_node: a.to_node || "rest-api",
+        type,
+        description: a.description.slice(0, 240),
+      });
+    }
+    return output.length > 0 ? output : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Tries LLM for richer niche positioning. Returns null on any LLM problem. */
+async function generateNicheWithLlm(
+  client: LlmClient,
+  scan: ScanResult,
+): Promise<{ declared_position: { does: string[]; does_not: string[] } } | null> {
+  const description = scan.packageJson
+    ? (scan.packageJson.description as string | undefined) || ""
+    : "";
+
+  const prompt = [
+    "Analyze this project and write concise positioning statements.",
+    "",
+    "Project:",
+    `- Name: ${scan.projectName}`,
+    `- Type: ${scan.projectType}`,
+    `- Language: ${scan.language}`,
+    `- Frameworks: ${scan.frameworks.join(", ") || "none"}`,
+    description ? `- Description: ${description.slice(0, 200)}` : "- Description: (none)",
+    `- Sample imports: ${scan.rawImports.slice(0, 5).join(", ") || "none"}`,
+    "",
+    "Return valid JSON only—no other text:;",
+    "{",
+    '  "declared_position": {',
+    '    "does": ["statement one", "statement two", "statement three"],',
+    '    "does_not": ["boundary one", "boundary two"]',
+    "  }",
+    "}",
+    "",
+    "Rules:",
+    "- does: 2-5 specific statements. Each under 80 chars.",
+    "- does_not: 1-3 honest boundary statements. Each under 80 chars.",
+    "- Clear, readable English. No jargon.",
+  ].join("\n");
+
+  try {
+    const response = await awaitPromiseOrTimeout(client.chat([{ role: "user", content: prompt }], { maxTokens: 384, temperature: 0.3 }));
+    if (!response || !response.content) return null;
+
+    const parsed = parseLlmJson<LlmNicheResponse>(response.content);
+    if (!parsed || !parsed.declared_position) return null;
+
+    const does = (parsed.declared_position.does || []).filter((s) => s && s.length < 120).slice(0, 5);
+    const doesNot = (parsed.declared_position.does_not || []).filter((s) => s && s.length < 120).slice(0, 3);
+
+    if (does.length < 2) return null;
+    return { declared_position: { does, does_not: doesNot } };
+  } catch {
+    return null;
+  }
+}
+
+/** Small Promise wrapper with a short timeout to prevent hanging on slow LLM calls. */
+function awaitPromiseOrTimeout<T>(promise: Promise<T>, opts: { maxTokens?: number; temperature?: number } = {}): Promise<T | null> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(null), 15000);
+    promise.then((v) => { clearTimeout(timeout); resolve(v); }).catch(() => { clearTimeout(timeout); resolve(null); });
+  });
 }
 
 /** Generate a SYN proposal from project discovery. */
-export function generateProposal(options: ProposalEngineOptions): ProposalEngineResult {
+export async function generateProposal(options: ProposalEngineOptions): Promise<ProposalEngineResult> {
   const scan = ProjectScanner.scan(options.projectPath);
   const cluster = options.clusterPath ? loadCluster(options.clusterPath) : null;
   const proposedMaps = buildProposedMaps(scan, cluster);
-  const proposedArrows = buildProposedArrows(scan, cluster, options.customArrowDescriptions || {});
-  const niche = buildNiche(scan);
+
+  let llmEnhanced = false;
+  const client = getLlmClientIfAvailable();
+
+  let proposedArrows: SynProposalCrossMapArrow[] = [];
+  let niche: { declared_position: { does: string[]; does_not: string[] } } = buildNiche(scan);
+
+  // Pattern matching first — always runs as a baseline.
+  const patternArrows = buildProposedArrows(scan, cluster, options.customArrowDescriptions || {});
+
+  if (client) {
+    const siblingMaps = (cluster?.maps || []).concat(
+      proposedMaps.map((m) => ({ mapId: m.map_id, scope: m.scope })),
+    );
+    const llmArrows = await generateArrowsWithLlm(client, scan, siblingMaps);
+    const llmNiche = await generateNicheWithLlm(client, scan);
+
+    if (llmArrows && llmArrows.length > 0) {
+      proposedArrows = mergeArrows(patternArrows, llmArrows);
+      llmEnhanced = true;
+    } else {
+      proposedArrows = patternArrows;
+    }
+
+    if (llmNiche) {
+      niche = llmNiche;
+      llmEnhanced = true;
+    }
+  } else {
+    proposedArrows = patternArrows;
+  }
 
   const proposal: SynProposal = {
     proposal_version: "1.0",
@@ -62,7 +289,7 @@ export function generateProposal(options: ProposalEngineOptions): ProposalEngine
       },
     },
     niche,
-    notes: buildNotes(scan),
+    notes: buildNotes(scan, llmEnhanced),
   };
 
   const outputPath = resolve(process.cwd(), ".statuz/syn", `${proposal.id}.yaml`);
@@ -71,12 +298,39 @@ export function generateProposal(options: ProposalEngineOptions): ProposalEngine
 
   const existing = findExistingProposalWithHash(hash);
   if (existing) {
-    return { proposal, outputPath: existing, isDuplicate: true };
+    return { proposal, outputPath: existing, isDuplicate: true, llmEnhanced };
   }
 
   SynProposalIO.write(outputPath, proposal);
 
-  return { proposal, outputPath, isDuplicate: false };
+  return { proposal, outputPath, isDuplicate: false, llmEnhanced };
+}
+
+/** Merge pattern-matched arrows with LLM arrows, de-duplicating by key. */
+function mergeArrows(
+  patternArrows: SynProposalCrossMapArrow[],
+  llmArrows: SynProposalCrossMapArrow[],
+): SynProposalCrossMapArrow[] {
+  const seen = new Set<string>();
+  const result: SynProposalCrossMapArrow[] = [];
+
+  for (const a of llmArrows) {
+    const key = `${a.from_map}:${a.from_node}->${a.to_map}:${a.to_node}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(a);
+    }
+  }
+
+  for (const a of patternArrows) {
+    const key = `${a.from_map}:${a.from_node}->${a.to_map}:${a.to_node}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(a);
+    }
+  }
+
+  return result;
 }
 
 function computeProposalHash(proposal: SynProposal): string {
@@ -304,8 +558,11 @@ function buildNiche(scan: ScanResult): { declared_position: { does: string[]; do
   return { declared_position: { does, does_not } };
 }
 
-function buildNotes(scan: ScanResult): string[] {
+function buildNotes(scan: ScanResult, llmEnhanced: boolean = false): string[] {
   const notes: string[] = [];
+  if (llmEnhanced) {
+    notes.push(`Arrow descriptions and niche positioning were generated with LLM assistance.`);
+  }
   if (scan.rawImports.length > 0) {
     notes.push(`Imports detected (from sample): ${scan.rawImports.slice(0, 3).join(", ")}`);
   }
