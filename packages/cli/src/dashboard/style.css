@@ -1,0 +1,540 @@
+/* === Statuz Dashboard — 现代、冷静、克制设计 ===
+ * 
+ * 设计原则：
+ * 1. 克制配色 - Slate 中性色 + 单一品牌色（蓝色）
+ * 2. 无渐变、无霓虹、无发光效果
+ * 3. 清晰的视觉层次，留白为主
+ * 4. 使用 CSS 自定义属性便于主题切换
+ */
+
+/* === 设计令牌（Design Tokens）=== */
+:root {
+  /* 中性色 - Slate 系 */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-border-hover: #cbd5e1;
+  
+  /* 文字色 */
+  --color-text: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  
+  /* 品牌色 - 克制蓝色 */
+  --color-brand: #3b82f6;
+  --color-brand-light: #eff6ff;
+  --color-brand-border: #bfdbfe;
+  
+  /* 状态色 - 低饱和度 */
+  --color-status-idle: #f59e0b;
+  --color-status-progress: #3b82f6;
+  --color-status-done: #10b981;
+  --color-status-blocked: #ef4444;
+  
+  /* 间距 */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+    
+  /* 字体 */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* === 重置 === */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* === 布局 === */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* === 顶部导航 === */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  font-size: 28px;
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.header-subtitle {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-badge.online {
+  background: var(--color-brand-light);
+  color: var(--color-status-done);
+  border: 1px solid var(--color-brand-border);
+}
+
+.status-badge.offline {
+  background: #fef2f2;
+  color: var(--color-status-blocked);
+  border: 1px solid #fecaca;
+}
+
+/* === 主网格 === */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .main-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === 卡片 === */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.card:hover {
+  border-color: var(--color-border-hover);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-icon {
+  font-size: 20px;
+}
+
+.card-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.card-date {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.card-badge {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: var(--color-brand-light);
+  color: var(--color-brand);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+/* === 空状态 === */
+.empty-state {
+  text-align: center;
+  padding: 20px;
+  color: var(--color-text-muted);
+}
+
+.empty-state code {
+  display: inline-block;
+  padding: 4px 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-brand);
+}
+
+/* === Agent 卡片 === */
+.identity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.identity-item {
+  background: var(--color-bg);
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.identity-item label {
+  display: block;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.identity-item .value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.section-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 16px 0;
+}
+
+/* === 状态 === */
+.current-state label {
+  display: block;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.state-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.state-tag {
+  padding: 4px 12px;
+  background: var(--color-brand-light);
+  color: var(--color-brand);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.state-tag.status-idle {
+  background: #fffbeb;
+  color: var(--color-status-idle);
+  border: 1px solid #fde68a;
+}
+
+.state-tag.status-in-progress {
+  background: var(--color-brand-light);
+  color: var(--color-status-progress);
+  border: 1px solid var(--color-brand-border);
+}
+
+.state-tag.status-completed {
+  background: #ecfdf5;
+  color: var(--color-status-done);
+  border: 1px solid #a7f3d0;
+}
+
+.state-tag.status-blocked {
+  background: #fef2f2;
+  color: var(--color-status-blocked);
+  border: 1px solid #fecaca;
+}
+
+.task-text {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.next-action {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-brand);
+  font-style: italic;
+}
+
+/* === 进度 === */
+.progress-stats {
+  display: flex;
+  gap: 24px;
+}
+
+.progress-item {
+  text-align: center;
+}
+
+.progress-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* === Pending Actions === */
+.action-summary {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-item {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  background: var(--color-bg);
+  border-radius: 10px;
+}
+
+.summary-item.highlight {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.summary-item.success {
+  background: #ecfdf5;
+}
+
+.summary-item.warning {
+  background: #fef2f2;
+}
+
+.summary-num {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.summary-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-item {
+  background: var(--color-bg);
+  padding: 14px;
+  border-radius: 10px;
+  border-left: 3px solid transparent;
+}
+
+.action-item:hover {
+  background: #f1f5f9;
+}
+
+.action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.action-id {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.action-status {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #fffbeb;
+  color: var(--color-status-idle);
+  border: 1px solid #fde68a;
+}
+
+.action-status.in_progress {
+  background: var(--color-brand-light);
+  color: var(--color-status-progress);
+  border: 1px solid var(--color-brand-border);
+}
+
+.action-status.done {
+  background: #ecfdf5;
+  color: var(--color-status-done);
+  border: 1px solid #a7f3d0;
+}
+
+.action-status.blocked {
+  background: #fef2f2;
+  color: var(--color-status-blocked);
+  border: 1px solid #fecaca;
+}
+
+.action-status.cancelled {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.action-title {
+  display: block;
+  font-size: 14px;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.action-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.action-priority {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.action-priority.critical {
+  background: #fef2f2;
+  color: var(--color-status-blocked);
+  border-color: #fecaca;
+}
+
+.action-priority.high {
+  background: #fffbeb;
+  color: var(--color-status-idle);
+  border-color: #fde68a;
+}
+
+.action-priority.medium {
+  background: var(--color-brand-light);
+  color: var(--color-brand);
+  border-color: var(--color-brand-border);
+}
+
+.action-priority.low {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.action-assigned {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.action-blocked {
+  font-size: 11px;
+  color: var(--color-status-blocked);
+  font-weight: 500;
+}
+
+.more-link {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+}
+
+/* === Arrow Map === */
+.map-stats {
+  display: flex;
+  gap: 24px;
+}
+
+.map-stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.map-stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.map-stat-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.map-description {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* === Footer === */
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}

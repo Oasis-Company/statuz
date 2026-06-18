@@ -5,9 +5,14 @@
 import { Command } from "commander";
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import * as yaml from "yaml";
 import { PendingActionsIO, Statuz, ArrowMapIO } from "@statuz/sdk-ts";
+
+// ES Module 兼容：定义 __filename 和 __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export const dashboardCommand = new Command("dashboard")
   .description("Start a local web dashboard for viewing Statuz status")
@@ -32,8 +37,15 @@ export const dashboardCommand = new Command("dashboard")
         res.writeHead(200, { "Content-Type": "text/html" });
         res.end(html);
       } else if (url === "/style.css") {
-        res.writeHead(200, { "Content-Type": "text/css" });
-        res.end(cssStyles);
+        const cssPath = resolve(__dirname, "style.css");
+        if (existsSync(cssPath)) {
+          const css = readFileSync(cssPath, "utf8");
+          res.writeHead(200, { "Content-Type": "text/css" });
+          res.end(css);
+        } else {
+          res.writeHead(404, { "Content-Type": "text/plain" });
+          res.end("CSS file not found");
+        }
       } else {
         res.writeHead(404, { "Content-Type": "text/plain" });
         res.end("Not found");
@@ -66,7 +78,7 @@ function generateDashboard(statuzPath: string, pendingActionsPath: string, arrow
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Statuz Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>${cssStyles}</style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="container">
@@ -379,9 +391,9 @@ const cssStyles = `
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  background: #f8fafc;
   min-height: 100vh;
-  color: #e0e0e0;
+  color: #1e293b;
 }
 
 .container {
@@ -396,7 +408,7 @@ body {
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .header-left {
@@ -418,10 +430,7 @@ body {
 .logo-text {
   font-size: 24px;
   font-weight: 700;
-  background: linear-gradient(135deg, #00d4ff, #7b2fff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #1e293b;
 }
 
 .header-subtitle {

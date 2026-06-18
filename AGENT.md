@@ -2,6 +2,26 @@
 
 > For AI agents working on this repository. Last updated: 2026-06-16
 
+---
+
+## Core Vision — The Why
+
+**Statuz exists to solve one of AI's biggest challenges: information compression and state closure.**
+
+We believe:
+- AI needs **true global state**, not scattered documents
+- Topology matters more than text — we need structured relationships, not just markdown
+- Information storage needs a **paradigm shift** — moving from flat documents to graph-based representations
+- **Niche** requires a fundamentally new search engine (future: C++ backend, graph theory based)
+- Only with this foundation can AI tackle **truly complex projects**
+
+This is **hell-level difficulty** — we won't solve everything alone. We'll:
+1. Design the architecture
+2. Implement what we can
+3. Flag unsolved problems for deeper research (professor consultation)
+
+---
+
 ## The Four Layers You Must Understand
 
 Statuz has a four-layer architecture. Do not mix concerns between layers:
@@ -78,3 +98,28 @@ Do NOT escalate for:
 2. Run `statuz validate` on any changed YAML files
 3. Run `statuz status-keeper run`
 4. Update AGENT.md if your work changes the rules
+
+---
+
+## Unsolved Problems — For Future Research
+
+These are the hard problems we've identified but haven't solved yet. Flag these when encountered:
+
+| Problem | Description | Status |
+|---------|-------------|--------|
+| **Information Compression** | How to compress vast amounts of project context into a navigable, queryable structure without losing meaning? | 📚 Needs research |
+| **True Global State** | Current statuz is per-project. How to create a unified view across all projects in a cluster? | 📚 Needs research |
+| **Niche Search Engine** | Niche needs a graph-based search engine capable of understanding ecological positioning. Requires C++ for performance. | 📚 Needs research |
+| **Graph-Based Topology** | Moving Arrow Map from YAML to a proper graph database with efficient traversal and query capabilities. | 📚 Needs research |
+| **State Closure** | How to detect when we have enough context to make decisions without missing critical information? | 📚 Needs research |
+| **Cross-Project Influence Analysis** | When Project A changes, which other projects in the cluster might be affected? | 📚 Needs research |
+
+## Research Notes
+
+When you encounter these problems, document:
+1. What specific behavior you observed
+2. What you tried and why it didn't work
+3. Any mathematical or theoretical approaches that might apply
+4. References to papers/theories that might be relevant
+
+These notes will be collected and shared with experts for deeper analysis.

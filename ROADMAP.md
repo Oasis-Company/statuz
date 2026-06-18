@@ -4,6 +4,22 @@
 
 # Roadmap
 
+> **⚠️ 诚实声明（2026-06-16更新）：**
+>
+> 本 ROADMAP 中的 [x] 表示"该功能的 schema/文档/示例已完成并通过验证"，
+> **但不一定表示"该功能的 CLI 命令已完全实现并可正常工作"**。
+>
+> **实际实现状态请以 `packages/cli/src/` 代码和 `HARD-TODO.md` 为准。**
+>
+> **已知问题：**
+> - `arrow-map detect --auto` 的扫描器目前返回空结果（stub 实现）
+> - 部分命令（如 `niche`, `syn`）有 CLI 注册但未完全测试
+> - 66 层（Arrow Maps）的 MVP 尚未完成
+>
+> **Updated 2026-06-16 - Honest Assessment**
+
+---
+
 > Updated 2026-06-14 - Ecosystem Architecture Upgrade
 >
 > **Positioning Statement:** Statuz is an AI Agent **Situated Alignment Ecosystem** = Protocol + Toolchain + Best Practices Documentation
@@ -211,3 +227,102 @@
 - Cross-agent niche awareness
 - Real-time ecosystem signals
 - Agent discovery and registry
+
+---
+
+## ⚠️ 实际实现状态（诚实评估 - 2026-06-16）
+
+### 已验证可用的功能
+
+**Core CLI（已测试可用）：**
+- ✅ `statuz init` - 完全可用
+- ✅ `statuz validate` - 完全可用（支持 statuz, cluster, arrow-map, syn-proposal, niche）
+- ✅ `statuz resume` - 完全可用
+- ✅ `statuz checkpoint` - 完全可用
+
+**66 Arrow Maps（部分可用）：**
+- ✅ `statuz arrow-map init` - 可用（生成有效 YAML）
+- ✅ `statuz arrow-map validate` - 可用（验证 Arrow Map）
+- ❌ `statuz arrow-map detect --auto` - **不可用**（扫描器返回空结果）
+- ❌ `statuz arrow-map detect --interactive` - **未完全接通**
+
+**niche 命令（已注册但未完全测试）：**
+- ✅ `statuz niche init` - 已注册，功能未知
+- ✅ `statuz niche validate` - 已注册，功能未知
+- ✅ `statuz niche show` - 已注册，功能未知
+- ✅ `statuz niche update` - 已注册，功能未知
+
+**其他命令（已注册但未测试）：**
+- ⚠️ `statuz syn` - 已注册，未测试
+- ⚠️ `statuz cluster` - 已注册，未测试
+- ⚠️ `statuz calibration` - 已注册，未测试
+- ⚠️ `statuz agent` - 已注册，未测试
+
+### Schema/Docs 完成但代码未实现
+
+以下在 ROADMAP 中标记为 [x]，但**实际代码未完全实现**：
+
+1. **0.6 niche Technical Charter**
+   - ✅ Schema 完成
+   - ✅ 文档完成
+   - ⚠️ CLI 命令未完全测试
+
+2. **0.7 niche Minimum Object Set**
+   - ✅ 6 个 schema 完成
+   - ✅ 验证通过
+   - ⚠️ 无查询引擎
+
+3. **0.8 niche Vertical Demo**
+   - ✅ 示例文件完成
+   - ✅ 验证通过（23/23）
+   - ⚠️ 无自动化演示
+
+4. **0.9 SYN Project MVP**
+   - ✅ 示例文件完成
+   - ✅ 验证通过（22/22）
+   - ⚠️ 无 CLI 命令完成
+
+5. **1.1.2 Arrow Map Cluster**
+   - ✅ Schema 完成
+   - ✅ SDK IO 完成
+   - ❌ CLI 命令未实现（ROADMAP 中标记为 [ ]）
+
+6. **1.1.3 Status Keeper**
+   - ✅ Schema 完成
+   - ✅ 引擎实现（runChecks, generateReport）
+   - ❌ CLI 命令未实现（ROADMAP 中标记为 [ ] ）
+
+### 已知问题（来自 NEXT_STEPS_2026-06-14.md）
+
+1. **`packages/cli` 未完成的模块导致运行时崩溃**
+   - `arrow-proposal`, `bus`, `calibration`, `lease`, `niche`, `syn`, `user-action` 这些模块在 `src/index.ts` 中被 import
+   - 其中 `arrow-proposal` 有运行时 ESM 导出错误
+   - **这些模块不在 66 MVP 范围内**
+
+2. **ROADMAP 0.5（VS Code Extension）未启动**
+   - 计划中但无代码
+
+3. **无 GitHub Actions CI**
+   - ROADMAP 0.4.1 声称有 CI，但未经本次会话验证
+
+### 下一步优先级（来自 HARD-TODO.md）
+
+**P0: 完成 66 MVP**
+- 实现 `scanPackageJson()` - 让 `detect --auto` 返回真实结果
+- 实现 `scanDockerCompose()` - 增强检测能力
+- 实现 `scanImports()` - 完成自动发现
+
+**P1: 文档化压缩策略**
+- 创建 `docs/INFORMATION_COMPRESSION.md`
+- 研究图压缩算法
+- 设计存储格式
+
+**P2: 原型查询引擎**
+- 实现 `query-engine.ts` 原型
+- 定义查询 API
+- 添加基准测试
+
+---
+
+**诚实评估完成时间：** 2026-06-16  
+**下次更新：** 完成 66 MVP 后

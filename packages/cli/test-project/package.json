@@ -1,1 +1,1 @@
-﻿{"name":"test-frontend","description":"A React frontend application for testing LLM","version":"1.0.0"}
+﻿{"name":"test-frontend","description":"A React frontend that calls a backend REST API","version":"1.0.0"}
