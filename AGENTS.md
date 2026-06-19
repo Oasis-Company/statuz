@@ -1,191 +1,73 @@
-Do not start with SDKs, dashboards, databases, or MCP servers before the CLI and schema are working.
+# AGENTS.md — Statuz Post-66 Working Guide
 
-## Repository Areas
+> All legacy docs (66 Manifesto, niche, SYN, schemas, examples) have been moved to `leftover/`.
+> The project has been recalibrated. Read `STATUZ设计哲学的论述.md` for the current vision.
 
-Important paths:
+## Current Architecture
 
-- `README.md`  
-  Human-facing project overview.
+```
+engine/          ← Graph Engine prototype (active development)
+  src/graph.ts   ← In-memory adjacency list + graph algorithms
+  src/types.ts   ← Node, Edge, Relation type system
+  demo/          ← Self-test and demonstration scripts
+packages/        ← Legacy CLI/SDK/MCP code (frozen — to be replaced)
+leftover/        ← All outdated docs, schemas, and examples
+```
 
-- `SPEC.md`  
-  Main protocol specification.
+## Core Philosophy (from 设计哲学论述)
 
-- `ROADMAP.md`  
-  Development plan and staged priorities.
+- Statuz is a **graph engine**, not a protocol or document system
+- Information must be **actively released** (like working memory), not passively retrieved
+- "Better Engine, Better Diagram, Better Loop"
+- Core is the base; Dashboard is where features emerge
+- Goal: July MVP — working Engine + CLI Dashboard
 
-- `spec/statuz.schema.json`  
-  JSON Schema for validating Statuz YAML files.
+## Engine Development Rules
 
-- `examples/basic/statuz.yaml`  
-  Minimal valid Statuz example.
+1. **Zero dependencies** — Engine is pure TypeScript
+2. **Memory-first** — All graph ops in-memory. Serialization is secondary.
+3. **Three core queries** must always work: `traverse`, `impact`, `path`
+4. **Self-test** — `npx tsx engine/demo/self-test.ts` must pass before any commit
+5. **No YAML files** — Old paradigm is dead. Engine decides storage format.
 
-- `examples/multi-agent/statuz.yaml`  
-  Multi-agent example.
+## The Three Queries
 
-- `examples/muserock/statuz.yaml`  
-  Creative workflow example for MuseRock-style use cases.
+| Query | What it answers | Method |
+|-------|----------------|--------|
+| `traverse(from, relation?)` | "What does this connect to?" | Direct adjacency lookup |
+| `impact(nodeId)` | "If this changes, who's affected?" | Reverse BFS (blast radius) |
+| `path(from, to)` | "How do I get there?" | BFS shortest path |
 
-- `packages/cli`  
-  TypeScript CLI package.
+## Hard Rules
 
-- `skills/statuz-bootstrap`  
-  Draft Agent Skill for generating Statuz files.
+- Do NOT add YAML schemas, JSON Schema files, or protocol documents
+- Do NOT revive niche, SYN, Arrow Map file formats from `leftover/`
+- Do NOT add CLI commands before the Engine is solid
+- Do NOT add databases, servers, or network calls
+- Do NOT change the LICENSE without explicit human approval
+- The Engine is the product — everything else emerges from it
 
-- `docs`  
-  Supporting design notes, architecture documents, ADRs, and smoke tests.
+## Decision Rule
 
-## CLI Expectations
+If a concept from the old paradigm (niche, SYN, status-keeper) comes up:
+- **Can the Engine compute it?** → Add as an Engine method
+- **Is it a UI concern?** → Defer to Dashboard phase
+- **Is it a YAML file pattern?** → Discard
 
-The CLI should remain small.
-
-Required commands for the early version:
+## Verification
 
 ```bash
-statuz init
-statuz validate <file>
-statuz resume <file>
+cd engine
+npx tsx demo/self-test.ts
+```
 
-Expected local verification:
+All queries must return correct results. Types must compile cleanly.
 
-cd packages/cli
-npm install
-npm run build
-npm run validate:example
-
-The CLI must produce clear human-readable errors.
-
-Do not expose raw stack traces for normal validation failures.
-
-Schema Expectations
-
-The schema must validate the official examples.
-
-The schema should prioritize clarity over cleverness.
-
-Do not over-model the world.
-
-The early schema should focus on:
-
-statuz_version
-updated_at
-identity
-role
-goal
-current_state
-progress
-relations
-rules
-checkpoints
-
-Avoid adding complex memory, embedding, permission, or database concepts in the 0.1 stage.
-
-Example Expectations
-
-Every example should be:
-
-Valid YAML.
-Easy to read.
-Compatible with the schema.
-Useful as a copy-paste starting point.
-Focused on runtime status, not long-term knowledge storage.
-
-If an example cannot pass statuz validate, fix the example or the schema before adding new features.
-
-Code Style
-
-Use TypeScript for the CLI.
-
-Prefer simple, dependency-light code.
-
-Use clear names.
-
-Prefer explicit validation and helpful errors.
-
-Do not add frameworks unless they are clearly necessary.
-
-Do not introduce network calls in P0.
-
-Do not introduce databases in P0.
-
-Documentation Style
-
-Write documentation in clear English.
-
-Be precise.
-
-Avoid hype inside technical docs.
-
-The philosophical positioning is important, but implementation docs should stay operational.
-
-Good sentence:
-
-Statuz records the current runtime state of an AI agent.
-
-Bad sentence:
-
-Statuz is a revolutionary consciousness layer that changes everything.
-
-Use the strong vision in the README and manifesto, but keep engineering docs practical.
-
-Non-Negotiable Product Principles
-Status is not memory.
-Runtime state must be inspectable by humans.
-The protocol must be portable across tools.
-The first version must work without a server.
-Agents should be able to resume from Statuz without reading an entire chat history.
-Statuz should help agents know what to do next.
-Statuz should remain small enough to be understood quickly.
-P0 Definition of Done
-
-P0 is complete only when all of the following are true:
-
-npm install works in packages/cli.
-npm run build works in packages/cli.
-npm run validate:example passes.
-examples/basic/statuz.yaml is valid.
-statuz validate <file> works.
-statuz resume <file> works.
-statuz init generates a valid status file.
-GitHub Actions CI runs on push and pull request.
-docs/CLI_SMOKE_TEST.md exists.
-No major philosophical or architectural scope creep was introduced.
-Things Agents Must Not Do
-
-Do not rewrite the whole repository.
-
-Do not replace the protocol with a database.
-
-Do not turn Statuz into generic memory.
-
-
-Do not remove the core thesis.
-
-Do not change the license without explicit human approval.
-
-Do not make breaking changes to the schema without updating examples and docs.
-
-When Unsure
-
-If a task is ambiguous, use this decision rule:
-
-If it helps the agent know its current state, it may belong in Statuz.
-If it only helps the agent remember facts, it probably belongs in memory.
-If it connects tools, it probably belongs in MCP.
-If it describes a reusable workflow, it may belong in a Skill.
-If it tracks human project tasks, it may belong in an issue tracker.
-
-Keep Statuz focused on runtime status.
-
-Handoff Rule
+## Handoff Rule
 
 At the end of every meaningful change, summarize:
-
-What changed.
-Why it changed.
-How to verify it.
-What remains unresolved.
-What the next agent should do.
-
-This project is building a protocol for agent continuity.
-
-Every agent working on this repository should leave the next agent with a clearer status than it found.
+- What changed in the Engine
+- Why it changed
+- How to verify (`npx tsx engine/demo/self-test.ts`)
+- What remains unresolved
+- What the next agent should build

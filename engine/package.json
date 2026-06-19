@@ -1,0 +1,15 @@
+{
+  "name": "@statuz/engine",
+  "version": "0.1.0",
+  "description": "Statuz Graph Engine — in-memory topological runtime",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "npx tsx demo/self-test.ts",
+    "build": "echo 'Engine is zero-dependency TypeScript — no build needed yet'"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.0.0"
+  }
+}
