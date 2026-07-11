@@ -46,6 +46,54 @@ enum Commands {
         #[arg(short, long, default_value = "cluster.json")]
         output: String,
     },
+    /// Clone a cluster with options
+    Clone {
+        #[arg(short, long)]
+        input: String,
+        #[arg(short, long, default_value = "clone.stz")]
+        output: String,
+        #[arg(short, long)]
+        name: Option<String>,
+        #[arg(short, long)]
+        password: Option<String>,
+        #[arg(long, default_value_t = false)]
+        keep_password: bool,
+        #[arg(long, default_value_t = false)]
+        keep_timestamps: bool,
+    },
+    /// Merge a source cluster into a target cluster
+    Merge {
+        #[arg(short, long)]
+        target: String,
+        #[arg(short, long)]
+        source: String,
+        #[arg(short, long, default_value = "skip")]
+        strategy: String,
+        #[arg(long)]
+        rename_suffix: Option<String>,
+        #[arg(short, long, default_value = "merged.stz")]
+        output: String,
+    },
+    /// Set, change, or clear the password on a cluster
+    SetPassword {
+        #[arg(short, long)]
+        path: String,
+        #[arg(short, long)]
+        set: Option<String>,
+        #[arg(long)]
+        old: Option<String>,
+        #[arg(long)]
+        new: Option<String>,
+        #[arg(long, default_value_t = false)]
+        clear: bool,
+    },
+    /// Set the visibility of a cluster
+    SetVisibility {
+        #[arg(short, long)]
+        path: String,
+        #[arg(short, long)]
+        visibility: String,
+    },
     /// Run comprehensive self-test
     SelfTest,
 }
@@ -118,6 +166,158 @@ fn main() {
                     Err(e) => eprintln!("Deserialize error: {}", e),
                 },
                 Err(e) => eprintln!("Read error: {}", e),
+            }
+        }
+        Commands::Clone { input, output, name, password, keep_password, keep_timestamps } => {
+            let data = match std::fs::read(input) {
+                Ok(d) => d,
+                Err(e) => { eprintln!("Read error: {}", e); return; }
+            };
+            let cluster = match deserialize_cluster(&data) {
+                Ok(c) => c,
+                Err(e) => { eprintln!("Deserialize error: {}", e); return; }
+            };
+
+            let options = CloneOptions {
+                reset_password: !keep_password && password.is_none(),
+                new_password: password.clone(),
+                new_name: name.clone(),
+                reset_timestamps: !keep_timestamps,
+            };
+
+            match cluster.clone_with_options(&options) {
+                Ok(cloned) => match serialize_cluster(&cloned) {
+                    Ok(data) => match std::fs::write(output, &data) {
+                        Ok(_) => {
+                            println!("✅ Cluster cloned to '{}' ({} bytes)", output, data.len());
+                            println!("   New ID: {}", cloned.id);
+                            println!("   Name: {}", cloned.name);
+                        }
+                        Err(e) => eprintln!("Write error: {}", e),
+                    },
+                    Err(e) => eprintln!("Serialize error: {}", e),
+                },
+                Err(e) => eprintln!("Clone error: {}", e),
+            }
+        }
+        Commands::Merge { target, source, strategy, rename_suffix, output } => {
+            let target_data = match std::fs::read(target) {
+                Ok(d) => d,
+                Err(e) => { eprintln!("Read target error: {}", e); return; }
+            };
+            let source_data = match std::fs::read(source) {
+                Ok(d) => d,
+                Err(e) => { eprintln!("Read source error: {}", e); return; }
+            };
+
+            let mut target_cluster = match deserialize_cluster(&target_data) {
+                Ok(c) => c,
+                Err(e) => { eprintln!("Deserialize target error: {}", e); return; }
+            };
+            let source_cluster = match deserialize_cluster(&source_data) {
+                Ok(c) => c,
+                Err(e) => { eprintln!("Deserialize source error: {}", e); return; }
+            };
+
+            let merge_strategy = match strategy.as_str() {
+                "skip" => MergeStrategy::Skip,
+                "overwrite" => MergeStrategy::Overwrite,
+                "rename" => MergeStrategy::Rename {
+                    suffix: rename_suffix.clone().unwrap_or_else(|| "-merged".to_string()),
+                },
+                "merge-meta" => MergeStrategy::MergeMeta,
+                _ => {
+                    eprintln!("Invalid strategy: {}. Use: skip, overwrite, rename, merge-meta", strategy);
+                    return;
+                }
+            };
+
+            let result = target_cluster.merge_from(&source_cluster, &merge_strategy);
+
+            println!("✅ Merge complete");
+            println!("   Nodes: {} added, {} skipped, {} overwritten",
+                result.nodes_added, result.nodes_skipped, result.nodes_overwritten);
+            println!("   Fields: {} added, {} skipped, {} overwritten",
+                result.fields_added, result.fields_skipped, result.fields_overwritten);
+            println!("   Edges: {} added, {} skipped", result.edges_added, result.edges_skipped);
+            println!("   Bridges: {} added", result.bridges_added);
+            for w in &result.warnings {
+                println!("   ⚠ {}", w);
+            }
+
+            match serialize_cluster(&target_cluster) {
+                Ok(data) => match std::fs::write(output, &data) {
+                    Ok(_) => println!("   Merged cluster saved to '{}' ({} bytes)", output, data.len()),
+                    Err(e) => eprintln!("Write error: {}", e),
+                },
+                Err(e) => eprintln!("Serialize error: {}", e),
+            }
+        }
+        Commands::SetPassword { path, set, old, new, clear } => {
+            let data = match std::fs::read(path) {
+                Ok(d) => d,
+                Err(e) => { eprintln!("Read error: {}", e); return; }
+            };
+            let mut cluster = match deserialize_cluster(&data) {
+                Ok(c) => c,
+                Err(e) => { eprintln!("Deserialize error: {}", e); return; }
+            };
+
+            if let Some(pwd) = set {
+                match cluster.set_password(pwd) {
+                    Ok(_) => println!("✅ Password set"),
+                    Err(e) => { eprintln!("Error: {}", e); return; }
+                }
+            } else if let (Some(old_pwd), Some(new_pwd)) = (old, new) {
+                match cluster.change_password(old_pwd, new_pwd) {
+                    Ok(_) => println!("✅ Password changed"),
+                    Err(e) => { eprintln!("Error: {}", e); return; }
+                }
+            } else if *clear {
+                cluster.clear_password();
+                println!("✅ Password cleared");
+            } else {
+                eprintln!("Use --set <password>, --old <old> --new <new>, or --clear");
+                return;
+            }
+
+            match serialize_cluster(&cluster) {
+                Ok(data) => match std::fs::write(path, &data) {
+                    Ok(_) => println!("   Cluster saved ({} bytes)", data.len()),
+                    Err(e) => eprintln!("Write error: {}", e),
+                },
+                Err(e) => eprintln!("Serialize error: {}", e),
+            }
+        }
+        Commands::SetVisibility { path, visibility } => {
+            let data = match std::fs::read(path) {
+                Ok(d) => d,
+                Err(e) => { eprintln!("Read error: {}", e); return; }
+            };
+            let mut cluster = match deserialize_cluster(&data) {
+                Ok(c) => c,
+                Err(e) => { eprintln!("Deserialize error: {}", e); return; }
+            };
+
+            let vis = match visibility.as_str() {
+                "public" => Visibility::Public,
+                "private" => Visibility::Private,
+                "organization" => Visibility::Organization,
+                _ => {
+                    eprintln!("Invalid visibility: {}. Use: public, private, organization", visibility);
+                    return;
+                }
+            };
+
+            cluster.set_visibility(vis);
+            println!("✅ Visibility set to {:?}", cluster.visibility);
+
+            match serialize_cluster(&cluster) {
+                Ok(data) => match std::fs::write(path, &data) {
+                    Ok(_) => println!("   Cluster saved ({} bytes)", data.len()),
+                    Err(e) => eprintln!("Write error: {}", e),
+                },
+                Err(e) => eprintln!("Serialize error: {}", e),
             }
         }
         Commands::SelfTest => {
@@ -565,6 +765,94 @@ fn run_self_test() {
         Err(e) => eprintln!("  Password test error: {}", e),
     }
 
+    // ─── Phase 10: Sharing Mechanism ─────────────────────────────
+    println!("\n━━━ Phase 10: Sharing Mechanism ─━━");
+
+    // Scenario 1: Clone with default options (reset password, reset timestamps)
+    println!("\n  Scenario 1: Clone with default options");
+    let cloned = cluster.clone_with_options(&CloneOptions::default()).expect("Clone failed");
+    assert!(cloned.password_hash.is_none(), "Default clone should reset password");
+    assert!(cloned.id != cluster.id, "Clone should have new ID");
+    println!("   ✅ Clone with defaults: new ID = {}...{}",
+        &cloned.id[..8], &cloned.id[cloned.id.len()-8..]);
+
+    // Scenario 2: Clone with custom name and password
+    println!("\n  Scenario 2: Clone with custom name and password");
+    let named = cluster.clone_fresh(
+        Some("Cloned Cluster".to_string()),
+        Some("secret123".to_string()),
+    ).expect("Clone with name failed");
+    assert!(named.password_hash.is_some(), "Named clone should have password");
+    assert!(named.unlock("secret123"), "Named clone should unlock with correct password");
+    assert!(!named.unlock("wrong"), "Named clone should not unlock with wrong password");
+    assert_eq!(named.name, "Cloned Cluster");
+    println!("   ✅ Clone with name and password: name='{}', password protected={}",
+        named.name, named.password_hash.is_some());
+
+    // Scenario 3: Merge with Skip strategy
+    println!("\n  Scenario 3: Merge with Skip strategy");
+    let mut target = cluster.clone();
+    let mut source = cluster.clone();
+    let unique_node = Node {
+        id: "unique-node-merge-test".into(),
+        type_: "test".into(),
+        label: "Unique Node".into(),
+        status: NodeStatus::Active,
+        meta: None,
+    };
+    source.register_node(unique_node);
+    let result = target.merge_from(&source, &MergeStrategy::Skip);
+    assert!(result.nodes_added > 0, "Skip merge should add new nodes");
+    assert_eq!(result.nodes_skipped, 0, "Skip merge should not skip if no conflicts");
+    assert!(target.nodes.contains_key("unique-node-merge-test"), "Skip merge should add unique node");
+    println!("   ✅ Merge (Skip): {} nodes added, {} skipped", result.nodes_added, result.nodes_skipped);
+
+    // Scenario 4: Merge with Overwrite strategy
+    println!("\n  Scenario 4: Merge with Overwrite strategy");
+    let mut target2 = cluster.clone();
+    let mut source2 = cluster.clone();
+    let mut modified_node = source2.nodes.get("api-gateway").unwrap().clone();
+    modified_node.label = "API Gateway (Modified)".to_string();
+    source2.nodes.insert("api-gateway".into(), modified_node);
+    let result2 = target2.merge_from(&source2, &MergeStrategy::Overwrite);
+    assert!(result2.nodes_overwritten > 0, "Overwrite merge should overwrite conflicting nodes");
+    assert_eq!(
+        target2.nodes.get("api-gateway").unwrap().label,
+        "API Gateway (Modified)",
+        "Overwrite should replace node label"
+    );
+    println!("   ✅ Merge (Overwrite): {} nodes added, {} overwritten",
+        result2.nodes_added, result2.nodes_overwritten);
+
+    // Scenario 5: Merge with Rename strategy
+    println!("\n  Scenario 5: Merge with Rename strategy");
+    let mut target3 = cluster.clone();
+    let mut source3 = cluster.clone();
+    let result3 = target3.merge_from(&source3, &MergeStrategy::Rename { suffix: "-v2".to_string() });
+    assert!(result3.nodes_added > 0, "Rename merge should add nodes with suffix");
+    assert!(target3.nodes.contains_key("api-gateway-v2"), "Rename should create api-gateway-v2");
+    println!("   ✅ Merge (Rename): {} nodes added (with suffix -v2)", result3.nodes_added);
+
+    // Scenario 6: Password lifecycle + visibility
+    println!("\n  Scenario 6: Password lifecycle and visibility");
+    let mut pwd_cluster = Cluster::new(
+        "pwd-lifecycle".into(),
+        "Password Lifecycle".into(),
+        Visibility::Private,
+    );
+    pwd_cluster.set_password("initial-pass").expect("Set password failed");
+    assert!(pwd_cluster.unlock("initial-pass"), "Should unlock with correct password");
+    pwd_cluster.change_password("initial-pass", "new-pass").expect("Change password failed");
+    assert!(pwd_cluster.unlock("new-pass"), "Should unlock with new password");
+    assert!(!pwd_cluster.unlock("initial-pass"), "Should NOT unlock with old password");
+    pwd_cluster.clear_password();
+    assert!(pwd_cluster.password_hash.is_none(), "Password should be cleared");
+    assert!(pwd_cluster.unlock("anything"), "No password = always unlocked");
+    pwd_cluster.set_visibility(Visibility::Public);
+    assert_eq!(pwd_cluster.visibility, Visibility::Public, "Visibility should be Public");
+    println!("   ✅ Password lifecycle: set → change → clear → verify");
+    println!("   ✅ Visibility: changed to {:?}", pwd_cluster.visibility);
+
     // ─── Summary ─────────────────────────────────────────────────
     println!("\n━━━ Summary ─━━");
     println!("  ✅ GraphEngine: traverse, impact, path, centrality, health");
@@ -576,5 +864,6 @@ fn run_self_test() {
     println!("  ✅ Corruption detection: hash mismatch detection");
     println!("  ✅ JSON export: human-readable debugging output");
     println!("  ✅ Password: argon2 verification");
-    println!("\n✅ All 9 phases passed. Engine is ready for Day 3.\n");
+    println!("  ✅ Sharing: clone, merge (skip/overwrite/rename), password lifecycle, visibility");
+    println!("\n✅ All 10 phases passed. Engine is ready for Day 4.\n");
 }

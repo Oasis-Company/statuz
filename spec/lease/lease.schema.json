@@ -1,0 +1,129 @@
+{
+  "$id": "https://statuz.org/schemas/lease/lease.schema.json",
+  "title": "Lease Schema",
+  "description": "JSON Schema for Statuz Lease — time-boxed, revocable assignment of responsibility from Statuz Runtime to an Agent",
+  "type": "object",
+  "required": [
+    "lease_version",
+    "id",
+    "assigner",
+    "assignee",
+    "responsibility",
+    "scope",
+    "priority",
+    "status",
+    "deadline",
+    "created_at"
+  ],
+  "properties": {
+    "lease_version": {
+      "type": "string",
+      "const": "0.1",
+      "description": "Schema version, must be 0.1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^ls-[0-9]{3}$",
+      "description": "Unique lease ID (e.g., ls-001)"
+    },
+    "assigner": {
+      "type": "string",
+      "description": "Who created this lease (agent_id or system identifier)"
+    },
+    "assignee": {
+      "type": "string",
+      "description": "Agent ID who is assigned this responsibility"
+    },
+    "responsibility": {
+      "type": "string",
+      "description": "Brief description of what the assignee is responsible for"
+    },
+    "scope": {
+      "type": "object",
+      "description": "Scope of responsibility — what the lease covers",
+      "required": ["task"],
+      "properties": {
+        "task": {
+          "type": "string",
+          "description": "Specific task the agent should perform"
+        },
+        "files": {
+          "type": "array",
+          "description": "Relevant files this lease covers",
+          "items": {
+            "type": "string"
+          }
+        },
+        "arrow_map_id": {
+          "type": "string",
+          "description": "Arrow Map node ID this lease is associated with"
+        }
+      },
+      "additionalProperties": true
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Lease priority level"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "accepted", "active", "completed", "revoked", "expired"],
+      "description": "Current lease lifecycle status"
+    },
+    "deadline": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when the lease expires"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when the lease was created"
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when the lease was accepted (optional)"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when the lease was completed (optional)"
+    },
+    "checkpoints": {
+      "type": "array",
+      "description": "Progress checkpoints within this lease",
+      "items": {
+        "type": "object",
+        "required": ["id", "at", "summary"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Checkpoint identifier (e.g., ls-001-cp-01)"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO timestamp of this checkpoint"
+          },
+          "summary": {
+            "type": "string",
+            "description": "What was accomplished at this checkpoint"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "renewals": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Number of times this lease has been renewed"
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Expected next action the assignee should take"
+    }
+  },
+  "additionalProperties": true
+}

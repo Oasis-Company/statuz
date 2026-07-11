@@ -1,0 +1,21 @@
+# SYN Resolution Example
+# Human decision made on a SYN request
+
+syn_resolution_version: "1.0"
+id: "syn-001-resolution"
+syn_request_id: "syn-001"
+principal: "engineering-lead"
+timestamp: "2026-06-12T11:15:00Z"
+decision: "option-1"
+decision_summary: "Update declared position"
+rationale: "The drift analysis shows consistent patterns of work that fall outside our declared scope but are clearly part of our actual operations. Updating the manifest will provide a more accurate picture of our ecological position and reduce unnecessary drift warnings."
+effective_date: "2026-06-12T12:00:00Z"
+next_steps:
+  - "Update niche-manifest.yaml with new 'does' items"
+  - "Review and update documentation"
+  - "Run calibration after changes"
+audit_trail:
+  - "Resolution created by engineering-lead"
+  - "Based on request syn-001"
+  - "Decision: Update declared position"
+  - "Approved by: engineering-lead"

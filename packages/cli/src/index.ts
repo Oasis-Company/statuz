@@ -12,18 +12,10 @@ import { arrowMapCommand } from "./arrow-map/command.js";
 import { arrowProposalCommand } from "./arrow-proposal/command.js";
 import { busCommand } from "./bus/command.js";
 import { calibrationCommand } from "./calibration/command.js";
-import { clusterCommand } from "./cluster/command.js";
-import { dashboardCommand } from "./dashboard/command.js";
-import { agentCommand } from "./agent/command.js";
 import { leaseCommand } from "./lease/command.js";
 import { nicheCommand } from "./niche/command.js";
-import { pendingActionsCommand } from "./pending-actions/command.js";
-import { statusKeeperCommand } from "./status-keeper/command.js";
 import { synCommand } from "./syn/command.js";
 import { userActionCommand } from "./user-action/command.js";
-import { llmCommand } from "./llm/command.js";
-import { validate, formatErrors, getSchemaTypes } from "@statuz/sdk-ts";
-import type { SchemaType } from "@statuz/sdk-ts";
 
 const program = new Command();
 
@@ -44,23 +36,244 @@ function loadYaml(path: string): unknown {
   }
 }
 
-function loadStatuzSchema(): Record<string, unknown> {
-  const candidates = [
-    resolve(process.cwd(), "spec/statuz.schema.json"),
-    resolve(dirname(import.meta.dirname), "../../spec/statuz.schema.json"),
-    resolve(dirname(import.meta.dirname), "../../../spec/statuz.schema.json"),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      try {
-        return JSON.parse(readFileSync(candidate, "utf8"));
-      } catch {
-        continue;
+const STATUZ_SCHEMA = {
+  "$id": "https://oasiscompany.org/schemas/statuz-0.1.schema.json",
+  "title": "Statuz 0.1",
+  "description": "AI Agent Runtime Status Protocol document",
+  "type": "object",
+  "required": [
+    "statuz_version",
+    "identity",
+    "current_state"
+  ],
+  "properties": {
+    "statuz_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "identity": {
+      "type": "object",
+      "required": [
+        "agent_name",
+        "project_name"
+      ],
+      "properties": {
+        "agent_name": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "role": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "responsibilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "goal": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string"
+        },
+        "secondary": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "current_state": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "last_checkpoint": {
+          "type": "string"
+        },
+        "next_action": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "progress": {
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "relations": {
+      "type": "object",
+      "properties": {
+        "related_agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_projects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agent_graph": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "type"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "rules": {
+      "type": "object",
+      "properties": {
+        "should": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "should_not": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "summary"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "next_action": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
       }
     }
-  }
-  throw new Error("Could not find statuz.schema.json. Try running from the project root or ensure spec/statuz.schema.json exists.");
-}
+  },
+  "additionalProperties": true
+};
 
 function createInitialStatus(agent: string, project: string): StatuzDocument {
   return {
@@ -156,64 +369,28 @@ program
     }
   });
 
-function detectSchemaType(filePath: string): SchemaType | null {
-  const fileName = filePath.toLowerCase();
-  const doc = loadYaml(filePath);
-  
-  if (doc && typeof doc === "object") {
-    if ("statuz_version" in doc) return "statuz";
-    if ("cluster_version" in doc) return "cluster";
-    if ("arrow_map_version" in doc) return "arrow-map";
-    if ("proposal_version" in doc) return "syn-proposal";
-    if ("niche_version" in doc) return "niche";
-  }
-  
-  if (fileName.includes("statuz")) return "statuz";
-  if (fileName.includes("cluster")) return "cluster";
-  if (fileName.includes("arrow-map") || fileName.includes("arrow_map")) return "arrow-map";
-  if (fileName.includes("proposal")) return "syn-proposal";
-  if (fileName.includes("niche")) return "niche";
-  
-  return null;
-}
-
 program
   .command("validate")
-  .description("Validate a Statuz-related YAML file against its schema")
-  .argument("<file>", "path to YAML file")
-  .option("-t, --type <type>", `schema type: ${getSchemaTypes().join(", ")}`, "")
-  .action((file, options) => {
+  .description("Validate a Statuz YAML file against the schema")
+  .argument("<file>", "path to statuz YAML file")
+  .action((file) => {
     const filePath = resolve(process.cwd(), file);
     const doc = loadYaml(filePath);
-    
-    let schemaType: SchemaType;
-    if (options.type) {
-      if (getSchemaTypes().includes(options.type as SchemaType)) {
-        schemaType = options.type as SchemaType;
-      } else {
-        console.error(`Error: Unknown schema type: ${options.type}. Valid types: ${getSchemaTypes().join(", ")}`);
-        process.exit(1);
-      }
-    } else {
-      const detected = detectSchemaType(filePath);
-      if (!detected) {
-        console.error(`Error: Could not detect schema type. Use --type to specify. Valid types: ${getSchemaTypes().join(", ")}`);
-        process.exit(1);
-      }
-      schemaType = detected;
-    }
-    
-    const result = validate(schemaType, doc);
-    
-    if (!result.valid) {
-      console.error(`Error: Invalid ${schemaType} file: ${filePath}`);
-      if (result.errors) {
-        console.error(formatErrors(result.errors));
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    addFormats(ajv);
+    const validate = ajv.compile(STATUZ_SCHEMA);
+    const ok = validate(doc);
+    if (!ok) {
+      console.error(`Error: Invalid Statuz file: ${filePath}`);
+      if (validate.errors) {
+        for (const err of validate.errors) {
+          const path = err.instancePath || "(root)";
+          console.error(`  ${path}: ${err.message}`);
+        }
       }
       process.exit(1);
     }
-    
-    console.log(`Valid ${schemaType} file: ${filePath}`);
+    console.log(`Valid Statuz file: ${filePath}`);
   });
 
 program
@@ -239,75 +416,13 @@ program
     if (state.next_action) console.log(`Next:     ${state.next_action}`);
   });
 
-program
-  .command("checkpoint")
-  .description("Add a checkpoint to a Statuz file")
-  .argument("<file>", "path to statuz YAML file")
-  .requiredOption("--summary <text>", "Brief summary of progress")
-  .option("--next <action>", "Next action to take")
-  .option("--decision <text>", "Key decision made at this checkpoint")
-  .option("--evidence <items...>", "Evidence items supporting this checkpoint")
-  .action((file, options) => {
-    const filePath = resolve(process.cwd(), file);
-    const doc = loadYaml(filePath) as StatuzDocument;
-    
-    const checkpoints = doc.checkpoints || [];
-    const nextId = `cp-${String(checkpoints.length + 1).padStart(3, "0")}`;
-    const now = new Date().toISOString();
-    
-    const checkpoint = {
-      id: nextId,
-      at: now,
-      summary: options.summary,
-      decision: options.decision,
-      evidence: options.evidence,
-      next_action: options.next,
-    };
-    
-    if (!doc.checkpoints) {
-      doc.checkpoints = [];
-    }
-    doc.checkpoints.push(checkpoint);
-    
-    doc.updated_at = now;
-    
-    if (options.next) {
-      if (!doc.current_state) {
-        doc.current_state = { status: "in_progress" };
-      }
-      doc.current_state.next_action = options.next;
-    }
-    
-    doc.current_state.last_checkpoint = options.summary;
-    
-    try {
-      writeFileSync(filePath, YAML.stringify(doc), "utf8");
-    } catch {
-      console.error(`Error: Could not write file: ${filePath}`);
-      process.exit(1);
-    }
-    
-    console.log(`=== Checkpoint Created ===`);
-    console.log(`ID:      ${nextId}`);
-    console.log(`At:      ${now}`);
-    console.log(`Summary: ${options.summary}`);
-    if (options.next) console.log(`Next:    ${options.next}`);
-    if (options.decision) console.log(`Decision: ${options.decision}`);
-  });
-
 program.addCommand(arrowMapCommand);
-program.addCommand(clusterCommand);
-program.addCommand(dashboardCommand);
-program.addCommand(agentCommand);
 program.addCommand(busCommand());
 program.addCommand(calibrationCommand());
 program.addCommand(leaseCommand());
 program.addCommand(nicheCommand());
 program.addCommand(arrowProposalCommand());
-program.addCommand(pendingActionsCommand);
-program.addCommand(statusKeeperCommand());
 program.addCommand(userActionCommand());
 program.addCommand(synCommand());
-program.addCommand(llmCommand());
 
 program.parse(process.argv);

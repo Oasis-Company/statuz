@@ -8,5 +8,8 @@ pub use graph::types::*;
 pub use cluster::Cluster;
 pub use cluster::Field;
 pub use cluster::cluster::Visibility;
+pub use cluster::CloneOptions;
+pub use cluster::MergeStrategy;
+pub use cluster::MergeResult;
 pub use storage::*;
 pub use storage::StorageError;

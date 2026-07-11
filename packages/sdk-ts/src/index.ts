@@ -1,10 +1,9 @@
 /**
  * @statuz/sdk-ts — public API
  *
- * Core runtime (Statuz), coordination (Signal Bus), and the layered
+ * Core runtime (Statuz), coordination (Signal Bus), and the three-layer
  * stack: Core (runtime status), niche (ecological position), SYN
- * (human governance), Pending Actions (agent ↔ human task tracking),
- * and 66 (Arrow Maps — topological relationships).
+ * (human governance), and 66 (Arrow Maps — topological relationships).
  */
 
 export { Statuz } from "./statuz.js";
@@ -16,25 +15,10 @@ export { NicheManifestIO } from "./niche/manifest.js";
 // SYN IO classes
 export { SynRequestIO } from "./syn/request.js";
 export { SynResolutionIO } from "./syn/resolution.js";
-export { SynProposalIO } from "./syn/proposal.js";
-export type {
-  SynProposal,
-  SynProposalClusterAdditions,
-  SynProposalClusterMapAddition,
-  SynProposalCrossMapArrow,
-  SynProposalProject,
-  SynProposalStatuzInit,
-  SynProposalNiche,
-} from "./syn/proposal.js";
-
-// Agent (Phase 0.1 discovery)
-export { ProjectScanner } from "./agent/scanner.js";
-export type { ScanResult, ProjectType, Language, PackageJson } from "./agent/types.js";
 
 // Arrow Map IO classes
 export { ArrowMapIO } from "./arrow-map/arrow-map.js";
 export { ArrowProposalIO } from "./arrow-map/proposal.js";
-export { ArrowMapClusterIO } from "./arrow-map/cluster.js";
 
 // Core types
 export type {
@@ -139,29 +123,6 @@ export type {
   ArrowProposal
 } from "./arrow-map/proposal-types.js";
 
-// Arrow Map Cluster types
-export type {
-  MapScope,
-  ClusterMapRef,
-  CrossMapArrow,
-  ClusterMetadata,
-  ArrowMapCluster,
-  ClusterOptions
-} from "./arrow-map/cluster-types.js";
-
-// Pending Actions (bidirectional agent ↔ human task tracking)
-export { PendingActionsIO } from "./pending-actions/io.js";
-export type {
-  PendingActionsVersion,
-  PendingActionStatus,
-  PendingActionPriority,
-  PendingActionPrincipal,
-  PendingActionResolution,
-  PendingAction,
-  PendingActionsDocument,
-  PendingActionsSummary,
-} from "./pending-actions/types.js";
-
 // Calibration Engine (drift detection)
 export { CalibrationEngine } from "./calibration/engine.js";
 export type {
@@ -192,49 +153,3 @@ export type {
   UserActionStats,
   UserActionExportOptions
 } from "./user-action/types.js";
-
-// Status Keeper (health checks)
-export { StatusKeeperEngine } from "./status-keeper/engine.js";
-export type {
-  CheckType,
-  SeverityLevel,
-  ScheduleFrequency,
-  OutputFormat,
-  HealthCheck,
-  ScheduleConfig,
-  OutputConfig,
-  StatusKeeperConfig,
-  CheckResult,
-  HealthStatus,
-  HealthReport
-} from "./status-keeper/types.js";
-
-// Schema Registry and Validation
-export { loadSchema, loadAllSchemas, getSchemaVersion, getSchemaTypes } from "./schema/registry.js";
-export type { SchemaType, SchemaInfo } from "./schema/registry.js";
-export { validate, validateSchema, formatErrors } from "./schema/validator.js";
-export type { ValidationError } from "./schema/validator.js";
-
-// LLM Integration
-export { LlmClient, FallbackLlmClient } from "./llm/client.js";
-export { OpenAiClient } from "./llm/adapters/openai.js";
-export { AnthropicClient } from "./llm/adapters/anthropic.js";
-export { LlmConfigManager, createLlmClient, getLlmConfig } from "./llm/config.js";
-export { NicheAnalyzer } from "./llm/services/niche-analyzer.js";
-export { ArrowInferrer } from "./llm/services/arrow-inferrer.js";
-export type {
-  LlmProvider,
-  LlmRole,
-  LlmMessage,
-  LlmTool,
-  LlmToolCall,
-  LlmUsage,
-  LlmResponse,
-  LlmStreamChunk,
-  LlmConfig,
-  LlmServiceConfig,
-  NicheAnalysis,
-  ArrowAnalysis,
-  CodeAnalysis,
-  LlmError,
-} from "./llm/types.js";

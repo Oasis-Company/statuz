@@ -1,0 +1,22 @@
+# Arrow Proposal Example - Add Node
+# Proposal to add a new agent component to the Arrow Map
+
+proposal_version: "0.1"
+proposal_id: "prop-0001"
+source_map_id: "arrow-map-statuz"
+type: "add_node"
+status: "pending"
+author: "dev-team"
+rationale: "Adding a new payment processing agent component to handle payment workflows"
+timestamp: "2026-06-12T14:00:00Z"
+changes:
+  - action: "add"
+    target: "node"
+    node:
+      id: "agent-payment"
+      type: "component"
+      name: "Payment Agent"
+      description: "Handles payment processing workflows"
+      labels: ["agent", "payment"]
+      tags: ["core", "new"]
+      status: "active"

@@ -1,0 +1,44 @@
+# SYN Request Example
+# Human decision request triggered by drift detection
+
+syn_version: "1.0"
+id: "syn-001"
+type: "human_decision_required"
+source: "calibration-engine"
+calibration_id: "cal-1234567"
+timestamp: "2026-06-12T10:30:00Z"
+priority: "high"
+summary: "Significant task drift detected in niche position"
+context:
+  evidence_summary: "65% of recent checkpoints do not match declared 'does' keywords"
+  evidence_window: "Last 30 days"
+options:
+  - id: "option-1"
+    title: "Update declared position"
+    description: "Expand the 'does' list to include the new work patterns observed"
+    pros:
+      - "Aligns manifest with actual behavior"
+      - "Reduces false drift warnings"
+      - "Provides accurate self-description"
+    cons:
+      - "Requires human review of changes"
+      - "May require updating documentation"
+  - id: "option-2"
+    title: "Maintain current position"
+    description: "Keep the declared position unchanged; this is acceptable variation"
+    pros:
+      - "No changes needed"
+      - "Preserves original intent"
+    cons:
+      - "Continued drift warnings"
+      - "May indicate misalignment"
+  - id: "option-3"
+    title: "Pause and investigate"
+    description: "Put this on hold and investigate the root cause of drift"
+    pros:
+      - "Gather more data before deciding"
+      - "Avoid premature decisions"
+    cons:
+      - "Delays action"
+      - "Drift may continue"
+recommendation: "option-1"

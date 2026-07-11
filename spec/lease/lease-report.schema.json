@@ -1,0 +1,71 @@
+{
+  "$id": "https://statuz.org/schemas/lease/lease-report.schema.json",
+  "title": "Lease Report Schema",
+  "description": "JSON Schema for Statuz Lease Report — progress and status update from an assignee on an active lease",
+  "type": "object",
+  "required": [
+    "report_version",
+    "lease_id",
+    "reported_by",
+    "reported_at",
+    "status",
+    "progress_summary"
+  ],
+  "properties": {
+    "report_version": {
+      "type": "string",
+      "const": "0.1",
+      "description": "Schema version, must be 0.1"
+    },
+    "lease_id": {
+      "type": "string",
+      "pattern": "^ls-[0-9]{3}$",
+      "description": "Reference to the Lease being reported on (e.g., ls-001)"
+    },
+    "reported_by": {
+      "type": "string",
+      "description": "Agent ID submitting this report"
+    },
+    "reported_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when this report was created"
+    },
+    "status": {
+      "type": "string",
+      "description": "Current status of the lease (e.g., active, blocked, on_track)"
+    },
+    "progress_summary": {
+      "type": "string",
+      "description": "Text summary of progress since the last report or lease creation"
+    },
+    "next_steps": {
+      "type": "array",
+      "description": "Next planned actions the assignee will take",
+      "items": {
+        "type": "string"
+      }
+    },
+    "blocked_by": {
+      "type": "array",
+      "description": "Issues or blockers preventing progress",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "File paths or references supporting the progress claim",
+      "items": {
+        "type": "string"
+      }
+    },
+    "health_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence score (0-1) representing lease health"
+    }
+  },
+  "additionalProperties": true
+}
