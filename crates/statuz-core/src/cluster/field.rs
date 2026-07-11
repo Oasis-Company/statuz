@@ -3,7 +3,7 @@ use crate::graph::types::*;
 use serde::{Deserialize, Serialize};
 
 /// A Field is a named sub-graph within a Cluster.
-/// Each field has its own GraphEngine instance, but nodes can be
+/// Each field has its own GraphEngine instance, but nodes are
 /// shared across fields via the Cluster's node registry.
 ///
 /// Fields are the key abstraction: different fields represent different
@@ -42,7 +42,7 @@ impl Field {
     pub fn add_bridge(&mut self, edge: Edge) {
         let mut bridge = edge;
         bridge.relation = Relation::Bridges;
-        self.graph.add_edge_v2(bridge);
+        self.graph.add_edge(bridge);
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()

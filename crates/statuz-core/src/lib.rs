@@ -9,3 +9,4 @@ pub use cluster::Cluster;
 pub use cluster::Field;
 pub use cluster::cluster::Visibility;
 pub use storage::*;
+pub use storage::StorageError;

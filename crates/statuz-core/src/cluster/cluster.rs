@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use serde::{Deserialize, Serialize};
 use crate::graph::types::*;
 use crate::cluster::field::Field;
@@ -20,8 +20,9 @@ pub enum Visibility {
 /// 1. A Cluster owns all nodes centrally — nodes are shared across fields
 /// 2. Each Field owns its own edges (local topology)
 /// 3. Cross-field communication happens via Bridge edges (relation: "bridges")
-/// 4. Clusters are isolated from each other — no cross-cluster communication
-/// 5. Sharing is done via hash ID + password (file-level, not network)
+/// 4. Bridges are bidirectional — each field stores its own bridge edges
+/// 5. Clusters are isolated from each other — no cross-cluster communication
+/// 6. Sharing is done via hash ID + password (file-level, not network)
 ///
 /// "A statuz grows by creating clusters, mapping, and building richer representations on top."
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,18 +131,13 @@ impl Cluster {
 
     // ─── Cross-Field Bridge Communication ─────────────────
 
-    /// Add a bridge edge connecting a node in `from_field` to a node in `to_field`.
+    /// Add a bidirectional bridge between a node in `from_field` and a node in `to_field`.
     ///
-    /// This is the core mechanism for cross-field communication.
-    /// The bridge edge is stored in the source field's graph with `target_field` set,
-    /// and also recorded in the cluster's bridge registry.
+    /// Bridges are stored in both fields:
+    /// - Forward edge in `from_field`: source_node → target_node, target_field = to_field
+    /// - Reverse edge in `to_field`: target_node → source_node, target_field = from_field
     ///
-    /// When you traverse with `cross_field: true`:
-    /// - You start in Field A, traverse its local edges
-    /// - When you hit a bridge edge, you follow it to the target node in Field B
-    /// - From that node in Field B, you can continue traversing Field B's local edges
-    ///
-    /// This enables "field-hopping" queries without merging edge data.
+    /// This enables full bidirectional cross-field traversal and impact analysis.
     pub fn add_bridge(
         &mut self,
         from_field: &FieldId,
@@ -168,26 +164,43 @@ impl Cluster {
         }
 
         let bridge_id = format!("bridge-{}-{}-{}-{}", from_field, source_node, to_field, target_node);
-        let edge_id = format!("{}-{}", bridge_id, uuid::Uuid::new_v4());
 
-        let bridge = Edge {
-            id: edge_id,
+        // Forward edge: stored in source field
+        let forward_edge = Edge {
+            id: format!("{}-fwd", bridge_id),
             source: source_node.clone(),
             target: target_node.clone(),
             relation: Relation::Bridges,
             weight,
-            description,
+            description: description.clone(),
             target_field: Some(to_field.clone()),
             meta: None,
         };
 
-        // Store in source field's graph
-        let field = self.fields.get_mut(from_field).unwrap();
-        field.add_bridge(bridge.clone());
+        // Reverse edge: stored in target field
+        let reverse_edge = Edge {
+            id: format!("{}-rev", bridge_id),
+            source: target_node.clone(),
+            target: source_node.clone(),
+            relation: Relation::Bridges,
+            weight,
+            description: format!("{} (reverse)", description),
+            target_field: Some(from_field.clone()),
+            meta: None,
+        };
+
+        // Store forward edge in source field
+        let source_field = self.fields.get_mut(from_field).unwrap();
+        source_field.add_bridge(forward_edge.clone());
+
+        // Store reverse edge in target field
+        let target_field = self.fields.get_mut(to_field).unwrap();
+        target_field.add_bridge(reverse_edge.clone());
 
         // Record in cluster bridge registry
         let bridges = self.bridges.get_or_insert_with(HashMap::new);
-        bridges.insert(bridge_id, bridge);
+        bridges.insert(format!("{}-fwd", bridge_id), forward_edge);
+        bridges.insert(format!("{}-rev", bridge_id), reverse_edge);
 
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -196,6 +209,8 @@ impl Cluster {
 
         Ok(())
     }
+
+    // ─── Cross-Field Traversal ────────────────────────────
 
     /// Cross-field traversal: traverse from a node in one field,
     /// following local edges AND bridge edges to other fields.
@@ -212,7 +227,6 @@ impl Cluster {
         let mut visited_fields = HashSet::new();
         let mut visited_nodes = HashSet::new();
 
-        // Start traversal
         self._traverse_across(
             start_field, from_node, relation, max_depth, 0,
             &mut visited_fields, &mut visited_nodes, &mut result,
@@ -240,7 +254,6 @@ impl Cluster {
         }
         visited_nodes.insert(current_node.clone());
 
-        // Traverse in the current field
         if let Some(field) = self.fields.get(current_field) {
             let (nodes, edges) = if relation.is_some() {
                 field.graph.traverse(current_node, relation, false)
@@ -259,27 +272,20 @@ impl Cluster {
                 entry.1.push(e.clone());
             }
 
-            // Follow bridge edges to other fields
-            for e in &edges {
-                if let Some(ref target_field) = e.target_field {
-                    if !visited_fields.contains(target_field) {
-                        visited_fields.insert(target_field.clone());
-                        let target_node = if e.source == *current_node {
-                            &e.target
-                        } else {
-                            &e.source
-                        };
-                        self._traverse_across(
-                            target_field,
-                            target_node,
-                            relation,
-                            max_depth,
-                            depth + 1,
-                            visited_fields,
-                            visited_nodes,
-                            result,
-                        );
-                    }
+            // Collect bridge edges to follow before recursive call (avoid borrow conflict)
+            let bridges: Vec<(FieldId, NodeId)> = edges.iter()
+                .filter(|e| e.target_field.is_some() && e.relation == Relation::Bridges)
+                .map(|e| (e.target_field.clone().unwrap(), e.target.clone()))
+                .collect();
+
+            for (target_field, target_node) in bridges {
+                if !visited_fields.contains(&target_field) && !visited_nodes.contains(&target_node) {
+                    visited_fields.insert(target_field);
+                    self._traverse_across(
+                        &target_field, &target_node,
+                        relation, max_depth, depth + 1,
+                        visited_fields, visited_nodes, result,
+                    );
                 }
             }
         }
@@ -287,91 +293,82 @@ impl Cluster {
 
     // ─── Cross-Field Impact ──────────────────────────────
 
-    /// Impact analysis across all fields:
+    /// True cross-field impact analysis.
+    ///
     /// "If this node changes, who is affected across the entire cluster?"
-    pub fn impact_across_fields(&self, changed: &NodeId) -> Vec<ImpactResult> {
-        let mut results = Vec::new();
-        for (field_id, field) in &self.fields {
-            let mut impact = field.graph.impact(changed);
-            impact.blast_radius = self.reachable_across_fields(changed, &field_id, 3);
-            results.push(impact);
-        }
-        results
-    }
+    ///
+    /// Uses reverse BFS across ALL fields:
+    /// 1. Starting from `changed`, find all nodes that directly point to it
+    /// 2. Continue reverse traversal across all fields
+    /// 3. When crossing a bridge edge, follow the reverse bridge to the other field
+    pub fn impact_across_fields(&self, changed: &NodeId) -> ImpactResult {
+        let mut affected = HashSet::new();
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(changed.clone());
 
-    /// Cross-field reachability: find all nodes reachable from `from`
-    /// across fields, up to `max_depth` field hops.
-    pub fn reachable_across_fields(&self, from: &NodeId, start_field: &FieldId, max_depth: usize) -> Vec<NodeId> {
-        let mut result = HashSet::new();
-        let mut visited_fields = HashSet::new();
-        let mut visited_nodes = HashSet::new();
-
-        self._reachable_across(from, start_field, max_depth, 0, &mut visited_fields, &mut visited_nodes, &mut result);
-
-        result.into_iter().collect()
-    }
-
-    fn _reachable_across(
-        &self,
-        node: &NodeId,
-        field_id: &FieldId,
-        max_depth: usize,
-        depth: usize,
-        visited_fields: &mut HashSet<FieldId>,
-        visited_nodes: &mut HashSet<NodeId>,
-        result: &mut HashSet<NodeId>,
-    ) {
-        if depth > max_depth || visited_nodes.contains(node) {
-            return;
-        }
-        visited_nodes.insert(node.clone());
-
-        if let Some(field) = self.fields.get(field_id) {
-            let reachable = field.graph.reachable(node);
-            for n in reachable {
-                if !visited_nodes.contains(&n) {
-                    result.insert(n.clone());
-                    visited_nodes.insert(n.clone());
-                }
+        while let Some(current) = queue.pop_front() {
+            if visited.contains(&current) {
+                continue;
             }
+            visited.insert(current.clone());
 
-            // Follow bridges
-            let outgoing = field.graph.outgoing_edges(node, Some("bridges"));
-            for e in outgoing {
-                if let Some(ref target_field) = e.target_field {
-                    if !visited_fields.contains(target_field) {
-                        visited_fields.insert(target_field.clone());
-                        self._reachable_across(
-                            &e.target,
-                            target_field,
-                            max_depth,
-                            depth + 1,
-                            visited_fields,
-                            visited_nodes,
-                            result,
-                        );
+            for (_, field) in &self.fields {
+                // Reverse BFS: who points to `current`?
+                let incoming = field.graph.incoming_edges(&current, None);
+                for edge in incoming {
+                    let source = &edge.source;
+                    if !visited.contains(source) && !affected.contains(source) {
+                        affected.insert(source.clone());
+                        queue.push_back(source.clone());
+                    }
+                    // If this edge is a bridge, follow it to the OTHER field
+                    if edge.relation == Relation::Bridges {
+                        // The bridge's source is in the current field's perspective
+                        // We need to also traverse the reverse side
+                        if let Some(ref target_field) = edge.target_field {
+                            // The bridge target points to another field
+                            // The source node is the one that's affected
+                            if !visited.contains(source) {
+                                affected.insert(source.clone());
+                                queue.push_back(source.clone());
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        affected.remove(changed);
+        let mut list: Vec<NodeId> = affected.into_iter().collect();
+        list.sort();
+
+        ImpactResult {
+            changed: changed.clone(),
+            affected: list.clone(),
+            blast_radius: list,
+            critical_path: false,
         }
     }
 
     // ─── Cross-Field Path ─────────────────────────────────
 
     /// Find the shortest path between two nodes, possibly crossing fields.
+    /// Returns the path with field-level metadata for each step.
     pub fn path_across_fields(&self, from: &NodeId, to: &NodeId, start_field: &FieldId) -> PathResult {
-        // BFS over all fields
         let mut visited = HashSet::new();
         visited.insert(from.clone());
-        let mut queue: VecDeque<(NodeId, FieldId, Vec<Edge>)> = VecDeque::new();
-        queue.push_back((from.clone(), start_field.clone(), vec![]));
+        // BFS state: (node_id, current_field, path_edges, field_path)
+        let mut queue: VecDeque<(NodeId, FieldId, Vec<Edge>, Vec<FieldId>)> = VecDeque::new();
+        queue.push_back((from.clone(), start_field.clone(), vec![], vec![start_field.clone()]));
 
-        while let Some((current, field_id, path)) = queue.pop_front() {
+        while let Some((current, field_id, path, field_path)) = queue.pop_front() {
             if current == *to {
                 return PathResult {
                     from: from.clone(),
                     to: to.clone(),
                     path,
+                    field_path,
                     length: path.len() as i32,
                     exists: true,
                 };
@@ -384,14 +381,16 @@ impl Cluster {
                     if !visited.contains(neighbor) {
                         visited.insert(neighbor.clone());
                         let mut new_path = path.clone();
+                        let mut new_field_path = field_path.clone();
                         if i < edges.len() {
                             new_path.push(edges[i].clone());
+                            new_field_path.push(field_id.clone());
                         }
-                        queue.push_back((neighbor.clone(), field_id.clone(), new_path));
+                        queue.push_back((neighbor.clone(), field_id.clone(), new_path, new_field_path));
                     }
                 }
 
-                // Follow bridge edges
+                // Follow bridge edges to other fields
                 let bridge_edges = field.graph.outgoing_edges(&current, Some("bridges"));
                 for e in bridge_edges {
                     if let Some(ref target_field) = e.target_field {
@@ -399,7 +398,10 @@ impl Cluster {
                             visited.insert(e.target.clone());
                             let mut new_path = path.clone();
                             new_path.push(e.clone());
-                            queue.push_back((e.target.clone(), target_field.clone(), new_path));
+                            let mut new_field_path = field_path.clone();
+                            new_field_path.push(field_id.clone());
+                            new_field_path.push(target_field.clone());
+                            queue.push_back((e.target.clone(), target_field.clone(), new_path, new_field_path));
                         }
                     }
                 }
@@ -410,11 +412,9 @@ impl Cluster {
             from: from.clone(),
             to: to.clone(),
             path: vec![],
+            field_path: vec![],
             length: -1,
             exists: false,
         }
     }
 }
-
-use std::collections::HashSet;
-use std::collections::VecDeque;

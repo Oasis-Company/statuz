@@ -84,7 +84,7 @@ impl GraphEngine {
 
         // Critical path check: node on a high-centrality path?
         let centrality = self.centrality(5);
-        let critical_path = centrality.iter().any(|(id, _)| id == changed);
+        let critical_path = centrality.iter().any(|id| id == changed);
 
         ImpactResult {
             changed: changed.clone(),
@@ -108,6 +108,7 @@ impl GraphEngine {
                 from: from.clone(),
                 to: to.clone(),
                 path: vec![],
+                field_path: vec![],
                 length: 0,
                 exists: true,
             };
@@ -118,6 +119,7 @@ impl GraphEngine {
                 from: from.clone(),
                 to: to.clone(),
                 path: vec![],
+                field_path: vec![],
                 length: -1,
                 exists: false,
             };
@@ -157,6 +159,7 @@ impl GraphEngine {
                 from: from.clone(),
                 to: to.clone(),
                 path: vec![],
+                field_path: vec![],
                 length: -1,
                 exists: false,
             };
@@ -177,9 +180,10 @@ impl GraphEngine {
         PathResult {
             from: from.clone(),
             to: to.clone(),
+            path,
+            field_path: vec![],
             length: path.len() as i32,
             exists: true,
-            path,
         }
     }
 

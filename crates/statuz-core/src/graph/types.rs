@@ -132,6 +132,10 @@ pub struct PathResult {
     pub from: NodeId,
     pub to: NodeId,
     pub path: Vec<Edge>,
+    /// Field-level path — each entry corresponds to the field of the edge at the same index.
+    /// Empty for single-field paths.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub field_path: Vec<FieldId>,
     pub length: i32,
     pub exists: bool,
 }

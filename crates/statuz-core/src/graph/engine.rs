@@ -43,42 +43,16 @@ impl GraphEngine {
         });
     }
 
+    /// Add an edge to the graph. Clones the edge data into both
+    /// the outgoing adjacency (of source) and incoming adjacency (of target).
     pub fn add_edge(&mut self, edge: Edge) {
-        let rel = edge.relation.as_str().to_string();
-        self.edges.insert(edge.id.clone(), edge);
-
-        // Outgoing from source
-        {
-            let cell = self.adj.entry(edge.source.clone()).or_insert_with(|| AdjacencyCell {
-                node_id: edge.source.clone(),
-                outgoing: HashMap::new(),
-                incoming: HashMap::new(),
-            });
-            cell.outgoing.entry(rel.clone()).or_insert_with(Vec::new);
-            // We need to push the edge, but we already moved it. Let's fix this.
-        }
-        // Incoming to target
-        {
-            let cell = self.adj.entry(edge.target.clone()).or_insert_with(|| AdjacencyCell {
-                node_id: edge.target.clone(),
-                outgoing: HashMap::new(),
-                incoming: HashMap::new(),
-            });
-            cell.incoming.entry(rel).or_insert_with(Vec::new);
-        }
-    }
-
-    /// Better add_edge — push after inserts
-    pub fn add_edge_v2(&mut self, edge: Edge) {
         let rel = edge.relation.as_str().to_string();
         let source = edge.source.clone();
         let target = edge.target.clone();
         let id = edge.id.clone();
 
-        // Store edge
         self.edges.insert(id.clone(), edge);
 
-        // Outgoing from source
         let cell = self.adj.entry(source).or_insert_with(|| AdjacencyCell {
             node_id: String::new(),
             outgoing: HashMap::new(),
@@ -88,7 +62,6 @@ impl GraphEngine {
             self.edges.get(&id).unwrap().clone()
         );
 
-        // Incoming to target
         let cell = self.adj.entry(target).or_insert_with(|| AdjacencyCell {
             node_id: String::new(),
             outgoing: HashMap::new(),
@@ -100,7 +73,6 @@ impl GraphEngine {
     }
 
     pub fn remove_node(&mut self, id: &NodeId) {
-        // Remove all edges connected to this node
         if let Some(cell) = self.adj.get(id) {
             for (_, edges) in &cell.outgoing {
                 for e in edges {
@@ -192,7 +164,7 @@ impl GraphEngine {
             g.add_node(n);
         }
         for e in gd.edges {
-            g.add_edge_v2(e);
+            g.add_edge(e);
         }
         Ok(g)
     }
