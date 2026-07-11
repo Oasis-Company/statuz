@@ -21,3 +21,10 @@ __pycache__/
 temp-test/
 *.workbuddy/
 
+
+# Rust build artifacts
+target/
+# Cargo lock for local builds
+crates/*/Cargo.lock
+# Temp output for standalone test
+crates/statuz-core/out/
