@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "crates/statuz-core",
+    "crates/statuz-core-napi",
+    "crates/arrow-map",
+    "crates/niche",
+    "crates/syn",
+]
+resolver = "2"

@@ -883,10 +883,50 @@ fn run_self_test() {
     println!("   ✅ Password lifecycle: set → change → clear → verify");
     println!("   ✅ Visibility: changed to {:?}", pwd_cluster.visibility);
 
+    // ─── Phase 11: Subgraph, Validate, Diff ───────────────────────
+    println!("\n━━━ Phase 11: Subgraph, Validate, Diff ─━━");
+
+    // Subgraph: extract from "system-arch" field, depth=1 from api-gateway
+    let sg = cluster.subgraph("system-arch", &["api-gateway".into()], Some(1), None)
+        .expect("subgraph should succeed");
+    println!("  Subgraph (api-gateway, depth=1): {} nodes, {} edges",
+        sg.nodes.len(), sg.edges.len());
+    assert!(sg.nodes.len() >= 2, "subgraph should include at least 2 nodes (api-gateway + its neighbors)");
+    assert!(sg.edges.len() >= 2, "subgraph should include at least 2 edges (api-gateway -> auth, api-gateway -> orchestrator)");
+
+    // Validate: test cluster should be clean
+    let vr = cluster.validate();
+    println!("  Cluster validation: valid={}, issues={}", vr.is_valid, vr.issues.len());
+    assert!(vr.is_valid, "test cluster should be valid");
+    assert!(vr.issues.is_empty(), "test cluster should have no validation issues, got {} issues", vr.issues.len());
+
+    // Diff: identical clusters should have no differences
+    let identical_clone = cluster.clone();
+    let diff_same = cluster.diff(&identical_clone);
+    println!("  Diff (identical): {} changes", diff_same.added_nodes.len() + diff_same.removed_nodes.len() + diff_same.changed_nodes.len()
+        + diff_same.added_edges.len() + diff_same.removed_edges.len() + diff_same.changed_edges.len()
+        + diff_same.added_fields.len() + diff_same.removed_fields.len());
+    assert!(diff_same.added_nodes.is_empty(), "identical clusters should have no added nodes");
+    assert!(diff_same.removed_nodes.is_empty(), "identical clusters should have no removed nodes");
+    assert!(diff_same.changed_nodes.is_empty(), "identical clusters should have no changed nodes");
+
+    // Diff: clusters with changes should detect differences
+    let mut modified = cluster.clone();
+    modified.register_node(Node {
+        id: "diff-test-node".into(), type_: "test".into(), label: "Diff Test".into(),
+        status: NodeStatus::Active, meta: None,
+    });
+    let diff_mod = cluster.diff(&modified);
+    println!("  Diff (1 new node): {} added", diff_mod.added_nodes.len());
+    assert_eq!(diff_mod.added_nodes.len(), 1, "should detect exactly 1 added node");
+    assert_eq!(diff_mod.added_nodes[0].id, "diff-test-node", "added node should have the correct ID");
+
+    println!("  ✅ Phase 11 passed");
+
     // ─── Summary ─────────────────────────────────────────────────
     println!("\n━━━ Summary ─━━");
-    println!("  ✅ GraphEngine: traverse, impact, path, centrality, health");
-    println!("  ✅ Cluster: multi-field, centralized node registry");
+    println!("  ✅ GraphEngine: traverse, impact, path, centrality, health, subgraph, validate");
+    println!("  ✅ Cluster: multi-field, centralized node registry, diff, validate, subgraph");
     println!("  ✅ Bidirectional bridges: forward + reverse cross-field traversal");
     println!("  ✅ Cross-field path: field-level metadata in path display");
     println!("  ✅ Cross-field impact: reverse BFS across all fields");
@@ -895,5 +935,6 @@ fn run_self_test() {
     println!("  ✅ JSON export: human-readable debugging output");
     println!("  ✅ Password: argon2 verification");
     println!("  ✅ Sharing: clone, merge (skip/overwrite/rename), password lifecycle, visibility");
-    println!("\n✅ All 10 phases passed. Engine is ready for Day 4.\n");
+    println!("  ✅ Subgraph, Validate, Diff: engine-level subgraph extraction, consistency check, cluster diff");
+    println!("\n✅ All 11 phases passed. Engine is ready for representation layer.\n");
 }

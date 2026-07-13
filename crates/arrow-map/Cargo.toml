@@ -1,0 +1,8 @@
+[package]
+name = "arrow-map"
+version = "0.1.0"
+edition = "2021"
+description = "Arrow Map — text-to-graph parser for Statuz engine (placeholder)"
+
+[dependencies]
+statuz-core = { path = "../statuz-core" }

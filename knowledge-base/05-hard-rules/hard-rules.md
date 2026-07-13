@@ -45,7 +45,18 @@ A2A 字段是预留占位符，必须休眠到 A2A 1.0 发布且所有子系统 
 **正确做法**：`cluster.impact("node_id")` 而不是 `niche.yaml`
 **错误做法**：在 `crates/` 中创建新的 YAML 文件处理逻辑
 
-### 2.3 不添加 CLI 命令在 Engine 稳固之前
+### 2.3 Rust crate 实现允许，但不允许独立存储/CLI/Schema
+
+niche、SYN、Arrow Map 可以作为 Rust crate 实现（依赖 statuz-core），但必须遵守以下约束：
+- **不能创建独立存储格式**：所有数据存储在 `.stz` 文件中
+- **不能创建独立 CLI 命令**：所有操作通过 statuz CLI 或引擎 API
+- **不能创建独立 Schema/验证**：使用 statuz-core 的 type system
+- **不能创建独立序列化**：使用 storage module 的 msgpack+blake3 格式
+
+**正确做法**：`crates/niche/src/lib.rs` → 依赖 statuz-core → 调用 `cluster.subgraph()` / `cluster.diff()`
+**错误做法**：创建新的 `.niche` 文件格式、新的 `niche` CLI 命令、新的 JSON Schema
+
+### 2.4 不添加 CLI 命令在 Engine 稳固之前
 
 当前 11 个 CLI 命令已经足够。在 Engine 通过所有单元测试、边界情况测试、性能测试之前，不添加新命令。
 
@@ -74,7 +85,7 @@ cd crates/statuz-core
 cargo run -- self-test
 ```
 
-所有 10 Phase 必须全部通过，所有断言通过，无 panic。
+所有 11 Phase 必须全部通过，所有断言通过，无 panic。
 
 ### 3.4 代码语言必须是英文
 

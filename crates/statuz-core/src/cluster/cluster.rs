@@ -419,11 +419,286 @@ impl Cluster {
     }
 }
 
+// ─── Diff ─────────────────────────────────────────────
+
+const WEIGHT_EPSILON: f64 = 1e-10;
+
+/// Compare two nodes for equality, excluding meta field.
+fn nodes_differ(a: &Node, b: &Node) -> bool {
+    a.id != b.id || a.type_ != b.type_ || a.label != b.label || a.status != b.status
+}
+
+/// Compare two edges for equality, using EPSILON for weight comparison.
+fn edges_differ(a: &Edge, b: &Edge) -> bool {
+    a.id != b.id
+        || a.source != b.source
+        || a.target != b.target
+        || a.relation != b.relation
+        || (a.weight - b.weight).abs() > WEIGHT_EPSILON
+        || a.description != b.description
+        || a.target_field != b.target_field
+}
+
+impl Cluster {
+    /// Compare self (old) with other (new) and return the differences.
+    ///
+    /// Comparison rules:
+    /// - Node/edge/field matching is by ID
+    /// - `meta` field is excluded from comparison (None == Some({}))
+    /// - Edge weight uses EPSILON tolerance
+    /// - Bridge edges are compared separately from field edges
+    pub fn diff(&self, other: &Cluster) -> DiffResult {
+        // ─── Nodes ─────────────────────────────────
+        let mut added_nodes = Vec::new();
+        let mut removed_nodes = Vec::new();
+        let mut changed_nodes = Vec::new();
+
+        for (id, node) in &other.nodes {
+            if !self.nodes.contains_key(id) {
+                added_nodes.push(node.clone());
+            }
+        }
+        for (id, node) in &self.nodes {
+            if !other.nodes.contains_key(id) {
+                removed_nodes.push(node.clone());
+            }
+        }
+        for (id, self_node) in &self.nodes {
+            if let Some(other_node) = other.nodes.get(id) {
+                if nodes_differ(self_node, other_node) {
+                    changed_nodes.push((self_node.clone(), other_node.clone()));
+                }
+            }
+        }
+
+        // ─── Edges (across all fields) ─────────────
+        let self_edges = Self::collect_all_edges(self);
+        let other_edges = Self::collect_all_edges(other);
+
+        let mut added_edges = Vec::new();
+        let mut removed_edges = Vec::new();
+        let mut changed_edges = Vec::new();
+
+        for (id, edge) in &other_edges {
+            if !self_edges.contains_key(id) {
+                added_edges.push(edge.clone());
+            }
+        }
+        for (id, edge) in &self_edges {
+            if !other_edges.contains_key(id) {
+                removed_edges.push(edge.clone());
+            }
+        }
+        for (id, self_edge) in &self_edges {
+            if let Some(other_edge) = other_edges.get(id) {
+                if edges_differ(self_edge, other_edge) {
+                    changed_edges.push((self_edge.clone(), other_edge.clone()));
+                }
+            }
+        }
+
+        // ─── Fields ────────────────────────────────
+        let mut added_fields = Vec::new();
+        let mut removed_fields = Vec::new();
+
+        for fid in other.fields.keys() {
+            if !self.fields.contains_key(fid) {
+                added_fields.push(fid.clone());
+            }
+        }
+        for fid in self.fields.keys() {
+            if !other.fields.contains_key(fid) {
+                removed_fields.push(fid.clone());
+            }
+        }
+
+        // ─── Bridges ───────────────────────────────
+        let self_bridges = self.bridges.clone().unwrap_or_default();
+        let other_bridges = other.bridges.clone().unwrap_or_default();
+
+        let mut added_bridges = Vec::new();
+        let mut removed_bridges = Vec::new();
+
+        for (id, edge) in &other_bridges {
+            if !self_bridges.contains_key(id) {
+                added_bridges.push(edge.clone());
+            }
+        }
+        for (id, edge) in &self_bridges {
+            if !other_bridges.contains_key(id) {
+                removed_bridges.push(edge.clone());
+            }
+        }
+
+        DiffResult {
+            added_nodes, removed_nodes, changed_nodes,
+            added_edges, removed_edges, changed_edges,
+            added_fields, removed_fields,
+            added_bridges, removed_bridges,
+        }
+    }
+
+    /// Collect all non-bridge edges from all fields into a HashMap.
+    fn collect_all_edges(cluster: &Cluster) -> HashMap<EdgeId, Edge> {
+        let mut all = HashMap::new();
+        for field in cluster.fields.values() {
+            for edge in field.graph.all_edges() {
+                all.insert(edge.id.clone(), edge.clone());
+            }
+        }
+        all
+    }
+}
+
+// ─── Validate ────────────────────────────────────────
+
+impl Cluster {
+    /// Validate the entire Cluster for internal consistency.
+    ///
+    /// Checks:
+    /// 1. Orphan edges in each field — source/target node not in graph (via GraphEngine::validate)
+    /// 2. Foreign node references — edge references node not in cluster registry
+    /// 3. Broken bridges — bridge edge references non-existent target_field
+    /// 4. Orphan nodes — registered but not present in any field (Warning only)
+    pub fn validate(&self) -> ValidationResult {
+        let mut issues = Vec::new();
+
+        // ─── 1. Field-level validation + foreign node check ──
+        for (fid, field) in &self.fields {
+            // Delegate to GraphEngine::validate for orphan edges
+            let field_result = field.graph.validate();
+            for issue in field_result.issues {
+                issues.push(issue);
+            }
+
+            // Check all field edges for foreign node references
+            for edge in field.graph.all_edges() {
+                if !self.nodes.contains_key(&edge.source) {
+                    issues.push(ValidationIssue {
+                        severity: IssueSeverity::Error,
+                        category: IssueCategory::ForeignNode,
+                        message: format!(
+                            "Field '{}' edge '{}' references node '{}' not in cluster registry",
+                            fid, edge.id, edge.source
+                        ),
+                        affected_ids: vec![edge.id.clone(), edge.source.clone(), fid.clone()],
+                    });
+                }
+                if !self.nodes.contains_key(&edge.target) {
+                    issues.push(ValidationIssue {
+                        severity: IssueSeverity::Error,
+                        category: IssueCategory::ForeignNode,
+                        message: format!(
+                            "Field '{}' edge '{}' references node '{}' not in cluster registry",
+                            fid, edge.id, edge.target
+                        ),
+                        affected_ids: vec![edge.id.clone(), edge.target.clone(), fid.clone()],
+                    });
+                }
+
+                // Check bridge edges' target_field existence
+                if let Some(ref tf) = edge.target_field {
+                    if !self.fields.contains_key(tf) {
+                        issues.push(ValidationIssue {
+                            severity: IssueSeverity::Error,
+                            category: IssueCategory::BrokenBridge,
+                            message: format!(
+                                "Bridge edge '{}' in field '{}' references non-existent field '{}'",
+                                edge.id, fid, tf
+                            ),
+                            affected_ids: vec![edge.id.clone(), fid.clone(), tf.clone()],
+                        });
+                    }
+                }
+            }
+        }
+
+        // ─── 2. Bridge registry consistency ────────────────
+        if let Some(bridges) = &self.bridges {
+            for (bridge_id, bridge) in bridges {
+                if !self.nodes.contains_key(&bridge.source) {
+                    issues.push(ValidationIssue {
+                        severity: IssueSeverity::Error,
+                        category: IssueCategory::BrokenBridge,
+                        message: format!("Bridge '{}' references non-existent source node '{}'", bridge_id, bridge.source),
+                        affected_ids: vec![bridge_id.clone(), bridge.source.clone()],
+                    });
+                }
+                if !self.nodes.contains_key(&bridge.target) {
+                    issues.push(ValidationIssue {
+                        severity: IssueSeverity::Error,
+                        category: IssueCategory::BrokenBridge,
+                        message: format!("Bridge '{}' references non-existent target node '{}'", bridge_id, bridge.target),
+                        affected_ids: vec![bridge_id.clone(), bridge.target.clone()],
+                    });
+                }
+                if let Some(ref tf) = bridge.target_field {
+                    if !self.fields.contains_key(tf) {
+                        issues.push(ValidationIssue {
+                            severity: IssueSeverity::Error,
+                            category: IssueCategory::BrokenBridge,
+                            message: format!("Bridge '{}' references non-existent target field '{}'", bridge_id, tf),
+                            affected_ids: vec![bridge_id.clone(), tf.clone()],
+                        });
+                    }
+                }
+            }
+        }
+
+        // ─── 3. Orphan nodes (warning only) ────────────────
+        if !self.fields.is_empty() {
+            for (nid, _) in &self.nodes {
+                let mut found = false;
+                for field in self.fields.values() {
+                    if field.graph.get_node(nid).is_some() {
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    issues.push(ValidationIssue {
+                        severity: IssueSeverity::Warning,
+                        category: IssueCategory::OrphanNode,
+                        message: format!("Node '{}' is registered but not present in any field", nid),
+                        affected_ids: vec![nid.clone()],
+                    });
+                }
+            }
+        }
+
+        let is_valid = issues.iter().all(|i| i.severity != IssueSeverity::Error);
+        ValidationResult { issues, is_valid }
+    }
+}
+
+// ─── Subgraph Wrapper ────────────────────────────────
+
+impl Cluster {
+    /// Extract a subgraph from a specific field.
+    /// Returns an error if the field does not exist.
+    pub fn subgraph(
+        &self,
+        field_id: &str,
+        seeds: &[NodeId],
+        depth: Option<usize>,
+        relation: Option<&str>,
+    ) -> Result<SubgraphResult, String> {
+        let field = self.fields.get(field_id).ok_or_else(|| {
+            format!("Field '{}' not found in cluster", field_id)
+        })?;
+        Ok(field.graph.subgraph(seeds, depth, relation))
+    }
+}
+
 // ─── Tests ──────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn node(id: &str, type_: &str, label: &str, status: NodeStatus) -> Node {
+        Node { id: id.into(), type_: type_.into(), label: label.into(), status, meta: None }
+    }
 
     /// Build a test cluster with:
     ///   Nodes: a, b, c, d
@@ -630,5 +905,210 @@ mod tests {
         // d has no outgoing edges in f2, so no path back to a
         assert!(!path.exists, "no path from d back to a");
         assert_eq!(path.length, -1);
+    }
+
+    // ─── Diff Tests ──────────────────────────────────────
+
+    #[test]
+    fn test_diff_identical_clusters() {
+        let c1 = build_test_cluster();
+        let c2 = build_test_cluster();
+        let diff = c1.diff(&c2);
+        assert!(diff.added_nodes.is_empty());
+        assert!(diff.removed_nodes.is_empty());
+        assert!(diff.changed_nodes.is_empty());
+        assert!(diff.added_edges.is_empty());
+        assert!(diff.removed_edges.is_empty());
+        assert!(diff.changed_edges.is_empty());
+        assert!(diff.added_fields.is_empty());
+        assert!(diff.removed_fields.is_empty());
+        assert!(diff.added_bridges.is_empty());
+        assert!(diff.removed_bridges.is_empty());
+    }
+
+    #[test]
+    fn test_diff_added_node() {
+        let c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        c2.register_node(node("new-node", "test", "New", NodeStatus::Active));
+        let diff = c1.diff(&c2);
+        assert_eq!(diff.added_nodes.len(), 1);
+        assert_eq!(diff.added_nodes[0].id, "new-node");
+    }
+
+    #[test]
+    fn test_diff_removed_node() {
+        let c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        c2.unregister_node(&"d".into());
+        let diff = c1.diff(&c2);
+        assert_eq!(diff.removed_nodes.len(), 1);
+        assert_eq!(diff.removed_nodes[0].id, "d");
+    }
+
+    #[test]
+    fn test_diff_changed_node_label() {
+        let c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        if let Some(node) = c2.nodes.get_mut("a") {
+            node.label = "A-Modified".into();
+        }
+        let diff = c1.diff(&c2);
+        assert_eq!(diff.changed_nodes.len(), 1);
+        assert_eq!(diff.changed_nodes[0].0.id, "a");
+        assert_eq!(diff.changed_nodes[0].1.label, "A-Modified");
+    }
+
+    #[test]
+    fn test_diff_added_field() {
+        let c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        c2.create_field("f3".into(), "Field 3".into(), None);
+        let diff = c1.diff(&c2);
+        assert_eq!(diff.added_fields.len(), 1);
+        assert_eq!(diff.added_fields[0], "f3");
+    }
+
+    #[test]
+    fn test_diff_removed_field() {
+        let c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        c2.remove_field("f1");
+        let diff = c1.diff(&c2);
+        assert_eq!(diff.removed_fields.len(), 1);
+        assert_eq!(diff.removed_fields[0], "f1");
+    }
+
+    #[test]
+    fn test_diff_added_edge() {
+        let c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        let f2 = c2.fields.get_mut("f2").unwrap();
+        f2.graph.add_edge(Edge {
+            id: "e-new".into(), source: "a".into(), target: "d".into(),
+            relation: Relation::Informs, weight: 0.5, description: "new edge".into(),
+            target_field: None, meta: None,
+        });
+        let diff = c1.diff(&c2);
+        assert_eq!(diff.added_edges.len(), 1);
+        assert_eq!(diff.added_edges[0].id, "e-new");
+    }
+
+    #[test]
+    fn test_diff_removed_edge() {
+        let mut c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        // Remove edge e1 from c2's field f1
+        let f2 = c2.fields.get_mut("f1").unwrap();
+        f2.graph.remove_edge(&"e1".into());
+        let diff = c1.diff(&c2);
+        assert_eq!(diff.removed_edges.len(), 1);
+        assert_eq!(diff.removed_edges[0].id, "e1");
+    }
+
+    #[test]
+    fn test_diff_empty_vs_populated() {
+        let empty = Cluster::new("empty".into(), "Empty".into(), Visibility::Private);
+        let c = build_test_cluster();
+        let diff = empty.diff(&c);
+        assert_eq!(diff.added_nodes.len(), 4, "cluster has 4 registered nodes");
+        assert_eq!(diff.added_fields.len(), 2, "cluster has 2 fields");
+        assert!(diff.removed_nodes.is_empty());
+        assert!(diff.removed_fields.is_empty());
+    }
+
+    #[test]
+    fn test_diff_added_bridge() {
+        let c1 = build_test_cluster();
+        let mut c2 = build_test_cluster();
+        let _ = c2.add_bridge("f1", "f2", "b", "a", "new bridge".into(), 0.5);
+        let diff = c1.diff(&c2);
+        // add_bridge creates 2 bridge edges (fwd + rev)
+        assert_eq!(diff.added_bridges.len(), 2);
+    }
+
+    // ─── Cluster Validate Tests ──────────────────────────
+
+    #[test]
+    fn test_cluster_validate_clean() {
+        let c = build_test_cluster();
+        let result = c.validate();
+        assert!(result.is_valid);
+        assert!(result.issues.is_empty());
+    }
+
+    #[test]
+    fn test_cluster_validate_broken_bridge_target_field() {
+        let mut c = build_test_cluster();
+        let f1 = c.fields.get_mut("f1").unwrap();
+        f1.graph.add_edge(Edge {
+            id: "bad-bridge".into(), source: "a".into(), target: "b".into(),
+            relation: Relation::Bridges, weight: 1.0, description: "broken".into(),
+            target_field: Some("non-existent-field".into()), meta: None,
+        });
+        let result = c.validate();
+        assert!(!result.is_valid);
+        assert!(result.issues.iter().any(|i| i.category == IssueCategory::BrokenBridge));
+    }
+
+    #[test]
+    fn test_cluster_validate_foreign_node() {
+        let mut c = build_test_cluster();
+        let f1 = c.fields.get_mut("f1").unwrap();
+        f1.graph.add_edge(Edge {
+            id: "foreign-edge".into(), source: "a".into(), target: "foreign-node".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: "foreign".into(),
+            target_field: None, meta: None,
+        });
+        let result = c.validate();
+        assert!(!result.is_valid);
+        assert!(result.issues.iter().any(|i| i.category == IssueCategory::ForeignNode));
+    }
+
+    #[test]
+    fn test_cluster_validate_orphan_node_warning() {
+        let mut c = build_test_cluster();
+        c.register_node(node("orphan-node", "test", "Orphan", NodeStatus::Active));
+        let result = c.validate();
+        // Orphan node is a Warning, so cluster is still valid
+        assert!(result.is_valid);
+        assert!(result.issues.iter().any(|i| i.category == IssueCategory::OrphanNode));
+    }
+
+    #[test]
+    fn test_cluster_validate_empty() {
+        let c = Cluster::new("empty".into(), "Empty".into(), Visibility::Private);
+        let result = c.validate();
+        assert!(result.is_valid);
+        assert!(result.issues.is_empty());
+    }
+
+    // ─── Cluster Subgraph Tests ──────────────────────────
+
+    #[test]
+    fn test_cluster_subgraph_valid_field() {
+        let c = build_test_cluster();
+        let result = c.subgraph("f1", &["a".into()], Some(1), None).unwrap();
+        let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
+        node_ids.sort();
+        assert_eq!(node_ids, vec!["a", "b"]);
+        assert_eq!(result.edges.len(), 2);
+    }
+
+    #[test]
+    fn test_cluster_subgraph_nonexistent_field() {
+        let c = build_test_cluster();
+        let result = c.subgraph("nonexistent", &["a".into()], None, None);
+        assert!(result.is_err());
+        let err_msg = result.err().unwrap();
+        assert!(err_msg.contains("not found"), "error message should indicate field not found, got: {}", err_msg);
+    }
+
+    #[test]
+    fn test_cluster_subgraph_empty_seeds() {
+        let c = build_test_cluster();
+        let result = c.subgraph("f1", &[], None, None).unwrap();
+        assert!(result.nodes.is_empty());
+        assert!(result.edges.is_empty());
     }
 }

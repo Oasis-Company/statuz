@@ -303,6 +303,104 @@ impl GraphEngine {
             disconnected_components: components,
         }
     }
+
+    // ─── Subgraph ─────────────────────────────────────────
+
+    /// Extract a subgraph starting from seed nodes via BFS.
+    /// depth: None = unlimited, Some(0) = seeds only
+    /// relation: optional relation filter
+    pub fn subgraph(&self, seeds: &[NodeId], depth: Option<usize>, relation: Option<&str>) -> SubgraphResult {
+        if seeds.is_empty() {
+            return SubgraphResult { nodes: vec![], edges: vec![] };
+        }
+
+        let max_depth = depth.unwrap_or(usize::MAX);
+        let mut visited_nodes = HashSet::new();
+        let mut visited_edges = HashSet::new();
+        let mut result_nodes: Vec<Node> = Vec::new();
+        let mut result_edges: Vec<Edge> = Vec::new();
+        let mut queue: VecDeque<(NodeId, usize)> = VecDeque::new();
+
+        // Init: seed nodes
+        for seed in seeds {
+            if !visited_nodes.contains(seed) {
+                visited_nodes.insert(seed.clone());
+                if let Some(node) = self.nodes.get(seed) {
+                    result_nodes.push(node.clone());
+                }
+                queue.push_back((seed.clone(), 0));
+            }
+        }
+
+        // BFS
+        while let Some((current, current_depth)) = queue.pop_front() {
+            if current_depth >= max_depth {
+                continue;
+            }
+
+            let edges: Vec<Edge> = if let Some(rel) = relation {
+                self.outgoing_edges(&current, Some(rel)).into_iter().cloned().collect()
+            } else {
+                let mut all = Vec::new();
+                if let Some(cell) = self.adj.get(&current) {
+                    for (_, rel_edges) in &cell.outgoing {
+                        for e in rel_edges {
+                            if e.target_field.is_none() {
+                                all.push(e.clone());
+                            }
+                        }
+                    }
+                }
+                all
+            };
+
+            for edge in &edges {
+                if !visited_edges.contains(&edge.id) {
+                    visited_edges.insert(edge.id.clone());
+                    result_edges.push(edge.clone());
+                }
+                if !visited_nodes.contains(&edge.target) {
+                    visited_nodes.insert(edge.target.clone());
+                    if let Some(node) = self.nodes.get(&edge.target) {
+                        result_nodes.push(node.clone());
+                    }
+                    queue.push_back((edge.target.clone(), current_depth + 1));
+                }
+            }
+        }
+
+        SubgraphResult { nodes: result_nodes, edges: result_edges }
+    }
+
+    // ─── Validate ─────────────────────────────────────────
+
+    /// Validate graph internal consistency.
+    /// Checks: orphan edges (source or target not in graph)
+    pub fn validate(&self) -> ValidationResult {
+        let mut issues = Vec::new();
+
+        for edge in self.edges.values() {
+            if !self.nodes.contains_key(&edge.source) {
+                issues.push(ValidationIssue {
+                    severity: IssueSeverity::Error,
+                    category: IssueCategory::OrphanEdge,
+                    message: format!("Edge '{}' references non-existent source node '{}'", edge.id, edge.source),
+                    affected_ids: vec![edge.id.clone(), edge.source.clone()],
+                });
+            }
+            if !self.nodes.contains_key(&edge.target) {
+                issues.push(ValidationIssue {
+                    severity: IssueSeverity::Error,
+                    category: IssueCategory::OrphanEdge,
+                    message: format!("Edge '{}' references non-existent target node '{}'", edge.id, edge.target),
+                    affected_ids: vec![edge.id.clone(), edge.target.clone()],
+                });
+            }
+        }
+
+        let is_valid = issues.iter().all(|i| i.severity != IssueSeverity::Error);
+        ValidationResult { issues, is_valid }
+    }
 }
 
 // ─── Tests ──────────────────────────────────────────────────
@@ -310,6 +408,10 @@ impl GraphEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn node(id: &str, type_: &str, label: &str, status: NodeStatus) -> Node {
+        Node { id: id.into(), type_: type_.into(), label: label.into(), status, meta: None }
+    }
 
     /// Build a test graph:
     ///   a ──self──> a   (self-loop, "depends_on")
@@ -550,5 +652,150 @@ mod tests {
         let g = build_test_graph();
         let reachable = g.reachable(&"f".into());
         assert!(reachable.is_empty(), "isolated node should have no reachable nodes");
+    }
+
+    // ─── Subgraph Tests ──────────────────────────────────
+
+    #[test]
+    fn test_subgraph_empty_seeds() {
+        let g = build_test_graph();
+        let result = g.subgraph(&[], None, None);
+        assert!(result.nodes.is_empty());
+        assert!(result.edges.is_empty());
+    }
+
+    #[test]
+    fn test_subgraph_seeds_only() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["a".into()], Some(0), None);
+        assert_eq!(result.nodes.len(), 1);
+        assert_eq!(result.nodes[0].id, "a");
+        assert!(result.edges.is_empty());
+    }
+
+    #[test]
+    fn test_subgraph_single_hop() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["a".into()], Some(1), None);
+        let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
+        node_ids.sort();
+        // a -> b, a -> e, self-loop a->a
+        assert_eq!(node_ids, vec!["a", "b", "e"], "depth 1 from 'a' should reach a, b, e");
+        assert_eq!(result.edges.len(), 3);
+    }
+
+    #[test]
+    fn test_subgraph_multi_hop() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["a".into()], Some(3), None);
+        let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
+        node_ids.sort();
+        // a -> b -> c -> d, plus a -> e, plus self-loop a->a
+        assert_eq!(node_ids, vec!["a", "b", "c", "d", "e"]);
+    }
+
+    #[test]
+    fn test_subgraph_relation_filter() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["a".into()], None, Some("produces"));
+        let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
+        node_ids.sort();
+        assert_eq!(node_ids, vec!["a", "e"]);
+        assert_eq!(result.edges.len(), 1);
+        assert_eq!(result.edges[0].id, "e5");
+    }
+
+    #[test]
+    fn test_subgraph_unlimited_depth() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["a".into()], None, None);
+        let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
+        node_ids.sort();
+        assert_eq!(node_ids, vec!["a", "b", "c", "d", "e"], "f is isolated, not reachable");
+    }
+
+    #[test]
+    fn test_subgraph_from_isolated_node() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["f".into()], None, None);
+        assert_eq!(result.nodes.len(), 1);
+        assert_eq!(result.nodes[0].id, "f");
+        assert!(result.edges.is_empty());
+    }
+
+    #[test]
+    fn test_subgraph_multiple_seeds() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["a".into(), "f".into()], Some(1), None);
+        let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
+        node_ids.sort();
+        assert_eq!(node_ids, vec!["a", "b", "e", "f"]);
+    }
+
+    #[test]
+    fn test_subgraph_nonexistent_seed() {
+        let g = build_test_graph();
+        let result = g.subgraph(&["zzz".into()], None, None);
+        assert!(result.nodes.is_empty());
+        assert!(result.edges.is_empty());
+    }
+
+    // ─── Validate Tests ─────────────────────────────────
+
+    #[test]
+    fn test_validate_clean_graph() {
+        let g = build_test_graph();
+        let result = g.validate();
+        assert!(result.is_valid);
+        assert!(result.issues.is_empty());
+    }
+
+    #[test]
+    fn test_validate_orphan_edge_source() {
+        let mut g = GraphEngine::new();
+        g.add_node(node("a", "t", "A", NodeStatus::Active));
+        g.add_edge(Edge {
+            id: "orphan".into(), source: "zzz".into(), target: "a".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
+            target_field: None, meta: None,
+        });
+        let result = g.validate();
+        assert!(!result.is_valid);
+        assert!(result.issues.iter().any(|i| i.category == IssueCategory::OrphanEdge));
+    }
+
+    #[test]
+    fn test_validate_orphan_edge_target() {
+        let mut g = GraphEngine::new();
+        g.add_node(node("a", "t", "A", NodeStatus::Active));
+        g.add_edge(Edge {
+            id: "orphan".into(), source: "a".into(), target: "zzz".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
+            target_field: None, meta: None,
+        });
+        let result = g.validate();
+        assert!(!result.is_valid);
+        assert!(result.issues.iter().any(|i| i.category == IssueCategory::OrphanEdge));
+    }
+
+    #[test]
+    fn test_validate_both_ends_orphan() {
+        let mut g = GraphEngine::new();
+        g.add_edge(Edge {
+            id: "double-orphan".into(), source: "xxx".into(), target: "yyy".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
+            target_field: None, meta: None,
+        });
+        let result = g.validate();
+        assert!(!result.is_valid);
+        assert_eq!(result.issues.len(), 2);
+    }
+
+    #[test]
+    fn test_validate_empty_graph() {
+        let g = GraphEngine::new();
+        let result = g.validate();
+        assert!(result.is_valid);
+        assert!(result.issues.is_empty());
     }
 }

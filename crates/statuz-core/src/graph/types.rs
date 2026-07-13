@@ -87,7 +87,7 @@ pub enum NodeStatus {
 // ─── Node ────────────────────────────────────────────────────
 
 /// A node in the graph — anything that exists in the project ecosystem.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Node {
     pub id: NodeId,
     pub type_: String,
@@ -100,7 +100,7 @@ pub struct Node {
 // ─── Edge ────────────────────────────────────────────────────
 
 /// A directed edge — the reason two nodes are connected.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Edge {
     pub id: EdgeId,
     pub source: NodeId,
@@ -149,4 +149,147 @@ pub struct HealthReport {
     pub sources: Vec<NodeId>,
     pub high_centrality: Vec<NodeId>,
     pub disconnected_components: usize,
+}
+
+// ─── Subgraph Result ─────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SubgraphResult {
+    pub nodes: Vec<Node>,
+    pub edges: Vec<Edge>,
+}
+
+// ─── Diff Result ─────────────────────────────────────────────
+
+/// 比较两个 Cluster 的差异结果。
+/// 使用拥有值（Vec<Node> 而非 Vec<&Node>）以避免生命周期标注。
+/// 比较基于 id 字段匹配，而非内容匹配。
+/// meta 字段不参与比较（None 和 Some({}) 视为相同）。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DiffResult {
+    pub added_nodes: Vec<Node>,
+    pub removed_nodes: Vec<Node>,
+    /// (old_node, new_node) — 相同 id 但 type_/label/status 不同
+    pub changed_nodes: Vec<(Node, Node)>,
+    pub added_edges: Vec<Edge>,
+    pub removed_edges: Vec<Edge>,
+    /// (old_edge, new_edge) — 相同 id 但关系/描述/权重不同
+    pub changed_edges: Vec<(Edge, Edge)>,
+    pub added_fields: Vec<FieldId>,
+    pub removed_fields: Vec<FieldId>,
+    pub added_bridges: Vec<Edge>,
+    pub removed_bridges: Vec<Edge>,
+}
+
+// ─── Validation Result ───────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum IssueSeverity {
+    Error,
+    Warning,
+}
+
+impl std::fmt::Display for IssueSeverity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IssueSeverity::Error => write!(f, "error"),
+            IssueSeverity::Warning => write!(f, "warning"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum IssueCategory {
+    OrphanEdge,
+    MissingField,
+    BrokenBridge,
+    ForeignNode,
+    DuplicateBridge,
+    CyclicBridge,
+    TimestampInconsistency,
+    OrphanNode,
+}
+
+impl std::fmt::Display for IssueCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IssueCategory::OrphanEdge => write!(f, "orphan_edge"),
+            IssueCategory::MissingField => write!(f, "missing_field"),
+            IssueCategory::BrokenBridge => write!(f, "broken_bridge"),
+            IssueCategory::ForeignNode => write!(f, "foreign_node"),
+            IssueCategory::DuplicateBridge => write!(f, "duplicate_bridge"),
+            IssueCategory::CyclicBridge => write!(f, "cyclic_bridge"),
+            IssueCategory::TimestampInconsistency => write!(f, "timestamp_inconsistency"),
+            IssueCategory::OrphanNode => write!(f, "orphan_node"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ValidationIssue {
+    pub severity: IssueSeverity,
+    pub category: IssueCategory,
+    pub message: String,
+    pub affected_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ValidationResult {
+    pub issues: Vec<ValidationIssue>,
+    pub is_valid: bool,
+}
+
+// ─── SYN Types ────────────────────────────────────────────────
+// 这些类型定义在 core 中以避免 niche 和 syn crate 之间的循环依赖。
+// niche::Engine::drift_to_syn() 返回 SynProposal。
+// syn::SynEngine::approve/reject() 操作 SynProposal。
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SynStatus {
+    Draft,
+    UnderReview,
+    Approved,
+    Rejected,
+    Implemented,
+}
+
+impl std::fmt::Display for SynStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SynStatus::Draft => write!(f, "draft"),
+            SynStatus::UnderReview => write!(f, "under_review"),
+            SynStatus::Approved => write!(f, "approved"),
+            SynStatus::Rejected => write!(f, "rejected"),
+            SynStatus::Implemented => write!(f, "implemented"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SynOption {
+    pub label: String,
+    pub description: String,
+    /// Merge strategy as string: "skip", "overwrite", "rename", "merge_meta"
+    /// String type avoids circular dependency (MergeStrategy is defined in cluster module)
+    pub merge_strategy: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AuditEntry {
+    pub timestamp: u64,
+    pub actor: String,
+    pub action: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SynProposal {
+    pub id: String,
+    pub summary: String,
+    pub description: String,
+    pub options: Vec<SynOption>,
+    pub diff: DiffResult,
+    pub audit_trail: Vec<AuditEntry>,
+    pub status: SynStatus,
+    pub created_at: u64,
 }

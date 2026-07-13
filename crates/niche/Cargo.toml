@@ -1,0 +1,8 @@
+[package]
+name = "niche"
+version = "0.1.0"
+edition = "2021"
+description = "Niche — semantic interpretation for Statuz clusters (placeholder)"
+
+[dependencies]
+statuz-core = { path = "../statuz-core" }

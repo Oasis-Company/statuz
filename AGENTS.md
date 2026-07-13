@@ -25,22 +25,27 @@ Key workflow: `/grill-with-docs` → `/tdd` → `/code-review` → commit.
 ## Current Architecture
 
 ```
-crates/statuz-core/  ← Rust Graph Engine (active development)
-  src/
-    graph/           ← In-memory adjacency list + graph algorithms
-      types.rs       ← Node, Edge, Relation, Field, Cluster type system
-      engine.rs      ← GraphEngine: add/remove/traverse/serialize
-      query.rs       ← Three core queries: traverse, impact, path
-    cluster/         ← Cluster = storage container + multi-field ecosystem
-      cluster.rs     ← Cluster: centralized node registry, cross-field bridges
-      field.rs       ← Field: sub-graph within a cluster
-      sharing.rs     ← Clone, Merge, Password, Visibility
-    storage/         ← Statuz storage format (msgpack + blake3 + argon2)
-      mod.rs         ← Ser/Des, hash ID, password verification, compression, encryption
-    main.rs          ← CLI (init, show, save, load, self-test)
-    lib.rs           ← Public API exports
-leftover/            ← All outdated docs, schemas, and examples
-packages/            ← Legacy CLI/SDK/MCP code (frozen — to be replaced)
+crates/
+├── statuz-core/         ← Rust Graph Engine (active development)
+│   src/
+│     graph/             ← In-memory adjacency list + graph algorithms
+│       types.rs         ← Node, Edge, Relation, Field, Cluster type system
+│       engine.rs        ← GraphEngine: add/remove/traverse/serialize
+│       query.rs         ← Five core queries: traverse, impact, path, subgraph, validate
+│     cluster/           ← Cluster = storage container + multi-field ecosystem
+│       cluster.rs       ← Cluster: centralized node registry, diff, validate, subgraph
+│       field.rs         ← Field: sub-graph within a cluster
+│       sharing.rs       ← Clone, Merge, Password, Visibility
+│     storage/           ← Statuz storage format (msgpack + blake3 + argon2)
+│       mod.rs           ← Ser/Des, hash ID, password verification, compression, encryption
+│     main.rs            ← CLI (init, show, save, load, self-test)
+│     lib.rs             ← Public API exports
+├── arrow-map/           ← Text-to-graph parser (placeholder)
+├── niche/               ← Semantic interpretation engine (placeholder)
+├── syn/                 ← Change decision & audit system (placeholder)
+└── statuz-core-napi/    ← napi-rs bindings (frozen)
+leftover/                ← All outdated docs, schemas, and examples
+packages/                ← Legacy CLI/SDK/MCP code (frozen — to be replaced)
 ```
 
 ## Core Philosophy
@@ -56,19 +61,22 @@ packages/            ← Legacy CLI/SDK/MCP code (frozen — to be replaced)
 
 1. **Zero non-serde dependencies** — Graph algorithms are pure std. Compression/encryption libraries (zstd, chacha20) are infrastructure, not business logic.
 2. **Memory-first** — All graph ops in-memory. Serialization is secondary.
-3. **Three core queries** must always work: `traverse`, `impact`, `path`
+3. **Five core queries** must always work: `traverse`, `impact`, `path`, `subgraph`, `validate`
 4. **Self-test** — `cd crates/statuz-core && cargo run -- self-test` must pass before any commit
 5. **No YAML files** — Old paradigm is dead. Engine uses msgpack+blake3 storage format.
 6. **Unit tests** — Each module must have `#[cfg(test)]` tests. Run `cargo test` before any commit.
 7. **No dead code** — Unused variables, imports, or functions must be removed or prefixed with `_`.
+8. **Representation layer crates** — `arrow-map`, `niche`, `syn` are companion crates that depend on `statuz-core`. They must NOT create independent storage, CLI commands, or schema files. They communicate through the engine's public API only.
 
-## The Three Queries
+## The Five Queries (three core + two supplementary)
 
 | Query | What it answers | Method |
 |-------|----------------|--------|
 | `traverse(from, relation?)` | "What does this connect to?" | Direct adjacency lookup |
 | `impact(nodeId)` | "If this changes, who's affected?" | Reverse BFS (blast radius) |
 | `path(from, to)` | "How do I get there?" | BFS shortest path |
+| `subgraph(seeds, depth, relation?)` | "What does this sub-ecosystem look like?" | BFS extract |
+| `validate()` | "Is the graph internally consistent?" | Structural consistency check |
 
 ## Cluster Architecture
 
@@ -171,7 +179,7 @@ Types: feat, fix, refactor, docs, test, chore, perf, ci
 ### Test Types (ALL required)
 
 1. **Unit Tests** (`#[cfg(test)]`) — Individual functions, edge cases, error paths.
-2. **Integration Tests** — The built-in self-test (`cargo run -- self-test`) covers 10 phases, ~60 assertions.
+2. **Integration Tests** — The built-in self-test (`cargo run -- self-test`) covers 11 phases, ~70 assertions.
 3. **E2E Tests** — `scripts/e2e.ps1` covers the full create → clone → merge → password workflow.
 
 ### Test-Driven Development

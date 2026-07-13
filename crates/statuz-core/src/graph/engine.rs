@@ -89,6 +89,32 @@ impl GraphEngine {
         self.adj.remove(id);
     }
 
+    /// Remove a single edge from the graph by its ID.
+    /// Removes from edge registry, source's outgoing adjacency, and target's incoming adjacency.
+    pub fn remove_edge(&mut self, id: &EdgeId) {
+        if let Some(edge) = self.edges.remove(id) {
+            let rel = edge.relation.as_str().to_string();
+            // Remove from source's outgoing
+            if let Some(cell) = self.adj.get_mut(&edge.source) {
+                if let Some(edges) = cell.outgoing.get_mut(&rel) {
+                    edges.retain(|e| e.id != *id);
+                    if edges.is_empty() {
+                        cell.outgoing.remove(&rel);
+                    }
+                }
+            }
+            // Remove from target's incoming
+            if let Some(cell) = self.adj.get_mut(&edge.target) {
+                if let Some(edges) = cell.incoming.get_mut(&rel) {
+                    edges.retain(|e| e.id != *id);
+                    if edges.is_empty() {
+                        cell.incoming.remove(&rel);
+                    }
+                }
+            }
+        }
+    }
+
     // ─── Accessors ────────────────────────────────────────
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
@@ -333,6 +359,38 @@ mod tests {
         assert_eq!(filtered.len(), 1);
         let no_match = g.outgoing_edges(&"a".into(), Some("consumes"));
         assert_eq!(no_match.len(), 0);
+    }
+
+    #[test]
+    fn test_remove_edge() {
+        let mut g = GraphEngine::new();
+        let n1 = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
+        let n2 = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
+        g.add_node(n1);
+        g.add_node(n2);
+        g.add_edge(Edge {
+            id: "e1".into(), source: "a".into(), target: "b".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
+            target_field: None, meta: None,
+        });
+        assert_eq!(g.edge_count(), 1);
+
+        g.remove_edge(&"e1".into());
+        assert_eq!(g.edge_count(), 0);
+        // Source's outgoing should be empty
+        let outgoing = g.outgoing_edges(&"a".into(), None);
+        assert!(outgoing.is_empty(), "outgoing edges should be empty after removing the only edge");
+        // Target's incoming should be empty
+        let incoming = g.incoming_edges(&"b".into(), None);
+        assert!(incoming.is_empty(), "incoming edges should be empty after removing the only edge");
+    }
+
+    #[test]
+    fn test_remove_nonexistent_edge() {
+        let mut g = GraphEngine::new();
+        g.remove_edge(&"nonexistent".into());
+        // Should not panic and edge count stays 0
+        assert_eq!(g.edge_count(), 0);
     }
 
     #[test]

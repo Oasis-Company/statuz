@@ -60,6 +60,24 @@
 - 覆盖 95% 以上的实际使用场景
 - 足够简单，可以保证正确性和性能
 
+### ADR 003a：四项额外查询方法（subgraph / validate / diff）
+
+**上下文**：2026-07-13，发现三项查询不足以支持 niche（语义解释）和 SYN（变更决策）的需求。
+
+**决策**：在引擎核心中添加四项方法：
+1. `GraphEngine::subgraph()` — 从种子节点 BFS 提取子图（支持 depth 和 relation 过滤）
+2. `GraphEngine::validate()` — 图内部一致性检查（孤立边检测）
+3. `Cluster::validate()` — Cluster 级别一致性检查（孤立边、外来节点、断桥、孤立节点）
+4. `Cluster::diff()` — 两个 Cluster 的差异比较（节点、边、字段、桥接的全维度对比）
+
+**理由**：
+- `subgraph` 是 niche drift detection 的基础：比较两个时间点的子图差异
+- `validate` 是数据完整性保证：确保 Cluster 没有损坏
+- `diff` 是 SYN 变更决策的基础：生成变更提案
+- `meta` 字段不参与比较（None == Some({})），权重比较使用 EPSILON 容差
+
+**未覆盖**：`GraphEngine` 级别的 `diff` 方法 — 这不是引擎核心 API，属于 niche 或 SYN crate 的职责。
+
 ---
 
 ## 二、架构级决策
@@ -113,6 +131,17 @@
 - 性能：内存操作远快于磁盘操作
 - 简单：不需要事务日志、WAL 等复杂机制
 - 用户控制：用户决定何时保存
+
+### ADR 006a：`remove_edge` 方法
+
+**上下文**：2026-07-13，为支持 `Cluster::diff` 的删除边测试，发现 `GraphEngine` 缺少 `remove_edge` 方法。
+
+**决策**：添加 `GraphEngine::remove_edge(id: &EdgeId)` 方法，实现从 `self.edges`、source 节点的 outgoing adjacency、target 节点的 incoming adjacency 中同步移除。
+
+**理由**：
+- 完整性：有 `add_edge` 就应该有 `remove_edge`
+- 测试可测性：`test_diff_removed_edge` 需要这个能力
+- 实际使用：用户需要能够删除单条边而不删除节点
 
 ---
 
