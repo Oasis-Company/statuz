@@ -28,6 +28,15 @@ enum Commands {
     Save {
         #[arg(short, long, default_value = "test-cluster.stz")]
         output: String,
+        /// Enable zstd compression
+        #[arg(long, default_value_t = false)]
+        compress: bool,
+        /// Enable chacha20 encryption (requires password)
+        #[arg(long, default_value_t = false)]
+        encrypt: bool,
+        /// Password for encryption (if not set, uses cluster's password)
+        #[arg(long)]
+        password: Option<String>,
     },
     /// Load cluster from .stz file
     Load {
@@ -323,13 +332,22 @@ fn main() {
         Commands::SelfTest => {
             run_self_test();
         }
-        Commands::Save { output } => {
+        Commands::Save { output, compress, encrypt, password } => {
             let cluster = build_test_cluster();
-            match serialize_cluster(&cluster) {
+            let pwd = password.as_deref();
+            if encrypt && pwd.is_none() {
+                eprintln!("Error: --encrypt requires --password <password>");
+                return;
+            }
+            match serialize_cluster_with_options(&cluster, compress, pwd) {
                 Ok(data) => {
                     match std::fs::write(output, &data) {
                         Ok(_) => {
-                            println!("✅ Cluster saved to '{}' ({} bytes)", output, data.len());
+                            let flags = if compress && encrypt { "compressed + encrypted" }
+                                else if compress { "compressed" }
+                                else if encrypt { "encrypted" }
+                                else { "raw" };
+                            println!("✅ Cluster saved to '{}' ({} bytes, {})", output, data.len(), flags);
                             println!("   Cluster ID: {}", cluster.id);
                         }
                         Err(e) => eprintln!("Write error: {}", e),
@@ -344,8 +362,20 @@ fn main() {
                     Ok(cluster) => {
                         print_cluster_info(&cluster);
                         println!("✅ Integrity verified (blake3 hash match)");
+                        if cluster.password_hash.is_some() {
+                            println!("⚠️  This cluster is password-protected (but was decrypted on load for info display)");
+                        }
                     }
-                    Err(e) => eprintln!("Load error: {}", e),
+                    Err(e) => {
+                        // Check if the error is about missing password for decryption
+                        let err_str = e.to_string();
+                        if err_str.contains("file is encrypted") {
+                            eprintln!("Load error: {}", e);
+                            eprintln!("Hint: Use --password <password> to decrypt");
+                        } else {
+                            eprintln!("Load error: {}", e);
+                        }
+                    }
                 },
                 Err(e) => eprintln!("Read error: {}", e),
             }

@@ -418,3 +418,217 @@ impl Cluster {
         }
     }
 }
+
+// ─── Tests ──────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a test cluster with:
+    ///   Nodes: a, b, c, d
+    ///   Field "f1": a -> b -> c  (depends_on)
+    ///   Field "f2": (empty)
+    ///   Bridge: f1.a → f2.d
+    fn build_test_cluster() -> Cluster {
+        let mut cluster = Cluster::new(
+            "test-cluster".into(),
+            "Test Cluster".into(),
+            Visibility::Private,
+        );
+        for id in &["a", "b", "c", "d"] {
+            cluster.register_node(Node {
+                id: id.to_string(),
+                type_: "test".into(),
+                label: id.to_string(),
+                status: NodeStatus::Active,
+                meta: None,
+            });
+        }
+        cluster.create_field("f1".into(), "Field 1".into(), None);
+        cluster.create_field("f2".into(), "Field 2".into(), None);
+
+        // Add edges in f1: a -> b -> c
+        let f1 = cluster.fields.get_mut("f1").unwrap();
+        f1.graph.add_edge(Edge {
+            id: "e1".into(), source: "a".into(), target: "b".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
+            target_field: None, meta: None,
+        });
+        f1.graph.add_edge(Edge {
+            id: "e2".into(), source: "b".into(), target: "c".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
+            target_field: None, meta: None,
+        });
+
+        // Bridge: f1.a → f2.d
+        cluster.add_bridge("f1", "f2", "a", "d", "bridge".into(), 1.0).unwrap();
+
+        cluster
+    }
+
+    // ─── Empty Cluster ───────────────────────────────────
+
+    #[test]
+    fn test_empty_cluster() {
+        let c = Cluster::new("id".into(), "empty".into(), Visibility::Public);
+        assert_eq!(c.fields.len(), 0, "new cluster should have zero fields");
+        assert_eq!(c.nodes.len(), 0, "new cluster should have zero nodes");
+        assert!(c.bridges.is_none(), "new cluster should have no bridges");
+    }
+
+    // ─── Add Field ───────────────────────────────────────
+
+    #[test]
+    fn test_add_field() {
+        let mut c = Cluster::new("id".into(), "test".into(), Visibility::Public);
+        c.create_field("arch".into(), "Architecture".into(), None);
+        assert_eq!(c.fields.len(), 1);
+        assert!(c.get_field("arch").is_some(), "field should exist after creation");
+    }
+
+    // ─── Register Node ───────────────────────────────────
+
+    #[test]
+    fn test_register_node() {
+        let mut c = Cluster::new("id".into(), "test".into(), Visibility::Organization);
+        let node = Node {
+            id: "n1".into(), type_: "test".into(), label: "N1".into(),
+            status: NodeStatus::Active, meta: None,
+        };
+        c.register_node(node);
+        assert!(c.get_node("n1").is_some(), "node should be found after registration");
+    }
+
+    // ─── Unregister Node ─────────────────────────────────
+
+    #[test]
+    fn test_unregister_node() {
+        let mut c = build_test_cluster();
+        assert!(c.get_node("a").is_some());
+        c.unregister_node(&"a".into());
+        assert!(c.get_node("a").is_none(), "node should be removed from registry");
+        // Node should also be removed from all fields
+        for field in c.fields.values() {
+            assert!(field.graph.get_node("a").is_none(),
+                "node should be removed from field '{}'", field.name);
+        }
+    }
+
+    // ─── Empty Field Bridge ──────────────────────────────
+
+    #[test]
+    fn test_empty_field_bridge() {
+        let mut c = Cluster::new("id".into(), "test".into(), Visibility::Private);
+        for id in &["x", "y"] {
+            c.register_node(Node {
+                id: id.to_string(), type_: "t".into(), label: id.to_string(),
+                status: NodeStatus::Active, meta: None,
+            });
+        }
+        c.create_field("f1".into(), "F1".into(), None);
+        c.create_field("f2".into(), "F2".into(), None);
+        let result = c.add_bridge("f1", "f2", "x", "y", "bridge".into(), 1.0);
+        assert!(result.is_ok(), "bridge between empty fields should succeed");
+
+        // Forward bridge should be visible in f1
+        let f1 = c.get_field("f1").unwrap();
+        let (nodes, _) = f1.graph.traverse(&"x".into(), Some("bridges"), false);
+        assert!(nodes.contains(&"y".into()), "bridge target 'y' should be reachable from 'x' in f1");
+    }
+
+    // ─── Duplicate Bridge ────────────────────────────────
+
+    #[test]
+    fn test_duplicate_bridge() {
+        let mut c = build_test_cluster();
+        // Adding the same bridge again should not error
+        let result = c.add_bridge("f1", "f2", "a", "d", "duplicate".into(), 1.0);
+        assert!(result.is_ok(), "duplicate bridge should not error");
+        // Bridge entries exist (overwritten in HashMap, same keys)
+        let bridges = c.bridges.as_ref().unwrap();
+        assert_eq!(bridges.len(), 2, "should still have exactly 2 bridge entries (fwd + rev)");
+    }
+
+    // ─── Remove Field ────────────────────────────────────
+
+    #[test]
+    fn test_remove_field() {
+        let mut c = build_test_cluster();
+        assert_eq!(c.fields.len(), 2);
+        c.remove_field("f1");
+        assert_eq!(c.fields.len(), 1, "one field should remain after removal");
+        assert!(c.get_field("f1").is_none(), "removed field should not be accessible");
+        assert!(c.get_field("f2").is_some(), "other field should still exist");
+    }
+
+    // ─── Cross-Field Traverse ────────────────────────────
+
+    #[test]
+    fn test_traverse_across_fields() {
+        let c = build_test_cluster();
+        let result = c.traverse_across_fields(&"f1".into(), &"a".into(), None, 3);
+        // Should find nodes in f1
+        assert!(result.contains_key("f1"), "should have results for f1");
+        let (f1_nodes, _) = result.get("f1").unwrap();
+        assert!(f1_nodes.contains(&"b".into()), "f1 should contain 'b'");
+        assert!(f1_nodes.contains(&"c".into()), "f1 should contain 'c'");
+        // Should cross the bridge to f2
+        assert!(result.contains_key("f2"), "should cross bridge to f2");
+        let (f2_nodes, _) = result.get("f2").unwrap();
+        assert!(f2_nodes.contains(&"d".into()), "f2 should contain 'd' via bridge");
+    }
+
+    // ─── Cross-Field Impact ──────────────────────────────
+
+    #[test]
+    fn test_impact_across_fields() {
+        let c = build_test_cluster();
+        // impact("a") looks for incoming edges to "a" across all fields.
+        // In f2, the reverse bridge "d -> a" is an incoming edge to "a",
+        // so "d" is affected when "a" changes.
+        let impact = c.impact_across_fields(&"a".into());
+        assert!(impact.affected.contains(&"d".into()),
+            "reverse bridge should make 'd' affected when 'a' changes");
+    }
+
+    #[test]
+    fn test_impact_across_fields_no_effect() {
+        let c = build_test_cluster();
+        // "d" has no incoming edges in any field, so nothing should be affected
+        let impact = c.impact_across_fields(&"d".into());
+        assert!(impact.affected.is_empty(),
+            "leaf node 'd' should affect no one");
+    }
+
+    // ─── Cross-Field Path ────────────────────────────────
+
+    #[test]
+    fn test_path_across_fields_same_field() {
+        let c = build_test_cluster();
+        // a -> b -> c within f1
+        let path = c.path_across_fields(&"a".into(), &"c".into(), &"f1".into());
+        assert!(path.exists, "path a->c within f1 should exist");
+        assert_eq!(path.length, 2, "a->b->c is 2 steps");
+    }
+
+    #[test]
+    fn test_path_across_fields_cross_bridge() {
+        let c = build_test_cluster();
+        // a -> d via bridge (f1.a → f2.d)
+        let path = c.path_across_fields(&"a".into(), &"d".into(), &"f1".into());
+        assert!(path.exists, "path a->d across bridge should exist");
+        assert_eq!(path.length, 1, "a->d via bridge is 1 step");
+    }
+
+    #[test]
+    fn test_path_across_fields_nonexistent() {
+        let c = build_test_cluster();
+        // No path from f1.a to f1.a (self-loop not created)
+        // Actually there's no edge from d to anything, so we can test d -> something
+        let path = c.path_across_fields(&"d".into(), &"a".into(), &"f2".into());
+        // d has no outgoing edges in f2, so no path back to a
+        assert!(!path.exists, "no path from d back to a");
+        assert_eq!(path.length, -1);
+    }
+}

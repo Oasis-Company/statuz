@@ -304,3 +304,251 @@ impl GraphEngine {
         }
     }
 }
+
+// ─── Tests ──────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a test graph:
+    ///   a ──self──> a   (self-loop, "depends_on")
+    ///   a ──e2────> b   ("depends_on")
+    ///   b ──e3────> c   ("depends_on")
+    ///   c ──e4────> d   ("depends_on")
+    ///   a ──e5────> e   ("produces")
+    ///   f            (isolated)
+    fn build_test_graph() -> GraphEngine {
+        let mut g = GraphEngine::new();
+        for id in &["a", "b", "c", "d", "e", "f"] {
+            g.add_node(Node {
+                id: id.to_string(),
+                type_: "test".into(),
+                label: id.to_string(),
+                status: NodeStatus::Active,
+                meta: None,
+            });
+        }
+        let edges: [(&str, &str, &str, &str, f64); 5] = [
+            ("e1", "a", "a", "depends_on", 1.0),  // self-loop
+            ("e2", "a", "b", "depends_on", 1.0),
+            ("e3", "b", "c", "depends_on", 1.0),
+            ("e4", "c", "d", "depends_on", 1.0),
+            ("e5", "a", "e", "produces",   1.0),
+        ];
+        for (id, src, tgt, rel, w) in &edges {
+            g.add_edge(Edge {
+                id: id.to_string(),
+                source: src.to_string(),
+                target: tgt.to_string(),
+                relation: Relation::from(*rel),
+                weight: *w,
+                description: String::new(),
+                target_field: None,
+                meta: None,
+            });
+        }
+        g
+    }
+
+    // ─── Empty Graph ─────────────────────────────────────
+
+    #[test]
+    fn test_empty_graph_traverse() {
+        let g = GraphEngine::new();
+        let (nodes, edges) = g.traverse(&"nonexistent".into(), None, false);
+        assert!(nodes.is_empty());
+        assert!(edges.is_empty());
+    }
+
+    #[test]
+    fn test_empty_graph_impact() {
+        let g = GraphEngine::new();
+        let impact = g.impact(&"nonexistent".into());
+        assert!(impact.affected.is_empty());
+        assert!(!impact.critical_path);
+    }
+
+    #[test]
+    fn test_empty_graph_path() {
+        let g = GraphEngine::new();
+        let path = g.path(&"nonexistent".into(), &"other".into(), false);
+        assert!(!path.exists);
+        assert_eq!(path.length, -1);
+    }
+
+    // ─── Non-existent Nodes ──────────────────────────────
+
+    #[test]
+    fn test_traverse_nonexistent() {
+        let g = build_test_graph();
+        let (nodes, edges) = g.traverse(&"zzz".into(), None, false);
+        assert!(nodes.is_empty());
+        assert!(edges.is_empty());
+    }
+
+    #[test]
+    fn test_impact_nonexistent() {
+        let g = build_test_graph();
+        let impact = g.impact(&"zzz".into());
+        assert!(impact.affected.is_empty());
+    }
+
+    #[test]
+    fn test_path_to_nonexistent() {
+        let g = build_test_graph();
+        let path = g.path(&"a".into(), &"zzz".into(), false);
+        assert!(!path.exists);
+        assert_eq!(path.length, -1);
+    }
+
+    #[test]
+    fn test_path_from_nonexistent() {
+        let g = build_test_graph();
+        let path = g.path(&"zzz".into(), &"a".into(), false);
+        assert!(!path.exists);
+        assert_eq!(path.length, -1);
+    }
+
+    // ─── Self-loop ───────────────────────────────────────
+
+    #[test]
+    fn test_self_loop_traverse() {
+        let g = build_test_graph();
+        let (nodes, _) = g.traverse(&"a".into(), None, false);
+        // Self-loop e1: a -> a, so 'a' appears in the result
+        assert!(nodes.contains(&"a".into()), "self-loop should make 'a' reachable from 'a'");
+    }
+
+    // ─── Single Layer Path ───────────────────────────────
+
+    #[test]
+    fn test_single_layer_path() {
+        let g = build_test_graph();
+        let path = g.path(&"a".into(), &"b".into(), false);
+        assert!(path.exists, "a -> b should exist");
+        assert_eq!(path.length, 1);
+    }
+
+    #[test]
+    fn test_single_layer_path_produces() {
+        let g = build_test_graph();
+        let path = g.path(&"a".into(), &"e".into(), false);
+        assert!(path.exists, "a -> e should exist (produces)");
+        assert_eq!(path.length, 1);
+    }
+
+    // ─── Multi-layer Path ────────────────────────────────
+
+    #[test]
+    fn test_multi_layer_path() {
+        let g = build_test_graph();
+        let path = g.path(&"a".into(), &"d".into(), false);
+        assert!(path.exists, "a -> b -> c -> d should exist");
+        assert_eq!(path.length, 3);
+    }
+
+    // ─── No Path ─────────────────────────────────────────
+
+    #[test]
+    fn test_no_path_disconnected() {
+        let g = build_test_graph();
+        // f is isolated — no path from a
+        let path = g.path(&"a".into(), &"f".into(), false);
+        assert!(!path.exists);
+        assert_eq!(path.length, -1);
+    }
+
+    // ─── Directionality ──────────────────────────────────
+
+    #[test]
+    fn test_directionality_a_to_b_yes() {
+        let g = build_test_graph();
+        // a -> b exists
+        let path = g.path(&"a".into(), &"b".into(), false);
+        assert!(path.exists);
+    }
+
+    #[test]
+    fn test_directionality_b_to_a_no() {
+        let g = build_test_graph();
+        // b -> a does NOT exist (graph is directed)
+        let path = g.path(&"b".into(), &"a".into(), false);
+        assert!(!path.exists);
+        assert_eq!(path.length, -1);
+    }
+
+    // ─── Centrality ──────────────────────────────────────
+
+    #[test]
+    fn test_centrality_hub_node() {
+        let g = build_test_graph();
+        let top = g.centrality(5);
+        assert!(!top.is_empty(), "centrality should return at least one node");
+        // 'a' has highest degree:
+        //   outgoing: e1(self), e2, e5 = 3
+        //   incoming: e1(self)        = 1
+        //   total: 4
+        assert_eq!(top[0], "a", "node 'a' should have highest centrality");
+    }
+
+    // ─── Health ──────────────────────────────────────────
+
+    #[test]
+    fn test_health_orphans() {
+        let g = build_test_graph();
+        let h = g.health();
+        // f is isolated: 0 outgoing, 0 incoming
+        assert!(h.orphans.contains(&"f".into()), "f should be an orphan");
+    }
+
+    #[test]
+    fn test_health_sinks() {
+        let g = build_test_graph();
+        let h = g.health();
+        // d: 0 outgoing, 1 incoming (e4) -> sink
+        // e: 0 outgoing, 1 incoming (e5) -> sink
+        assert!(h.sinks.contains(&"d".into()), "d should be a sink");
+        assert!(h.sinks.contains(&"e".into()), "e should be a sink");
+    }
+
+    #[test]
+    fn test_health_sources() {
+        let g = build_test_graph();
+        let h = g.health();
+        // a has outgoing > 0, but also has incoming (self-loop e1), so not a source.
+        // No node has truly zero incoming with non-zero outgoing.
+        // This is correct — the self-loop on 'a' counts as both.
+        // Just verify the report is well-formed.
+        assert_eq!(h.total_nodes, 6);
+        assert_eq!(h.total_edges, 5);
+    }
+
+    #[test]
+    fn test_health_disconnected_components() {
+        let g = build_test_graph();
+        let h = g.health();
+        // {a, b, c, d, e} — connected via a->b, a->e, b->c, c->d
+        // {f}             — isolated
+        assert_eq!(h.disconnected_components, 2);
+    }
+
+    // ─── Reachable ───────────────────────────────────────
+
+    #[test]
+    fn test_reachable_from_a() {
+        let g = build_test_graph();
+        let mut reachable = g.reachable(&"a".into());
+        reachable.sort();
+        // a can reach: a (self-loop), b, c, d, e
+        // reachable() removes the start node, so: a, b, c, d, e
+        assert_eq!(reachable, vec!["a", "b", "c", "d", "e"]);
+    }
+
+    #[test]
+    fn test_reachable_from_f_isolated() {
+        let g = build_test_graph();
+        let reachable = g.reachable(&"f".into());
+        assert!(reachable.is_empty(), "isolated node should have no reachable nodes");
+    }
+}

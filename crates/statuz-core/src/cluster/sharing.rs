@@ -369,3 +369,187 @@ impl Cluster {
             .as_secs();
     }
 }
+
+// ─── Tests ──────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Create a minimal cluster with a couple of nodes and one field.
+    fn make_test_cluster() -> Cluster {
+        let mut c = Cluster::new("test-id".into(), "Test".into(), Visibility::Private);
+        c.register_node(Node {
+            id: "n1".into(), type_: "t".into(), label: "N1".into(),
+            status: NodeStatus::Active, meta: None,
+        });
+        c.register_node(Node {
+            id: "n2".into(), type_: "t".into(), label: "N2".into(),
+            status: NodeStatus::Active, meta: None,
+        });
+        c.create_field("f1".into(), "Field 1".into(), None);
+        c
+    }
+
+    // ─── Clone: Empty Cluster ────────────────────────────
+
+    #[test]
+    fn test_clone_empty_cluster() {
+        let c = Cluster::new("id".into(), "empty".into(), Visibility::Public);
+        let cloned = c.clone_with_options(&CloneOptions::default()).unwrap();
+        assert_eq!(cloned.name, "empty");
+        assert_eq!(cloned.fields.len(), 0);
+        assert_eq!(cloned.nodes.len(), 0);
+        assert!(cloned.password_hash.is_none());
+        // Content-addressable ID should differ from original
+        assert_ne!(cloned.id, c.id, "cloned cluster should have a new ID");
+    }
+
+    // ─── Clone: With Password ────────────────────────────
+
+    #[test]
+    fn test_clone_with_password() {
+        let mut c = make_test_cluster();
+        c.set_password("secret123").unwrap();
+        let cloned = c.clone_with_options(&CloneOptions {
+            reset_password: false,
+            new_password: None,
+            ..CloneOptions::default()
+        }).unwrap();
+        assert!(cloned.password_hash.is_some(), "password should be preserved");
+        assert!(cloned.unlock("secret123"), "should unlock with original password");
+        assert!(!cloned.unlock("wrong"), "wrong password should fail");
+    }
+
+    // ─── Clone: Custom Name ──────────────────────────────
+
+    #[test]
+    fn test_clone_custom_name() {
+        let c = make_test_cluster();
+        let cloned = c.clone_with_options(&CloneOptions {
+            new_name: Some("Renamed Cluster".into()),
+            ..CloneOptions::default()
+        }).unwrap();
+        assert_eq!(cloned.name, "Renamed Cluster");
+        // Original unchanged
+        assert_eq!(c.name, "Test");
+    }
+
+    // ─── Merge: Both Empty ───────────────────────────────
+
+    #[test]
+    fn test_merge_empty_clusters() {
+        let mut target = Cluster::new("t".into(), "Target".into(), Visibility::Private);
+        let source = Cluster::new("s".into(), "Source".into(), Visibility::Private);
+        let result = target.merge_from(&source, &MergeStrategy::Skip);
+        assert_eq!(result.nodes_added, 0);
+        assert_eq!(result.fields_added, 0);
+        assert_eq!(result.edges_added, 0);
+    }
+
+    // ─── Merge: Skip Strategy ────────────────────────────
+
+    #[test]
+    fn test_merge_conflict_skip() {
+        let mut target = make_test_cluster();
+        let source = make_test_cluster();
+        let result = target.merge_from(&source, &MergeStrategy::Skip);
+        assert_eq!(result.nodes_skipped, 2, "n1, n2 should be skipped");
+        assert_eq!(result.fields_skipped, 1, "f1 should be skipped");
+        assert_eq!(result.nodes_added, 0);
+    }
+
+    // ─── Merge: Overwrite Strategy ───────────────────────
+
+    #[test]
+    fn test_merge_conflict_overwrite() {
+        let mut target = make_test_cluster();
+        let source = make_test_cluster();
+        let result = target.merge_from(&source, &MergeStrategy::Overwrite);
+        assert_eq!(result.nodes_overwritten, 2, "n1, n2 should be overwritten");
+        assert_eq!(result.fields_overwritten, 1, "f1 should be overwritten");
+    }
+
+    // ─── Merge: Rename Strategy ──────────────────────────
+
+    #[test]
+    fn test_merge_conflict_rename() {
+        let mut target = make_test_cluster();
+        let source = make_test_cluster();
+        let result = target.merge_from(&source, &MergeStrategy::Rename { suffix: "_v2".into() });
+        assert_eq!(result.nodes_added, 2, "n1_v2, n2_v2 should be added");
+        assert!(target.nodes.contains_key("n1_v2"), "renamed node n1_v2 should exist");
+        assert!(target.nodes.contains_key("n2_v2"), "renamed node n2_v2 should exist");
+        assert!(target.fields.contains_key("f1_v2"), "renamed field f1_v2 should exist");
+        // Originals still present
+        assert!(target.nodes.contains_key("n1"));
+        assert!(target.fields.contains_key("f1"));
+    }
+
+    // ─── Password: Empty ─────────────────────────────────
+
+    #[test]
+    fn test_password_empty_string() {
+        let mut c = make_test_cluster();
+        assert!(c.set_password("").is_ok(), "empty password should be accepted");
+        assert!(c.unlock(""), "should unlock with empty password");
+    }
+
+    // ─── Password: Special Characters ────────────────────
+
+    #[test]
+    fn test_password_special_chars() {
+        let mut c = make_test_cluster();
+        let special = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
+        assert!(c.set_password(special).is_ok(), "special char password should be accepted");
+        assert!(c.unlock(special), "should unlock with special char password");
+    }
+
+    // ─── Password: Long ──────────────────────────────────
+
+    #[test]
+    fn test_password_long() {
+        let mut c = make_test_cluster();
+        let long = "a".repeat(1000);
+        assert!(c.set_password(&long).is_ok(), "long password should be accepted");
+        assert!(c.unlock(&long), "should unlock with long password");
+    }
+
+    // ─── Password: Lifecycle ─────────────────────────────
+
+    #[test]
+    fn test_password_lifecycle() {
+        let mut c = make_test_cluster();
+        // Initially no password
+        assert!(c.password_hash.is_none(), "initially no password hash");
+        assert!(c.unlock("anything"), "no password means always unlocked");
+
+        // Set password
+        c.set_password("mypassword").unwrap();
+        assert!(c.password_hash.is_some(), "password hash should be set");
+        assert!(c.unlock("mypassword"), "correct password should unlock");
+        assert!(!c.unlock("wrongpassword"), "wrong password should fail");
+
+        // Change password
+        c.change_password("mypassword", "newpassword").unwrap();
+        assert!(c.unlock("newpassword"), "new password should work");
+        assert!(!c.unlock("mypassword"), "old password should no longer work");
+
+        // Clear password
+        c.clear_password();
+        assert!(c.password_hash.is_none(), "password hash should be cleared");
+        assert!(c.unlock("anything"), "no password means always unlocked");
+    }
+
+    // ─── Visibility ──────────────────────────────────────
+
+    #[test]
+    fn test_visibility_change() {
+        let mut c = make_test_cluster();
+        assert_eq!(c.visibility, Visibility::Private);
+        c.set_visibility(Visibility::Public);
+        assert_eq!(c.visibility, Visibility::Public);
+        c.set_visibility(Visibility::Organization);
+        assert_eq!(c.visibility, Visibility::Organization);
+    }
+}

@@ -175,3 +175,188 @@ impl Default for GraphEngine {
         Self::new()
     }
 }
+
+// ─── Tests ──────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_graph() {
+        let g = GraphEngine::new();
+        assert_eq!(g.node_count(), 0);
+        assert_eq!(g.edge_count(), 0);
+        assert!(g.all_nodes().is_empty());
+        assert!(g.all_edges().is_empty());
+    }
+
+    #[test]
+    fn test_single_node() {
+        let mut g = GraphEngine::new();
+        let node = Node {
+            id: "test-node".into(),
+            type_: "test".into(),
+            label: "Test Node".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
+        g.add_node(node);
+        assert_eq!(g.node_count(), 1);
+        assert!(g.get_node("test-node").is_some());
+        let (nodes, _) = g.traverse(&"test-node".into(), None, false);
+        assert!(nodes.is_empty());
+    }
+
+    #[test]
+    fn test_duplicate_edge() {
+        let mut g = GraphEngine::new();
+        let n1 = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
+        let n2 = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
+        g.add_node(n1);
+        g.add_node(n2);
+
+        let e1 = Edge {
+            id: "e1".into(), source: "a".into(), target: "b".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: "first".into(),
+            target_field: None, meta: None,
+        };
+        let e2 = Edge {
+            id: "e2".into(), source: "a".into(), target: "b".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: "duplicate".into(),
+            target_field: None, meta: None,
+        };
+        g.add_edge(e1);
+        g.add_edge(e2);
+
+        // Both edges should be stored (different IDs)
+        assert_eq!(g.edge_count(), 2);
+        // Both should appear in outgoing
+        let outgoing = g.outgoing_edges(&"a".into(), Some("depends_on"));
+        assert_eq!(outgoing.len(), 2);
+    }
+
+    #[test]
+    fn test_remove_nonexistent_node() {
+        let mut g = GraphEngine::new();
+        // Should not panic
+        g.remove_node(&"nonexistent".into());
+        assert_eq!(g.node_count(), 0);
+    }
+
+    #[test]
+    fn test_remove_node_cascade() {
+        let mut g = GraphEngine::new();
+        let n1 = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
+        let n2 = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
+        let n3 = Node { id: "c".into(), type_: "t".into(), label: "C".into(), status: NodeStatus::Active, meta: None };
+        g.add_node(n1);
+        g.add_node(n2);
+        g.add_node(n3);
+
+        g.add_edge(Edge {
+            id: "e1".into(), source: "a".into(), target: "b".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
+            target_field: None, meta: None,
+        });
+        g.add_edge(Edge {
+            id: "e2".into(), source: "b".into(), target: "c".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
+            target_field: None, meta: None,
+        });
+
+        assert_eq!(g.edge_count(), 2);
+        g.remove_node(&"b".into());
+        assert_eq!(g.node_count(), 2); // a and c remain
+        assert_eq!(g.edge_count(), 0); // all edges referencing b are removed
+        assert!(g.get_node("a").is_some());
+        assert!(g.get_node("c").is_some());
+    }
+
+    #[test]
+    fn test_batch_operations() {
+        let mut g = GraphEngine::new();
+        // Add 100 nodes
+        for i in 0..100 {
+            g.add_node(Node {
+                id: format!("node-{}", i),
+                type_: "test".into(),
+                label: format!("Node {}", i),
+                status: NodeStatus::Active,
+                meta: None,
+            });
+        }
+        assert_eq!(g.node_count(), 100);
+
+        // Add 100 edges forming a chain
+        for i in 0..99 {
+            g.add_edge(Edge {
+                id: format!("edge-{}", i),
+                source: format!("node-{}", i),
+                target: format!("node-{}", i + 1),
+                relation: Relation::DependsOn,
+                weight: 1.0,
+                description: "chain".into(),
+                target_field: None,
+                meta: None,
+            });
+        }
+        assert_eq!(g.edge_count(), 99);
+
+        // Verify chain by traversing from node-0
+        let (nodes, _) = g.traverse(&"node-0".into(), None, false);
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0], "node-1");
+    }
+
+    #[test]
+    fn test_outgoing_incoming_edges() {
+        let mut g = GraphEngine::new();
+        let a = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
+        let b = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
+        g.add_node(a);
+        g.add_node(b);
+
+        g.add_edge(Edge {
+            id: "e1".into(), source: "a".into(), target: "b".into(),
+            relation: Relation::Produces, weight: 1.0, description: "".into(),
+            target_field: None, meta: None,
+        });
+
+        let outgoing = g.outgoing_edges(&"a".into(), None);
+        assert_eq!(outgoing.len(), 1);
+        let incoming = g.incoming_edges(&"b".into(), None);
+        assert_eq!(incoming.len(), 1);
+
+        // Filter by relation
+        let filtered = g.outgoing_edges(&"a".into(), Some("produces"));
+        assert_eq!(filtered.len(), 1);
+        let no_match = g.outgoing_edges(&"a".into(), Some("consumes"));
+        assert_eq!(no_match.len(), 0);
+    }
+
+    #[test]
+    fn test_to_json_and_from_json() {
+        let mut g = GraphEngine::new();
+        g.add_node(Node {
+            id: "n1".into(), type_: "t".into(), label: "N1".into(),
+            status: NodeStatus::Active, meta: None,
+        });
+        g.add_node(Node {
+            id: "n2".into(), type_: "t".into(), label: "N2".into(),
+            status: NodeStatus::Active, meta: None,
+        });
+        g.add_edge(Edge {
+            id: "e1".into(), source: "n1".into(), target: "n2".into(),
+            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
+            target_field: None, meta: None,
+        });
+
+        let json = g.to_json();
+        let restored = GraphEngine::from_json(&json).expect("from_json should succeed");
+        assert_eq!(restored.node_count(), 2);
+        assert_eq!(restored.edge_count(), 1);
+        assert!(restored.get_node("n1").is_some());
+        assert!(restored.get_node("n2").is_some());
+    }
+}

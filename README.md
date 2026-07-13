@@ -1,433 +1,137 @@
-<div align="center">
-  <img src="assets/statuz-logo.svg" alt="Statuz Logo" width="120" />
-</div>
-
-<p align="center">
-  <a href="https://www.npmjs.com/package/@statuz/statuz">
-    <img alt="npm" src="https://img.shields.io/npm/v/@statuz/statuz?style=flat-square&color=blue">
-  </a>
-  <a href="https://www.npmjs.com/package/@statuz/statuz">
-    <img alt="npm" src="https://img.shields.io/npm/dt/@statuz/statuz?style=flat-square&color=green">
-  </a>
-  <a href="https://open-vsx.org/extension/statuz/statuz-vscode">
-    <img alt="Open VSX" src="https://img.shields.io/badge/Open%20VSX-v0.5.0-blue?style=flat-square">
-  </a>
-  <a href="https://github.com/statuz-protocol/statuz/blob/main/LICENSE">
-    <img alt="GitHub license" src="https://img.shields.io/github/license/statuz-protocol/statuz?style=flat-square&color=orange">
-  </a>
-</p>
-
 # Statuz
 
-> **Memory lets an AI remember the past. Statuz lets an AI understand where it stands, what matters now, and when human direction must be renewed.**
+**A graph engine for AI project ecosystems.**
 
-**Statuz is a Runtime that keeps users, agents, projects, and niches in continuous Reality Synchronization.**
+Statuz is an in-memory graph engine that computes the topology of AI project ecosystems. It answers three fundamental questions: What does this connect to? If this changes, who is affected? How do I get there?
 
-Statuz is the **situated alignment ecosystem for AI agents and their human principals**. It provides an open, verifiable, extensible stack for expressing:
-- who the agent is and what role it is playing;
-- what the agent is currently doing;
-- what progress has already been made;
-- **what other agents, projects, files, tools, users, products, or organizations are related;
-- **where the agent stands in the ecosystem;
-- **what changes in the environment affect the agent;
-- when the agent needs to request human direction for strategic decisions.
-
-Statuz is not another long-term memory database. It is the missing **situated alignment layer** between memory, tools, skills, projects, and multi-agent systems.
-
----
-
-## 🌟 Our Secret Weapon: Ecological Positioning (niche)
-
-**This is what makes Statuz unique.**
-
-Most agent tools focus on "what to do next." Statuz focuses on **where you stand in relation to everything else.**
-
-```
-┌───────────────────────────────────────────────────────────────────┐
-│  Your Project Ecosystem                                          │
-│                                                                 │
-│  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐    │
-│  │  Project A   │ ◀──▶ │  Project B   │ ◀──▶ │  Project C   │    │
-│  │ (frontend)   │      │  (backend)   │      │  (shared lib)│    │
-│  └──────┬───────┘      └───────┬──────┘      └──────┬───────┘    │
-│         │                      │                     │            │
-│         └──────────────────────┼─────────────────────┘            │
-│                                │                                  │
-│                                ▼                                  │
-│                  ┌──────────────────────┐                        │
-│                  │  Statuz niche Layer  │                        │
-│                  │  - Who's related?    │                        │
-│                  │  - How do they connect?│                       │
-│                  │  - What's changed?   │                        │
-│                  └──────────────────────┘                        │
-└───────────────────────────────────────────────────────────────────┘
-```
-
-**The niche layer declares:**
-- 🎯 **Position** (who I am, what I do, what I don't do)
-- 🌐 **Boundaries** (clear does/does_not separation)
-- 🎲 **Strategic bets** (key architectural decisions)
-- 📊 **Success signals** (how to measure alignment)
-
-**The calibration layer monitors:**
-- 🔗 **Project relationships** (what depends on what, who collaborates with whom)
-- 🔄 **Environment changes** (what's shifting in the ecosystem)
-- 📊 **Impact assessment** (which changes actually affect this agent)
-- 🎯 **Drift detection** (declared vs. observed behavior)
-- ⚠️ **SYN triggers** (when to escalate to human)
-
----
-
-<p align="center">
-  <img src="https://img.shields.io/badge/🚀%20Get%20Started%20Now!-blue?style=for-the-badge" alt="Get Started Now!">
-</p>
-
----
-
-## ⚡ Quick Start (30 seconds)
-
-### Option 1: VS Code Extension (Recommended)
-
-Search for **"Statuz"** in the VS Code Marketplace or install from [Open VSX](https://open-vsx.org/extension/statuz/statuz-vscode).
-
-### Option 2: Install via npm
+## Quick Start
 
 ```bash
-npm install -g @statuz/statuz
+# Build from source
+cd crates/statuz-core
+cargo build --release
+
+# Initialize a cluster
+cargo run -- init -n "My Project" -v private
+
+# Save as .stz file
+cargo run -- save -o my-project.stz
+
+# Load and inspect
+cargo run -- load -p my-project.stz
+cargo run -- show -p my-project.stz
+
+# Verify integrity
+cargo run -- verify -p my-project.stz
+
+# Save with compression
+cargo run -- save -o my-project.stz --compress
+
+# Save with encryption
+cargo run -- save -o my-project.stz --encrypt --password "your-secret"
+
+# Run self-test
+cargo run -- self-test
+
+# Run unit tests
+cargo test
 ```
 
-Then use it:
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `init` | Create a new cluster |
+| `show` | Display cluster info (nodes, fields, bridges) |
+| `save` | Serialize cluster to `.stz` file |
+| `load` | Deserialize and inspect `.stz` file |
+| `verify` | Check `.stz` integrity without full deserialization |
+| `export` | Export cluster to human-readable JSON |
+| `clone` | Clone a cluster with rename/fresh options |
+| `merge` | Merge two clusters with conflict strategies |
+| `set-password` | Set/change/clear cluster password |
+| `set-visibility` | Change cluster visibility (Public/Private/Organization) |
+| `self-test` | Run 10-phase built-in verification |
+
+### Save Options
+
+| Flag | Description |
+|------|-------------|
+| `--compress` | Enable zstd compression (smaller files) |
+| `--encrypt` | Enable chacha20 encryption (requires `--password`) |
+| `--password` | Password for encryption |
+
+## Architecture
+
+```
+crates/statuz-core/
+├── graph/         ← In-memory adjacency list + graph algorithms
+│   ├── types.rs   ← Node, Edge, Relation type system
+│   ├── engine.rs  ← GraphEngine: add/remove/traverse/serialize
+│   └── query.rs   ← Three core queries: traverse, impact, path
+├── cluster/       ← Storage container + multi-field ecosystem
+│   ├── cluster.rs ← Cluster: centralized node registry, cross-field bridges
+│   ├── field.rs   ← Field: sub-graph within a cluster
+│   └── sharing.rs ← Clone, Merge, Password, Visibility
+├── storage/       ← Storage format (msgpack + blake3 + argon2 + zstd + chacha20)
+│   └── mod.rs     ← Ser/Des, hash ID, password verification, compression, encryption
+└── main.rs        ← CLI (11 commands + self-test)
+```
+
+## The Three Queries
+
+| Query | What it answers | Method |
+|-------|----------------|--------|
+| `traverse(from, relation?)` | "What does this connect to?" | Direct adjacency lookup |
+| `impact(nodeId)` | "If this changes, who's affected?" | Reverse BFS (blast radius) |
+| `path(from, to)` | "How do I get there?" | BFS shortest path |
+
+## Storage Format
+
+```
+[STZ\0][version][flags][salt][content...][blake3 hash]
+ 4 bytes  2 bytes  2 bytes  16 bytes  variable   32 bytes
+```
+
+- **Content-addressed**: ID = blake3(content) hex
+- **Compression**: zstd (level 3, enabled via `--compress`)
+- **Encryption**: chacha20 with argon2-derived key (enabled via `--encrypt`)
+- **Integrity**: blake3 hash verified on every load
+- **Backward compatible**: reads v0x0001 format (pre-encryption)
+
+## Development
 
 ```bash
-# Initialize
-statuz init --agent dev-agent --project my-ai-project
+# Build
+cargo build
 
-# Validate
-statuz validate .statuz/statuz.yaml
+# Run all tests
+cargo test
 
-# Resume
-statuz resume .statuz/statuz.yaml
+# Run self-test
+cargo run -- self-test
+
+# Code style check
+cargo clippy
+
+# Run end-to-end test
+./scripts/e2e.ps1
 ```
 
-### Option 3: Install only what you need
+## Design Principles
 
-```bash
-# Only CLI
-npm install -g @statuz/cli
+- **Memory-first**: All graph operations in-memory. Serialization is secondary.
+- **Zero non-serde dependencies**: Graph algorithms are pure `std`. Compression/encryption libraries are infrastructure, not business logic.
+- **Cluster is the only storage unit**: No YAML files, no individual node files.
+- **Offline sharing**: Clone + Merge via files, not network.
 
-# Only SDK
-npm install @statuz/sdk-ts
+## What Statuz is Not
 
-# Only MCP Server
-npm install @statuz/mcp-server
-```
+- Not a database
+- Not a protocol (not MCP, not A2A, not a transport protocol)
+- Not a YAML/Niche/SYN document system
+- Not a dashboard (UI is a separate concern)
 
----
+## License
 
-## 🏗️ Four-Layer Architecture
-
-Statuz defines four layers of situated alignment—building from concrete runtime to reusable topology:
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│  🔮  66 (Arrow Maps)                                           │
-│  Reusable, executable topologies — What is the invisible       │
-│  architecture that makes me possible?                          │
-├───────────────────────────────────────────────────────────────┤
-│  🔄  SYN (Human Governance & Strategic Synchronization)       │
-│  When must I request human direction? How do I present        │
-│  strategic options with evidence? How do I record decisions?  │
-├───────────────────────────────────────────────────────────────┤
-│  🌍  niche (Ecological Position & Long-Term Calibration)      │
-│  Where do I stand in the ecosystem? What changes affect me?   │
-│  Should I recalibrate? Who should I collaborate with?         │
-├───────────────────────────────────────────────────────────────┤
-│  ⚡  Statuz Core (Runtime Status)                             │
-│  Who am I? What am I doing? What progress have I made?        │
-│  What should happen next?                                     │
-└───────────────────────────────────────────────────────────────┘
-```
-
-| Layer | Purpose | Status |
-|-------|---------|--------|
-| **Statuz Core** | Compact runtime status + **Pending Actions** (agent ↔ human task tracking) | ✅ Stable (0.5.0) |
-| **niche** | Ecological position declaration | ⚙️ Working Draft (0.5.0) |
-| **Calibration** | Drift detection (declared vs. observed) | ⚙️ Working Draft (0.5.0) |
-| **SYN** | Human governance for strategic decisions | ⚙️ Working Draft (0.5.0) |
-| **66** | Topological abstraction with Arrow Maps | 🔧 Implementation (0.1.0-draft) |
-
----
-
-## 📖 Four Typical Use Cases (Including Our Secret Weapon)
-
-### Use Case 1: Core Runtime Status (Resume after Interruption)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Agent gets interrupted (context switch, model switch)   │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Statuz Core YAML file saved beside project     │    │
-│  │  - identity: dev-agent                          │    │
-│  │  - task: implementing API layer                 │    │
-│  │  - checkpoint: test failed at controller        │    │
-│  └─────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Resume: statuz resume → picks up exactly       │    │
-│  │  where it left off, with full context           │    │
-│  └─────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Use Case 2: niche Ecological Positioning (Our Secret Weapon 🌟)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  You have 3 related projects: Frontend ↔ Backend ↔ Shared Library  │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  VCS changes in Shared Library → niche signal emitted  │    │
-│  └─────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Assessment: "Shared Library API changed →       │    │
-│  │  affects both Frontend & Backend → impact 80%  │    │
-│  └─────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Calibration proposal generated with evidence   │    │
-│  └─────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  All agents in Frontend/Backend get notified, sync up  │    │
-│  └─────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Use Case 3: niche Multi-Project Relationships (The Real Power 🔥)
-
-```
-┌───────────────────────────────────────────────────────────────────┐
-│  Project Graph (e.g., MuseRock + Statuz + oasis-cli  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  Statuz tracks: "I'm used by MuseRock, depends on oasis-cli"│  │
-│  │  - statuz.yaml for statuz.yaml          │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  When oasis-cli changes → Statuz detects: "Affects MuseRock?" │  │
-│  │  because they use my validation features"  │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  Smart collaboration triggered → all related agents get calibrated  │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────┘
-```
-
-### Use Case 4: SYN Strategic Synchronization (Human Governance)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Threshold crossed → SYN request initiated               │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  VS Code Extension shows: "Strategic decision   │    │
-│  │  needed—boundaries, position, or authority"     │    │
-│  └─────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Human reviews evidence → makes decision        │    │
-│  └─────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Resolution recorded, accountability tracked    │    │
-│  └─────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🎯 The Core Idea (in one diagram)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Statuz in one sentence                    │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────┐  ┌──────────────┐  ┌───────────────────────┐  │
-│  │  Who am  │  │   Where am   │  │  When do I need       │  │
-│  │   I?     │  │     I?       │  │  human direction?     │  │
-│  └────┬─────┘  └───────┬──────┘  └───────────┬───────────┘  │
-│       │                │                      │               │
-│       v                v                      v               │
-│  ┌──────────┐  ┌──────────────┐  ┌───────────────────────┐  │
-│  │  Core    │  │    niche     │  │        SYN            │  │
-│  │          │  │              │  │                       │  │
-│  │  ⚡      │  │   🌍         │  │        🔄             │  │
-│  └──────────┘  └──────────────┘  └───────────────────────┘  │
-│                                                               │
-│                 = Complete Situated Alignment                 │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Statuz focuses on **six primitives** in the Core layer, **plus ecological relationship tracking:**
-
-| Primitive | Question answered |
-|---|---|
-| `identity` | Who am I? |
-| `role` | What am I responsible for? |
-| `goal` | What am I trying to achieve? |
-| `progress` | How far have I gone? |
-| `relations` | **What projects, agents, tools, users, and files are connected to this state?** |
-| `next_action` | What is the next most useful move? |
-
----
-
-## 🚫 What Statuz is NOT
-
-Statuz is **not**:
-- a vector database;
-- a replacement for MCP;
-- a replacement for Agent Skills;
-- a full project management system;
-- a chat transcript archive;
-- a knowledge graph pretending to be memory.
-
-Statuz is the compact runtime state that tells the agent **where it stands.**
-
----
-
-## 📦 The Statuz Ecosystem
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Statuz Ecosystem                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  📝  Protocol Layer                                   │  │
-│  │  - SPEC.md (Core specification)                      │  │
-│  │  - JSON Schemas (validation)                         │  │
-│  │  - niche & SYN schemas                                │  │
-│  └──────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  🛠️  Tool Layer                                       │  │
-│  │  - CLI (npm: @statuz/cli)                            │  │
-│  │  - TypeScript SDK (npm: @statuz/sdk-ts)              │  │
-│  │  - Python SDK (pip: coming soon)                     │  │
-│  │  - MCP Server (npm: @statuz/mcp-server)              │  │
-│  │  - VS Code Extension (Open VSX: statuz.statuz-vscode)│  │
-│  └──────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  📚  Knowledge Layer                                  │  │
-│  │  - Examples (single-agent, multi-agent, niche)       │  │
-│  │  - ADRs (architecture decisions)                     │  │
-│  │  - Best practices documentation                      │  │
-│  └──────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  🚀  Distribution Layer                               │  │
-│  │  - npm packages (published)                          │  │
-│  │  - Open VSX (published)                              │  │
-│  │  - VS Code Marketplace (coming soon)                 │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 📊 Repository Status
-
-### ✅ Statuz Core (0.5.0 - Stable)
-The core runtime status layer that answers: who am I, what am I doing, where am I, and what's next.
-
-**Current implementation:**
-- CLI 0.5.0 - `statuz init`, `statuz validate`, `statuz resume`
-- TypeScript SDK 0.5.0 - programmatic access to Statuz files
-- MCP Server 0.5.0 - Model Context Protocol integration
-- VS Code Extension 0.5.0 - in-editor validation and tree view
-
-### 🌟 Statuz niche (0.5.0 - Working Draft)
-**Our secret weapon!** The ecological positioning layer that declares: who I am, what I do, what I don't do, and what success looks like.
-
-**Status:** Working draft. Schemas and documentation are complete.
-
-### ⚙️ Statuz Calibration (0.5.0 - Working Draft)
-The drift detection layer that monitors the gap between declared niche and observed behavior. Answers: am I doing what I said I would do?
-
-**Status:** Working draft. Schemas and documentation are complete.
-
-### ⚙️ Statuz SYN (0.5.0 - Working Draft)
-The human governance interface for strategic synchronization requests when position, boundaries, or authority require renewal.
-
-**Status:** Working draft. Schemas and documentation are complete; VS Code webview tooling is available.
-
----
-
-## 💡 Example: A Statuz File
-
-```yaml
-statuz_version: "0.1"
-
-identity:
-  agent_name: dev-agent
-  project_name: MuseRock
-  organization: Oasis Company
-
-role:
-  name: implementation-assistant
-  responsibilities:
-    - implement features
-    - preserve existing architecture
-    - explain tradeoffs
-
-current_state:
-  stage: implementation
-  task: add Statuz Layer
-  status: in_progress
-  last_checkpoint: designed the first API shape
-  next_action: create statuz service module
-
-relations:
-  related_agents:
-    - doc-agent
-    - qa-agent
-  related_projects:
-    - statuz
-    - oasis-cli
-  related_files:
-    - apps/api/src/memory
-    - apps/web/src/stores
-
-rules:
-  should_not:
-    - overwrite the existing memory system
-    - interrupt the user during focus mode
-```
-
----
-
-## 🧭 Philosophy
-
-AI agents do not only need more context. They need better **self-location** and **ecological awareness.**
-
-A good agent should be able to say:
-> I am the coding assistant for this project. I am currently implementing the API layer. I stopped because a test failed. The related documentation agent should be notified. The next action is to inspect the controller contract. Also, I see that oasis-cli changed—does that affect what I'm doing?
-
-That sentence is Statuz.
-
----
-
-## 📚 Documentation Map
-
-| Document | Purpose |
-|----------|---------|
-| **[ROOT_README.md](ROOT_README.md)** | Repository overview with architecture and package status |
-| **[SPEC.md](SPEC.md)** | Core Protocol specification (Core, niche, SYN layers) |
-| **[ADAPTERS.md](ADAPTERS.md)** | External Adapters guide (CLI, SDK, MCP, VS Code, Cloud) |
-| **[CLAUDE_CODE_INTEGRATION.md](CLAUDE_CODE_INTEGRATION.md)** | Complete user journey for Claude Code agents |
-| **[ROADMAP.md](ROADMAP.md)** | Development plan and staged priorities |
-| **[examples/](examples/)** | Ready-to-use Statuz file templates |
-| **[docs/](docs/)** | Architecture decisions and smoke tests |
-| **[66-implementation/](66-implementation/)** | Topological layer (Arrow Maps) implementation |
-
----
-
-## 🤝 Contributors
-
-This project is maintained by:
-- **ceaserzhao** ([@zbbsdsb](https://github.com/zbbsdsb)) from **Oasis Company**
-
----
-
-## 📄 License
-
-Apache-2.0.
+MIT

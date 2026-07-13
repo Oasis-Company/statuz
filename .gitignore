@@ -10,8 +10,11 @@ coverage/
 .statuz/local.yaml
 .statuz/
 
-# Workspace files
+# Editor / Agent workspace files
 .trae/
+.claude/
+.agents/
+skills/
 
 # Python cache
 __pycache__/
