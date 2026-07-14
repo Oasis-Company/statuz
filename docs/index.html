@@ -1,18 +1,34 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function() {
+  var stored = localStorage.getItem('theme');
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var theme = stored || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
 <title>Statuz — A graph engine for AI project ecosystems</title>
-<meta name="description" content="Statuz is a graph engine that makes AI project topology computable — traverse, impact, and path queries on any relationship graph.">
-<meta property="og:title" content="Statuz — Graph Engine">
-<meta property="og:description" content="A graph engine for AI project ecosystems. Three queries. All topology.">
+<meta name="description" content="Statuz is a graph engine that makes AI project topology computable — traverse, impact, path, subgraph, and validate queries on any relationship graph. Pure Rust, no database.">
+<meta name="keywords" content="graph engine, project topology, Rust, dependency mapping, BFS, impact analysis, statuz, open source">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://statuz.dev/">
+<meta property="og:title" content="Statuz — Graph Engine for AI Project Ecosystems">
+<meta property="og:description" content="Five queries. All topology. Traverse, impact, path, subgraph, and validate — pure Rust, no database.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://statuz.dev/og-image.png">
-<meta name="theme-color" content="#0a0a0f">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta property="og:url" content="https://statuz.dev/">
+<!-- <meta property="og:image" content="https://statuz.dev/og-image.png"> --> <!-- TODO: uncomment after deployment -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Statuz — Graph Engine">
+<meta name="twitter:description" content="Five queries. All topology. A Rust graph engine for AI project ecosystems.">
+<meta name="theme-color" content="#0a0a0f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
+<link rel="sitemap" type="application/xml" href="/sitemap.xml">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<link rel="apple-touch-icon" href="assets/logo.svg">
 <style>
 /* ─── CSS Variables ──────────────────────────────────────── */
 :root {
@@ -35,9 +51,9 @@
   --amber-dim: #92400e;
   --grid: #1a1a28;
   --grid-light: #e0e0de;
-  --font-display: 'Instrument Serif', 'Lora', 'Georgia', serif;
-  --font-body: 'DM Sans', 'Söhne', 'Helvetica Neue', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  --font-display: 'Georgia', 'Noto Serif CJK SC', serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'SF Mono', 'Noto Sans Mono', monospace;
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
@@ -86,6 +102,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
@@ -411,8 +428,10 @@ code, pre { font-family: var(--font-mono); }
   transition: opacity 0.6s ease-out, transform 0.6s ease-out, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .query-card:nth-child(1).visible { transition-delay: 0s; }
-.query-card:nth-child(2).visible { transition-delay: 0.15s; }
-.query-card:nth-child(3).visible { transition-delay: 0.3s; }
+.query-card:nth-child(2).visible { transition-delay: 0.1s; }
+.query-card:nth-child(3).visible { transition-delay: 0.2s; }
+.query-card:nth-child(4).visible { transition-delay: 0.3s; }
+.query-card:nth-child(5).visible { transition-delay: 0.4s; }
 .query-card:hover {
   border-color: var(--brand);
   box-shadow: var(--glow-brand);
@@ -782,7 +801,7 @@ code, pre { font-family: var(--font-mono); }
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
       </button>
-      <a href="https://github.com/statuz" class="github-icon" aria-label="GitHub">
+      <a href="https://github.com/statuz/statuz" class="github-icon" aria-label="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
         </svg>
@@ -826,10 +845,10 @@ code, pre { font-family: var(--font-mono); }
       </svg>
     </div>
     <h1>A graph engine for<br><em>AI project ecosystems</em></h1>
-    <p>Three queries — traverse, impact, path — answer every topological question about your project. No database. No protocol. Just a Rust engine and a <code>.stz</code> file.</p>
+    <p>Five queries — traverse, impact, path, subgraph, validate — answer every topological question about your project. No database. No protocol. Just a Rust engine and a <code>.stz</code> file.</p>
     <div class="hero-cta">
       <a href="#cli" class="btn btn-primary">Get started</a>
-      <a href="https://github.com/statuz" class="btn btn-secondary">View on GitHub</a>
+      <a href="https://github.com/statuz/statuz" class="btn btn-secondary">View on GitHub</a>
     </div>
   </div>
 </section>
@@ -913,8 +932,11 @@ code, pre { font-family: var(--font-mono); }
 <!-- ══════════════════════════════════════════════════════════ -->
 <section class="section" id="solution">
   <div class="container">
-    <h2 class="section-title">Three queries.<br>All topology.</h2>
-    <p class="section-subtitle">Statuz distills project topology into three operations. That's all you need to map, trace, and reason about any system.</p>
+    <h2 class="section-title">Five queries.<br>All topology.</h2>
+    <p class="section-subtitle">Statuz distills project topology into five operations. That's all you need to map, trace, reason, extract, and validate any system.</p>
+    <p class="section-subtitle" style="margin-top: 8px; font-size: 0.875rem; max-width: 100%;">
+      Supports <code>--compress</code> (zstd, level 3) and <code>--encrypt</code> (chacha20 + argon2) for storage.
+    </p>
     <div class="solution-cards">
       <!-- Traverse Card -->
       <div class="query-card">
@@ -1010,6 +1032,77 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"api-gate
 <span class="code-comment">// → { length: 2, path: ["api-gateway", "orchestrator", "db-primary"] }</span></pre>
         </div>
       </div>
+      <!-- Subgraph Card -->
+      <div class="query-card">
+        <div class="query-icon">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="5" r="2"/>
+            <circle cx="4" cy="15" r="2"/>
+            <circle cx="16" cy="15" r="2"/>
+            <path d="M10 7v2"/>
+            <path d="M4 15H2M18 15h-2"/>
+          </svg>
+        </div>
+        <h3>subgraph</h3>
+        <p class="query-desc">Extract a sub-ecosystem from any seed node. BFS extraction with configurable depth and relation filter.</p>
+        <div class="query-micro-svg">
+          <svg viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="8" r="4" fill="var(--brand)"/>
+            <circle cx="20" cy="32" r="3" fill="var(--amber)"/>
+            <circle cx="60" cy="32" r="3" fill="var(--amber)"/>
+            <circle cx="10" cy="12" r="3" fill="var(--line)" stroke-dasharray="2 2"/>
+            <circle cx="70" cy="12" r="3" fill="var(--line)" stroke-dasharray="2 2"/>
+            <line x1="40" y1="8" x2="20" y2="32" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#sg-arrow)"/>
+            <line x1="40" y1="8" x2="60" y2="32" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#sg-arrow)"/>
+            <line x1="40" y1="8" x2="10" y2="12" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 2"/>
+            <line x1="40" y1="8" x2="70" y2="12" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 2"/>
+            <rect x="12" y="4" width="56" height="32" rx="8" stroke="var(--brand)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+            <defs>
+              <marker id="sg-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="var(--amber)"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+        <div class="query-code">
+          <pre><span class="code-comment">// subgraph</span>
+graph.<span class="code-keyword">subgraph</span>([<span class="code-string">"api-gateway"</span>], { depth: 2 })
+<span class="code-comment">// → { nodes: [api-gateway, auth, orchestrator, ...],
+  //     edges: [...] }</span></pre>
+        </div>
+      </div>
+      <!-- Validate Card -->
+      <div class="query-card">
+        <div class="query-icon">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </div>
+        <h3>validate</h3>
+        <p class="query-desc">Check the graph for structural consistency. Detect orphan edges, dangling references, and integrity issues.</p>
+        <div class="query-micro-svg">
+          <svg viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="3" fill="var(--brand)"/>
+            <circle cx="40" cy="10" r="3" fill="var(--brand)"/>
+            <circle cx="40" cy="30" r="3" fill="var(--brand)"/>
+            <circle cx="60" cy="20" r="3" fill="var(--brand)"/>
+            <line x1="20" y1="20" x2="40" y2="10" stroke="var(--brand)" stroke-width="1.5"/>
+            <line x1="20" y1="20" x2="40" y2="30" stroke="var(--brand)" stroke-width="1.5"/>
+            <line x1="40" y1="10" x2="60" y2="20" stroke="var(--brand)" stroke-width="1.5"/>
+            <line x1="40" y1="30" x2="60" y2="20" stroke="var(--brand)" stroke-width="1.5"/>
+            <circle cx="70" cy="8" r="2" fill="var(--amber)" opacity="0.5"/>
+            <line x1="68" y1="6" x2="72" y2="10" stroke="var(--amber)" stroke-width="1" opacity="0.5"/>
+            <line x1="72" y1="6" x2="68" y2="10" stroke="var(--amber)" stroke-width="1" opacity="0.5"/>
+            <text x="40" y="38" text-anchor="middle" fill="var(--text-secondary)" font-family="var(--font-mono)" font-size="7">is_valid: true</text>
+          </svg>
+        </div>
+        <div class="query-code">
+          <pre><span class="code-comment">// validate</span>
+graph.<span class="code-keyword">validate</span>()
+<span class="code-comment">// → { is_valid: true, issues: [] }</span></pre>
+        </div>
+      </div>
     </div>
     <div class="solution-full-graph">
       <h3>Full topology example</h3>
@@ -1037,6 +1130,18 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"api-gate
           </marker>
         </defs>
       </svg>
+    </div>
+    <div class="solution-full-graph" style="margin-top: 16px; padding: var(--space-20) var(--space-32);">
+      <h3 style="font-size: 1rem;">Plus: Cluster <code style="font-family: var(--font-mono); color: var(--brand);">diff</code></h3>
+      <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5; margin-top: var(--space-8);">
+        Compare two clusters side-by-side. Detect added, removed, and changed nodes, edges, and fields. Essential for code review and change audit.
+      </p>
+      <div class="query-code" style="margin-top: var(--space-12);">
+        <pre><span class="code-comment">// diff</span>
+cluster.<span class="code-keyword">diff</span>(&amp;modified_cluster)
+<span class="code-comment">// → { added_nodes: [...], removed_nodes: [...],
+//     changed_nodes: [...], ... }</span></pre>
+      </div>
     </div>
   </div>
 </section>
@@ -1147,42 +1252,48 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"api-gate
         <h3><em>Bridge</em> &mdash; cross-field communication</h3>
         <p>Bidirectional edges connecting nodes across fields. No duplication.</p>
       </div>
-      <!-- Three Queries -->
+      <!-- Five Queries -->
       <div class="concept-card">
         <div class="concept-visual">
           <svg viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <g transform="translate(25, 25)">
-              <circle cx="0" cy="0" r="3" fill="var(--brand)"/>
-              <circle cx="25" cy="0" r="3" fill="var(--brand)"/>
-              <circle cx="12" cy="25" r="3" fill="var(--brand)"/>
-              <line x1="0" y1="0" x2="25" y2="0" stroke="var(--line)" stroke-width="1.5" marker-end="url(#hw-q-arrow)"/>
-              <line x1="0" y1="0" x2="12" y2="25" stroke="var(--line)" stroke-width="1.5" marker-end="url(#hw-q-arrow)"/>
-            </g>
-            <text x="50" y="85" text-anchor="middle" fill="var(--text-secondary)" font-family="var(--font-mono)" font-size="10">traverse</text>
-            <g transform="translate(85, 20)">
-              <path d="M8 2L0 18h16L8 2Z" fill="var(--amber)" fill-opacity="0.3"/>
-              <path d="M8 2L0 18h16L8 2Z" stroke="var(--amber)" stroke-width="1.5" stroke-linejoin="round"/>
-              <line x1="8" y1="8" x2="8" y2="13" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="8" cy="16" r="1.5" fill="var(--amber)"/>
-            </g>
-            <text x="100" y="85" text-anchor="middle" fill="var(--text-secondary)" font-family="var(--font-mono)" font-size="10">impact</text>
-            <g transform="translate(140, 22)">
-              <circle cx="0" cy="25" r="3" fill="var(--brand)"/>
-              <circle cx="10" cy="15" r="3" fill="var(--brand)"/>
-              <circle cx="20" cy="25" r="3" fill="var(--brand)"/>
-              <circle cx="30" cy="5" r="3" fill="var(--brand)"/>
-              <polyline points="0,25 10,15 20,25 30,5" stroke="var(--brand)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
-            </g>
-            <text x="150" y="85" text-anchor="middle" fill="var(--text-secondary)" font-family="var(--font-mono)" font-size="10">path</text>
+            <text x="10" y="20" fill="var(--brand)" font-family="var(--font-mono)" font-size="8">traverse</text>
+            <text x="10" y="38" fill="var(--amber)" font-family="var(--font-mono)" font-size="8">impact</text>
+            <text x="10" y="56" fill="var(--brand)" font-family="var(--font-mono)" font-size="8">path</text>
+            <text x="10" y="74" fill="var(--amber)" font-family="var(--font-mono)" font-size="8">subgraph</text>
+            <text x="10" y="92" fill="var(--text-secondary)" font-family="var(--font-mono)" font-size="8">validate</text>
+            <line x1="56" y1="10" x2="56" y2="95" stroke="var(--line)" stroke-width="0.5"/>
+            <circle cx="90" cy="20" r="4" fill="var(--brand)"/>
+            <circle cx="130" cy="20" r="4" fill="var(--line)"/>
+            <line x1="94" y1="20" x2="126" y2="20" stroke="var(--brand)" stroke-width="1.5" marker-end="url(#fq-arrow)"/>
+            <circle cx="110" cy="38" r="6" fill="var(--amber)" fill-opacity="0.3" stroke="var(--amber)" stroke-width="1.5"/>
+            <circle cx="90" cy="38" r="3" fill="var(--line)"/>
+            <circle cx="130" cy="38" r="3" fill="var(--line)"/>
+            <line x1="96" y1="38" x2="104" y2="38" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#fq-arrow-amber)"/>
+            <line x1="116" y1="38" x2="127" y2="38" stroke="var(--amber)" stroke-width="1" stroke-dasharray="2 2"/>
+            <circle cx="90" cy="56" r="3" fill="var(--brand)"/>
+            <circle cx="110" cy="56" r="3" fill="var(--brand)"/>
+            <circle cx="130" cy="56" r="3" fill="var(--brand)"/>
+            <polyline points="90,56 110,56 130,56" stroke="var(--brand)" stroke-width="1.5" fill="none"/>
+            <circle cx="90" cy="74" r="3" fill="var(--amber)"/>
+            <circle cx="120" cy="70" r="3" fill="var(--amber)"/>
+            <circle cx="150" cy="74" r="3" fill="var(--amber)"/>
+            <line x1="90" y1="74" x2="120" y2="70" stroke="var(--amber)" stroke-width="1"/>
+            <line x1="120" y1="70" x2="150" y2="74" stroke="var(--amber)" stroke-width="1"/>
+            <text x="70" y="92" text-anchor="middle" fill="var(--text-secondary)" font-family="var(--font-mono)" font-size="7">subgraph</text>
+            <circle cx="170" cy="88" r="8" fill="none" stroke="var(--text-secondary)" stroke-width="1" stroke-dasharray="3 2"/>
+            <text x="170" y="93" text-anchor="middle" fill="var(--text-secondary)" font-family="var(--font-mono)" font-size="8">✓</text>
             <defs>
-              <marker id="hw-q-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto">
-                <path d="M0,0 L10,5 L0,10 Z" fill="var(--line)"/>
+              <marker id="fq-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="var(--brand)"/>
+              </marker>
+              <marker id="fq-arrow-amber" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="var(--amber)"/>
               </marker>
             </defs>
           </svg>
         </div>
-        <h3><em>Three Queries</em> &mdash; all topology</h3>
-        <p>Traverse, impact, path. Three operations cover every graph question.</p>
+        <h3><em>Five Queries</em> &mdash; all topology</h3>
+        <p>Traverse, impact, path, subgraph, validate. Five operations cover every graph question.</p>
       </div>
     </div>
   </div>
@@ -1310,8 +1421,8 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"ceo"</sp
   <h2>Start building your topology today</h2>
   <p>One command. No dependencies. Pure Rust.</p>
   <div class="hero-cta">
-    <a href="#" class="btn btn-primary">Install via Cargo</a>
-    <a href="https://github.com/statuz" class="btn btn-secondary">View on GitHub</a>
+    <a href="https://crates.io/crates/statuz-core" class="btn btn-primary">Install via Cargo</a>
+    <a href="https://github.com/statuz/statuz" class="btn btn-secondary">View on GitHub</a>
   </div>
 </section>
 
@@ -1337,13 +1448,13 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"ceo"</sp
     </div>
     <div class="footer-col">
       <h4>Resources</h4>
-      <a href="https://github.com/statuz">GitHub</a>
-      <a href="#">Docs</a>
+      <a href="https://github.com/statuz/statuz">GitHub</a>
+      <a href="https://github.com/statuz/statuz/wiki">Docs</a>
     </div>
     <div class="footer-col">
       <h4>Connect</h4>
-      <a href="#">Twitter</a>
-      <a href="#">Email</a>
+      <a href="https://x.com/statuz">Twitter</a>
+      <a href="mailto:hello@statuz.dev">Email</a>
     </div>
   </div>
   <div class="footer-bottom">
@@ -1358,8 +1469,6 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"ceo"</sp
   const html = document.documentElement;
   const toggle = document.getElementById('themeToggle');
   const icon = document.getElementById('themeIcon');
-  const stored = localStorage.getItem('theme');
-  if (stored) html.setAttribute('data-theme', stored);
 
   function updateIcon() {
     const isDark = html.getAttribute('data-theme') !== 'light';
@@ -1394,6 +1503,10 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"ceo"</sp
 
 /* ─── Scroll Reveal (IntersectionObserver) ──────────────── */
 (function() {
+  if (typeof IntersectionObserver === 'undefined') {
+    document.querySelectorAll('.query-card').forEach(function(el) { el.classList.add('visible'); });
+    return;
+  }
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -1406,25 +1519,33 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"ceo"</sp
   document.querySelectorAll('.query-card').forEach(el => observer.observe(el));
 })();
 
+/* ─── CLI Typewriter Data ──────────────────────────────── */
+const CLI_LINES = [
+  { text: 'statuz init -n "My Project" -v private', cls: 'cli-prompt' },
+  { text: 'Cluster \'My Project\' initialized', cls: 'cli-success' },
+  { text: '   ID: cluster-a1b2c3d4', cls: 'cli-info' },
+  { text: '', cls: '' },
+  { text: 'statuz save -o my-project.stz', cls: 'cli-prompt' },
+  { text: 'Cluster saved to \'my-project.stz\' (2048 bytes)', cls: 'cli-success' },
+  { text: '', cls: '' },
+  { text: 'statuz save -o project-compressed.stz --compress', cls: 'cli-prompt' },
+  { text: 'Cluster saved with zstd compression (1024 bytes, 50% smaller)', cls: 'cli-success' },
+  { text: '', cls: '' },
+  { text: 'statuz save -o project-secure.stz --encrypt --password mypass', cls: 'cli-prompt' },
+  { text: 'Cluster saved with chacha20 encryption (password protected)', cls: 'cli-success' },
+  { text: '', cls: '' },
+  { text: 'statuz self-test', cls: 'cli-prompt' },
+  { text: 'Phase 1: Build Cluster', cls: 'cli-output' },
+  { text: '  Nodes: 7  |  Fields: 2  |  Bridges: 1', cls: 'cli-info' },
+  { text: 'Phase 10: Sharing Mechanism', cls: 'cli-output' },
+  { text: 'Phase 11: Subgraph, Validate, Diff', cls: 'cli-output' },
+  { text: 'All 11 phases passed.', cls: 'cli-success' },
+];
+
 /* ─── CLI Typewriter ────────────────────────────────────── */
 (function() {
   const cliBody = document.querySelector('.cli-body');
   if (!cliBody) return;
-
-  const lines = [
-    { text: 'statuz init -n "My Project" -v private', cls: 'cli-prompt' },
-    { text: 'Cluster \'My Project\' initialized', cls: 'cli-success' },
-    { text: '   ID: cluster-a1b2c3d4', cls: 'cli-info' },
-    { text: '', cls: '' },
-    { text: 'statuz save -o my-project.stz', cls: 'cli-prompt' },
-    { text: 'Cluster saved to \'my-project.stz\' (2048 bytes)', cls: 'cli-success' },
-    { text: '', cls: '' },
-    { text: 'statuz self-test', cls: 'cli-prompt' },
-    { text: 'Phase 1: Build Cluster', cls: 'cli-output' },
-    { text: '  Nodes: 7  |  Fields: 2  |  Bridges: 1', cls: 'cli-info' },
-    { text: 'Phase 10: Sharing Mechanism', cls: 'cli-output' },
-    { text: 'All 10 phases passed.', cls: 'cli-success' },
-  ];
 
   let currentIndex = 0;
   let started = false;
@@ -1442,11 +1563,11 @@ graph.<span class="code-keyword">path</span>(<span class="code-string">"ceo"</sp
   lineObserver.observe(cliBody);
 
   function typeNextLine() {
-    if (currentIndex >= lines.length) {
+    if (currentIndex >= CLI_LINES.length) {
       cliBody.insertAdjacentHTML('beforeend', '<span class="cli-prompt cli-cursor">$ </span>');
       return;
     }
-    const line = lines[currentIndex];
+    const line = CLI_LINES[currentIndex];
     const el = document.createElement('div');
     el.className = 'cli-line';
     el.innerHTML = line.cls ? `<span class="${line.cls}">${line.text}</span>` : '&nbsp;';
@@ -1466,6 +1587,33 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     document.querySelector(id)?.scrollIntoView({ behavior: 'smooth' });
   });
 });
+
+/* ─── Active Nav Link (aria-current) ────────────────────── */
+(function() {
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+
+  function updateActiveLink() {
+    let current = '';
+    sections.forEach(section => {
+      const top = section.offsetTop - 100;
+      const bottom = top + section.offsetHeight;
+      if (window.scrollY >= top && window.scrollY < bottom) {
+        current = section.id;
+      }
+    });
+    navLinks.forEach(link => {
+      if (link.getAttribute('href') === '#' + current) {
+        link.setAttribute('aria-current', 'section');
+      } else {
+        link.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  window.addEventListener('scroll', updateActiveLink, { passive: true });
+  updateActiveLink();
+})();
 </script>
 </body>
 </html>

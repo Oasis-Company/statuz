@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://statuz.dev/sitemap.xml
