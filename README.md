@@ -21,6 +21,9 @@ cargo run -- save -o my-project.stz
 cargo run -- load -p my-project.stz
 cargo run -- show -p my-project.stz
 
+# Load an encrypted file (password required)
+cargo run -- load -p my-project.stz --password "your-secret"
+
 # Verify integrity
 cargo run -- verify -p my-project.stz
 
@@ -35,6 +38,12 @@ cargo run -- self-test
 
 # Run unit tests
 cargo test
+
+# Cross-field demo (2 fields + 1 bridge)
+cargo run --example cross_field
+
+# End-to-end workflow test (create → clone → merge → password)
+powershell -ExecutionPolicy Bypass -File scripts/e2e.ps1
 ```
 
 ## CLI Commands
@@ -51,7 +60,7 @@ cargo test
 | `merge` | Merge two clusters with conflict strategies |
 | `set-password` | Set/change/clear cluster password |
 | `set-visibility` | Change cluster visibility (Public/Private/Organization) |
-| `self-test` | Run 10-phase built-in verification |
+| `self-test` | Run 11-phase built-in verification |
 
 ### Save Options
 

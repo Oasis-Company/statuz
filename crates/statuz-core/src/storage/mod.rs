@@ -181,12 +181,12 @@ pub fn serialize_cluster_with_options(
     }
 
     // Step 3: optional encryption
-    let salt = if password.is_some() {
+    let salt = if let Some(pwd) = password {
         let mut s = [0u8; SALT_SIZE];
         use rand::RngCore;
         rand::rngs::OsRng.fill_bytes(&mut s);
         flags |= FLAG_ENCRYPTED;
-        content = encrypt_content(&content, password.unwrap(), &s)?;
+        content = encrypt_content(&content, pwd, &s)?;
         s
     } else {
         [0u8; SALT_SIZE] // zero salt when not encrypted
@@ -289,7 +289,7 @@ fn parse_header(data: &[u8]) -> Result<(u16, u16, usize, usize), StorageError> {
 
     // Read version
     let version = u16::from_le_bytes(data[4..6].try_into().unwrap());
-    if version < MIN_SUPPORTED_VERSION || version > CURRENT_VERSION {
+    if !(MIN_SUPPORTED_VERSION..=CURRENT_VERSION).contains(&version) {
         return Err(StorageError::UnsupportedVersion(version));
     }
 

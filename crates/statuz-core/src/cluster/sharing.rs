@@ -34,8 +34,10 @@ impl Default for CloneOptions {
 
 /// Strategy for handling ID conflicts during merge.
 #[derive(Debug, Clone, PartialEq)]
+#[derive(Default)]
 pub enum MergeStrategy {
     /// Skip conflicting items — keep existing, ignore incoming
+    #[default]
     Skip,
     /// Overwrite conflicting items — replace with incoming
     Overwrite,
@@ -45,11 +47,6 @@ pub enum MergeStrategy {
     MergeMeta,
 }
 
-impl Default for MergeStrategy {
-    fn default() -> Self {
-        Self::Skip
-    }
-}
 
 // ─── Merge Result ────────────────────────────────────────────
 
@@ -66,6 +63,12 @@ pub struct MergeResult {
     pub edges_skipped: usize,
     pub bridges_added: usize,
     pub warnings: Vec<String>,
+}
+
+impl Default for MergeResult {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MergeResult {

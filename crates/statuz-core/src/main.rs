@@ -670,10 +670,10 @@ fn build_test_cluster() -> Cluster {
     // Bridge: bidirectional connection between fields
     // orchestrator (system-arch) ↔ redis-cache (data-flow)
     let _ = cluster.add_bridge(
-        &"system-arch".to_string(),
-        &"data-flow".to_string(),
-        &"orchestrator".to_string(),
-        &"redis-cache".to_string(),
+        "system-arch",
+        "data-flow",
+        "orchestrator",
+        "redis-cache",
         "Orchestrator's Redis dependency crosses from Architecture to Data Flow view".to_string(),
         0.8,
     );
@@ -699,12 +699,12 @@ fn run_self_test() {
     // ─── Phase 2: Graph Engine Queries ─────────────────────────
     println!("\n━━━ Phase 2: Graph Engine Queries (Field: system-arch) ━━━");
 
-    let field = cluster.get_field(&"system-arch".to_string()).unwrap();
+    let field = cluster.get_field("system-arch").unwrap();
     let g = &field.graph;
 
     // Q1: traverse
     println!("\n  Q1: traverse(\"api-gateway\")");
-    let (nodes, _) = g.traverse(&"api-gateway".to_string(), None, false);
+    let (nodes, _) = g.traverse("api-gateway", None, false);
     println!("   api-gateway connects to {} nodes:", nodes.len());
     assert!(nodes.len() == 2, "api-gateway should connect to 2 nodes");
     for nid in &nodes {
@@ -721,7 +721,7 @@ fn run_self_test() {
         impact.affected.len()
     );
     assert!(
-        impact.affected.len() > 0,
+        !impact.affected.is_empty(),
         "orchestrator impact should affect nodes"
     );
     for nid in &impact.affected {
@@ -740,7 +740,7 @@ fn run_self_test() {
 
     // Q3: path
     println!("\n  Q3: path(\"api-gateway\", \"db-primary\")");
-    let path = g.path(&"api-gateway".to_string(), &"db-primary".to_string(), false);
+    let path = g.path("api-gateway", "db-primary", false);
     if path.exists {
         println!("   Path found ({} steps):", path.length);
         assert!(path.length > 0, "Path should have at least 1 step");
@@ -784,8 +784,8 @@ fn run_self_test() {
     println!("\n━━━ Phase 3: Cross-Field Bridge (Forward: system-arch → data-flow) ━━━");
     println!("\n  Cross-field traverse from orchestrator (system-arch → data-flow):");
     let cross = cluster.traverse_across_fields(
-        &"system-arch".to_string(),
-        &"orchestrator".to_string(),
+        "system-arch",
+        "orchestrator",
         None,
         2,
     );
@@ -806,8 +806,8 @@ fn run_self_test() {
     // ─── Phase 4: Bidirectional Bridge (Reverse: data-flow → system-arch) ────
     println!("\n━━━ Phase 4: Bidirectional Bridge (Reverse: data-flow → system-arch) ━━━");
     let cross_rev = cluster.traverse_across_fields(
-        &"data-flow".to_string(),
-        &"redis-cache".to_string(),
+        "data-flow",
+        "redis-cache",
         None,
         2,
     );
@@ -832,9 +832,9 @@ fn run_self_test() {
     println!("\n━━━ Phase 5: Cross-Field Path ━━━");
     println!("\n  Cross-field path: api-gateway → redis-cache");
     let cf_path = cluster.path_across_fields(
-        &"api-gateway".to_string(),
-        &"redis-cache".to_string(),
-        &"system-arch".to_string(),
+        "api-gateway",
+        "redis-cache",
+        "system-arch",
     );
     if cf_path.exists {
         println!(
@@ -876,7 +876,7 @@ fn run_self_test() {
 
     // ─── Phase 6: Cross-Field Impact ────────────────────────────
     println!("\n━━━ Phase 6: Cross-Field Impact ─━━");
-    let cf_impact = cluster.impact_across_fields(&"redis-cache".to_string());
+    let cf_impact = cluster.impact_across_fields("redis-cache");
     println!(
         "   If redis-cache changes, {} nodes affected:",
         cf_impact.affected.len()

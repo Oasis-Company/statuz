@@ -3,6 +3,13 @@ use crate::graph::types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 
+/// Mutable state shared across the cross-field BFS recursion.
+struct CrossFieldTraversal {
+    visited_fields: HashSet<FieldId>,
+    visited_nodes: HashSet<NodeId>,
+    result: HashMap<FieldId, (Vec<NodeId>, Vec<Edge>)>,
+}
+
 /// Visibility of a Cluster
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Visibility {
@@ -239,24 +246,18 @@ impl Cluster {
         relation: Option<&str>,
         max_depth: usize,
     ) -> HashMap<FieldId, (Vec<NodeId>, Vec<Edge>)> {
-        let mut result: HashMap<FieldId, (Vec<NodeId>, Vec<Edge>)> = HashMap::new();
-        let mut visited_fields = HashSet::new();
-        let mut visited_nodes = HashSet::new();
+        let mut traversal = CrossFieldTraversal {
+            visited_fields: HashSet::new(),
+            visited_nodes: HashSet::new(),
+            result: HashMap::new(),
+        };
 
-        self._traverse_across(
-            start_field,
-            from_node,
-            relation,
-            max_depth,
-            0,
-            &mut visited_fields,
-            &mut visited_nodes,
-            &mut result,
-        );
+        self._traverse_across(start_field, from_node, relation, max_depth, 0, &mut traversal);
 
-        result
+        traversal.result
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn _traverse_across(
         &self,
         current_field: &str,
@@ -264,22 +265,21 @@ impl Cluster {
         relation: Option<&str>,
         max_depth: usize,
         depth: usize,
-        visited_fields: &mut HashSet<FieldId>,
-        visited_nodes: &mut HashSet<NodeId>,
-        result: &mut HashMap<FieldId, (Vec<NodeId>, Vec<Edge>)>,
+        t: &mut CrossFieldTraversal,
     ) {
         if depth > max_depth {
             return;
         }
-        if visited_nodes.contains(current_node) {
+        if t.visited_nodes.contains(current_node) {
             return;
         }
-        visited_nodes.insert(current_node.to_string());
+        t.visited_nodes.insert(current_node.to_string());
 
         if let Some(field) = self.fields.get(current_field) {
             // Record the current node as part of this field's discovered set
             // (including bridge entry points like the bridge target in f2)
-            let entry = result
+            let entry = t
+                .result
                 .entry(current_field.to_string())
                 .or_insert_with(|| (Vec::new(), Vec::new()));
             if !entry.0.iter().any(|n| n == current_node) {
@@ -296,7 +296,7 @@ impl Cluster {
             // targets belong to the target field (added via the recursion below)
             for e in &edges {
                 let is_bridge = e.relation == Relation::Bridges && e.target_field.is_some();
-                if !is_bridge && !visited_nodes.contains(&e.target) {
+                if !is_bridge && !t.visited_nodes.contains(&e.target) {
                     entry.0.push(e.target.clone());
                 }
             }
@@ -317,9 +317,9 @@ impl Cluster {
                 .collect();
 
             for (target_field, target_node, is_bridge) in next {
-                if !visited_nodes.contains(&target_node) {
+                if !t.visited_nodes.contains(&target_node) {
                     if is_bridge {
-                        visited_fields.insert(target_field.clone());
+                        t.visited_fields.insert(target_field.clone());
                     }
                     self._traverse_across(
                         &target_field,
@@ -327,9 +327,7 @@ impl Cluster {
                         relation,
                         max_depth,
                         depth + 1,
-                        visited_fields,
-                        visited_nodes,
-                        result,
+                        t,
                     );
                 }
             }
@@ -358,7 +356,7 @@ impl Cluster {
             }
             visited.insert(current.clone());
 
-            for (_, field) in &self.fields {
+            for field in self.fields.values() {
                 // Reverse BFS: who points to `current`?
                 let incoming = field.graph.incoming_edges(&current, None);
                 for edge in incoming {
@@ -734,7 +732,7 @@ impl Cluster {
         // A node is "present" in a field if it appears as an edge endpoint there
         // (field GraphEngines may not cache nodes — the registry is authoritative).
         if !self.fields.is_empty() {
-            for (nid, _) in &self.nodes {
+            for nid in self.nodes.keys() {
                 let mut found = false;
                 'fields: for field in self.fields.values() {
                     if field.graph.get_node(nid).is_some() {

@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 pub mod cluster;
 pub mod field;
 pub mod sharing;

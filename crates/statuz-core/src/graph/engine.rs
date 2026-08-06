@@ -62,7 +62,7 @@ impl GraphEngine {
         });
         cell.outgoing
             .entry(rel.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(self.edges.get(&id).unwrap().clone());
 
         let cell = self.adj.entry(target).or_insert_with(|| AdjacencyCell {
@@ -72,18 +72,18 @@ impl GraphEngine {
         });
         cell.incoming
             .entry(rel)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(self.edges.get(&id).unwrap().clone());
     }
 
     pub fn remove_node(&mut self, id: &str) {
         if let Some(cell) = self.adj.get(id) {
-            for (_, edges) in &cell.outgoing {
+            for edges in cell.outgoing.values() {
                 for e in edges {
                     self.edges.remove(&e.id);
                 }
             }
-            for (_, edges) in &cell.incoming {
+            for edges in cell.incoming.values() {
                 for e in edges {
                     self.edges.remove(&e.id);
                 }

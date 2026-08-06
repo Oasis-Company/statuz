@@ -31,7 +31,7 @@ impl GraphEngine {
                 }
             }
         } else {
-            for (_, rel_edges) in &cell.outgoing {
+            for rel_edges in cell.outgoing.values() {
                 for e in rel_edges {
                     if cross_field || e.target_field.is_none() {
                         edges.push(e);
@@ -65,7 +65,7 @@ impl GraphEngine {
         let mut queue: VecDeque<NodeId> = VecDeque::new();
 
         // Start from all nodes that directly point to `changed`
-        for (_, edges) in &cell.incoming {
+        for edges in cell.incoming.values() {
             for e in edges {
                 if !visited.contains(&e.source) {
                     visited.insert(e.source.clone());
@@ -78,7 +78,7 @@ impl GraphEngine {
         // BFS: who depends on those who depend on `changed`?
         while let Some(current) = queue.pop_front() {
             if let Some(current_cell) = self.adj.get(&current) {
-                for (_, edges) in &current_cell.incoming {
+                for edges in current_cell.incoming.values() {
                     for e in edges {
                         if !visited.contains(&e.source) {
                             visited.insert(e.source.clone());
@@ -145,10 +145,10 @@ impl GraphEngine {
             }
 
             if let Some(cell) = self.adj.get(&current) {
-                for (_, edges) in &cell.outgoing {
+                for edges in cell.outgoing.values() {
                     for e in edges {
-                        if cross_field || e.target_field.is_none() {
-                            if !visited.contains(&e.target) {
+                        if (cross_field || e.target_field.is_none())
+                            && !visited.contains(&e.target) {
                                 visited.insert(e.target.clone());
                                 parent.insert(e.target.clone(), (current.clone(), e.clone()));
                                 queue.push_back(e.target.clone());
@@ -156,7 +156,6 @@ impl GraphEngine {
                                     break 'bfs;
                                 }
                             }
-                        }
                     }
                 }
             }
@@ -205,17 +204,17 @@ impl GraphEngine {
 
         for (id, cell) in &self.adj {
             let mut degree = 0;
-            for (_, edges) in &cell.outgoing {
+            for edges in cell.outgoing.values() {
                 degree += edges.len();
             }
-            for (_, edges) in &cell.incoming {
+            for edges in cell.incoming.values() {
                 degree += edges.len();
             }
             scores.insert(id.clone(), degree);
         }
 
         let mut sorted: Vec<(NodeId, usize)> = scores.into_iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|x| std::cmp::Reverse(x.1));
         sorted.truncate(limit);
         sorted.into_iter().map(|(id, _)| id).collect()
     }
@@ -229,7 +228,7 @@ impl GraphEngine {
 
         while let Some(current) = queue.pop_front() {
             if let Some(cell) = self.adj.get(&current) {
-                for (_, edges) in &cell.outgoing {
+                for edges in cell.outgoing.values() {
                     for e in edges {
                         if !visited.contains(&e.target) {
                             visited.insert(e.target.clone());
@@ -254,10 +253,10 @@ impl GraphEngine {
         for (id, cell) in &self.adj {
             let mut out_count = 0;
             let mut in_count = 0;
-            for (_, e) in &cell.outgoing {
+            for e in cell.outgoing.values() {
                 out_count += e.len();
             }
-            for (_, e) in &cell.incoming {
+            for e in cell.incoming.values() {
                 in_count += e.len();
             }
 
@@ -285,7 +284,7 @@ impl GraphEngine {
                 component_visited.insert(id.clone());
                 while let Some(cur) = q.pop_front() {
                     if let Some(cell) = self.adj.get(&cur) {
-                        for (_, edges) in &cell.outgoing {
+                        for edges in cell.outgoing.values() {
                             for e in edges {
                                 if !component_visited.contains(&e.target) {
                                     component_visited.insert(e.target.clone());
@@ -293,7 +292,7 @@ impl GraphEngine {
                                 }
                             }
                         }
-                        for (_, edges) in &cell.incoming {
+                        for edges in cell.incoming.values() {
                             for e in edges {
                                 if !component_visited.contains(&e.source) {
                                     component_visited.insert(e.source.clone());
@@ -367,7 +366,7 @@ impl GraphEngine {
             } else {
                 let mut all = Vec::new();
                 if let Some(cell) = self.adj.get(&current) {
-                    for (_, rel_edges) in &cell.outgoing {
+                    for rel_edges in cell.outgoing.values() {
                         for e in rel_edges {
                             if e.target_field.is_none() {
                                 all.push(e.clone());
