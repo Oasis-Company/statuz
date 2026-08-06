@@ -46,6 +46,9 @@ enum Commands {
     Load {
         #[arg(short, long)]
         path: String,
+        /// Password for decryption (required for encrypted files)
+        #[arg(long)]
+        password: Option<String>,
     },
     /// Verify .stz file integrity without full deserialization
     Verify {
@@ -450,9 +453,9 @@ fn main() {
                 Err(e) => eprintln!("Serialize error: {}", e),
             }
         }
-        Commands::Load { path } => {
+        Commands::Load { path, password } => {
             match std::fs::read(path) {
-                Ok(data) => match deserialize_cluster(&data) {
+                Ok(data) => match deserialize_cluster_with_password(&data, password.as_deref()) {
                     Ok(cluster) => {
                         print_cluster_info(&cluster);
                         println!("✅ Integrity verified (blake3 hash match)");
@@ -469,9 +472,13 @@ fn main() {
                         } else {
                             eprintln!("Load error: {}", e);
                         }
+                        std::process::exit(1);
                     }
                 },
-                Err(e) => eprintln!("Read error: {}", e),
+                Err(e) => {
+                    eprintln!("Read error: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
     }
