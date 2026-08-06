@@ -286,16 +286,19 @@ impl Cluster {
                 entry.0.push(current_node.to_string());
             }
 
-            let (nodes, edges) = field.graph.traverse(current_node, relation, true);
+            let (_, edges) = field.graph.traverse(current_node, relation, true);
 
             // Collect results for this field
-            for nid in &nodes {
-                if !visited_nodes.contains(nid) {
-                    entry.0.push(nid.clone());
-                }
-            }
             for e in &edges {
                 entry.1.push((*e).clone());
+            }
+            // Local edges' targets belong to THIS field's node list; bridge
+            // targets belong to the target field (added via the recursion below)
+            for e in &edges {
+                let is_bridge = e.relation == Relation::Bridges && e.target_field.is_some();
+                if !is_bridge && !visited_nodes.contains(&e.target) {
+                    entry.0.push(e.target.clone());
+                }
             }
 
             // Continue BFS along every edge: bridge edges hop to the target field,
@@ -421,8 +424,9 @@ impl Cluster {
             }
 
             if let Some(field) = self.fields.get(&field_id) {
-                // Traverse local edges
-                let (neighbors, edges) = field.graph.traverse(&current, None, true);
+                // Traverse local edges (bridges handled separately below — they
+                // must enqueue with the TARGET field, not the current one)
+                let (neighbors, edges) = field.graph.traverse(&current, None, false);
                 for (i, neighbor) in neighbors.iter().enumerate() {
                     if !visited.contains(neighbor) {
                         visited.insert(neighbor.clone());
