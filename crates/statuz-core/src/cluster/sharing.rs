@@ -1,6 +1,6 @@
-use crate::cluster::Cluster;
 use crate::cluster::cluster::Visibility;
-use crate::graph::types::*;
+use crate::cluster::Cluster;
+use crate::graph::types::{Edge, FieldId};
 use crate::storage::{generate_cluster_id, hash_password, verify_password};
 use std::collections::HashMap;
 
@@ -124,7 +124,11 @@ impl Cluster {
 
     /// Convenience: clone with a fresh name and optional password.
     /// Password is reset by default; provide `new_password` to set one.
-    pub fn clone_fresh(&self, new_name: Option<String>, new_password: Option<String>) -> Result<Self, String> {
+    pub fn clone_fresh(
+        &self,
+        new_name: Option<String>,
+        new_password: Option<String>,
+    ) -> Result<Self, String> {
         self.clone_with_options(&CloneOptions {
             reset_password: new_password.is_none(),
             new_password,
@@ -171,7 +175,11 @@ impl Cluster {
                                     merged_meta.entry(k.clone()).or_insert_with(|| v.clone());
                                 }
                             }
-                            existing.meta = if merged_meta.is_empty() { None } else { Some(merged_meta) };
+                            existing.meta = if merged_meta.is_empty() {
+                                None
+                            } else {
+                                Some(merged_meta)
+                            };
                             result.nodes_overwritten += 1;
                         }
                     }
@@ -217,7 +225,10 @@ impl Cluster {
             let target_field = match self.fields.get_mut(field_id) {
                 Some(f) => f,
                 None => {
-                    result.warnings.push(format!("Field '{}' has edges but field was not merged (skipped)", field_id));
+                    result.warnings.push(format!(
+                        "Field '{}' has edges but field was not merged (skipped)",
+                        field_id
+                    ));
                     continue;
                 }
             };
@@ -253,55 +264,67 @@ impl Cluster {
 
         // ─── Merge Bridges ───────────────────────────────
         if let Some(source_bridges) = &source.bridges {
-            let bridges = self.bridges.get_or_insert_with(HashMap::new);
-            for (bridge_id, bridge) in source_bridges {
-                if bridges.contains_key(bridge_id) {
-                    // Bridge already exists — skip
-                    continue;
-                }
+            // Phase 1: validate and collect pending bridges (no mutation — avoids
+            // holding a borrow of `self.bridges` while calling `self.add_bridge`)
+            let mut pending: Vec<(FieldId, Edge)> = Vec::new();
+            {
+                let bridges = self.bridges.get_or_insert_with(HashMap::new);
+                for (bridge_id, bridge) in source_bridges {
+                    if bridges.contains_key(bridge_id) {
+                        // Bridge already exists — skip
+                        continue;
+                    }
 
-                // Validate bridge references
-                let mut valid = true;
-                if !self.nodes.contains_key(&bridge.source) {
-                    result.warnings.push(format!(
-                        "Skipping bridge '{}': source node '{}' not found in target cluster",
-                        bridge_id, bridge.source
-                    ));
-                    valid = false;
-                }
-                if !self.nodes.contains_key(&bridge.target) {
-                    result.warnings.push(format!(
-                        "Skipping bridge '{}': target node '{}' not found in target cluster",
-                        bridge_id, bridge.target
-                    ));
-                    valid = false;
-                }
-                if let Some(ref tf) = bridge.target_field {
-                    if !self.fields.contains_key(tf) {
+                    // Validate bridge references
+                    let mut valid = true;
+                    if !self.nodes.contains_key(&bridge.source) {
                         result.warnings.push(format!(
-                            "Skipping bridge '{}': target field '{}' not found in target cluster",
-                            bridge_id, tf
+                            "Skipping bridge '{}': source node '{}' not found in target cluster",
+                            bridge_id, bridge.source
                         ));
                         valid = false;
                     }
-                }
-
-                if valid {
-                    // Re-add bridge through the proper method to ensure bidirectional
+                    if !self.nodes.contains_key(&bridge.target) {
+                        result.warnings.push(format!(
+                            "Skipping bridge '{}': target node '{}' not found in target cluster",
+                            bridge_id, bridge.target
+                        ));
+                        valid = false;
+                    }
                     if let Some(ref tf) = bridge.target_field {
-                        // Find which field in source has this bridge
+                        if !self.fields.contains_key(tf) {
+                            result.warnings.push(format!(
+                                "Skipping bridge '{}': target field '{}' not found in target cluster",
+                                bridge_id, tf
+                            ));
+                            valid = false;
+                        }
+                    }
+
+                    if valid && bridge.target_field.is_some() {
+                        // Find which field in source has this bridge edge
                         for (src_fid, src_field) in &source.fields {
                             if src_field.graph.get_edge(&bridge.id).is_some() {
-                                let _ = self.add_bridge(
-                                    src_fid, tf,
-                                    &bridge.source, &bridge.target,
-                                    bridge.description.clone(), bridge.weight,
-                                );
-                                result.bridges_added += 1;
+                                pending.push((src_fid.clone(), bridge.clone()));
                                 break;
                             }
                         }
                     }
+                }
+            }
+
+            // Phase 2: apply bridges through the proper method (ensures bidirectionality)
+            for (src_fid, bridge) in pending {
+                if let Some(ref tf) = bridge.target_field {
+                    let _ = self.add_bridge(
+                        &src_fid,
+                        tf,
+                        &bridge.source,
+                        &bridge.target,
+                        bridge.description.clone(),
+                        bridge.weight,
+                    );
+                    result.bridges_added += 1;
                 }
             }
         }
@@ -334,7 +357,11 @@ impl Cluster {
     }
 
     /// Change the password: verify the old password first, then set the new one.
-    pub fn change_password(&mut self, old_password: &str, new_password: &str) -> Result<(), String> {
+    pub fn change_password(
+        &mut self,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), String> {
         if !self.unlock(old_password) {
             return Err("Old password is incorrect".to_string());
         }
@@ -375,17 +402,24 @@ impl Cluster {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::types::{Node, NodeStatus};
 
     /// Create a minimal cluster with a couple of nodes and one field.
     fn make_test_cluster() -> Cluster {
         let mut c = Cluster::new("test-id".into(), "Test".into(), Visibility::Private);
         c.register_node(Node {
-            id: "n1".into(), type_: "t".into(), label: "N1".into(),
-            status: NodeStatus::Active, meta: None,
+            id: "n1".into(),
+            type_: "t".into(),
+            label: "N1".into(),
+            status: NodeStatus::Active,
+            meta: None,
         });
         c.register_node(Node {
-            id: "n2".into(), type_: "t".into(), label: "N2".into(),
-            status: NodeStatus::Active, meta: None,
+            id: "n2".into(),
+            type_: "t".into(),
+            label: "N2".into(),
+            status: NodeStatus::Active,
+            meta: None,
         });
         c.create_field("f1".into(), "Field 1".into(), None);
         c
@@ -411,13 +445,21 @@ mod tests {
     fn test_clone_with_password() {
         let mut c = make_test_cluster();
         c.set_password("secret123").unwrap();
-        let cloned = c.clone_with_options(&CloneOptions {
-            reset_password: false,
-            new_password: None,
-            ..CloneOptions::default()
-        }).unwrap();
-        assert!(cloned.password_hash.is_some(), "password should be preserved");
-        assert!(cloned.unlock("secret123"), "should unlock with original password");
+        let cloned = c
+            .clone_with_options(&CloneOptions {
+                reset_password: false,
+                new_password: None,
+                ..CloneOptions::default()
+            })
+            .unwrap();
+        assert!(
+            cloned.password_hash.is_some(),
+            "password should be preserved"
+        );
+        assert!(
+            cloned.unlock("secret123"),
+            "should unlock with original password"
+        );
         assert!(!cloned.unlock("wrong"), "wrong password should fail");
     }
 
@@ -426,10 +468,12 @@ mod tests {
     #[test]
     fn test_clone_custom_name() {
         let c = make_test_cluster();
-        let cloned = c.clone_with_options(&CloneOptions {
-            new_name: Some("Renamed Cluster".into()),
-            ..CloneOptions::default()
-        }).unwrap();
+        let cloned = c
+            .clone_with_options(&CloneOptions {
+                new_name: Some("Renamed Cluster".into()),
+                ..CloneOptions::default()
+            })
+            .unwrap();
         assert_eq!(cloned.name, "Renamed Cluster");
         // Original unchanged
         assert_eq!(c.name, "Test");
@@ -476,11 +520,25 @@ mod tests {
     fn test_merge_conflict_rename() {
         let mut target = make_test_cluster();
         let source = make_test_cluster();
-        let result = target.merge_from(&source, &MergeStrategy::Rename { suffix: "_v2".into() });
+        let result = target.merge_from(
+            &source,
+            &MergeStrategy::Rename {
+                suffix: "_v2".into(),
+            },
+        );
         assert_eq!(result.nodes_added, 2, "n1_v2, n2_v2 should be added");
-        assert!(target.nodes.contains_key("n1_v2"), "renamed node n1_v2 should exist");
-        assert!(target.nodes.contains_key("n2_v2"), "renamed node n2_v2 should exist");
-        assert!(target.fields.contains_key("f1_v2"), "renamed field f1_v2 should exist");
+        assert!(
+            target.nodes.contains_key("n1_v2"),
+            "renamed node n1_v2 should exist"
+        );
+        assert!(
+            target.nodes.contains_key("n2_v2"),
+            "renamed node n2_v2 should exist"
+        );
+        assert!(
+            target.fields.contains_key("f1_v2"),
+            "renamed field f1_v2 should exist"
+        );
         // Originals still present
         assert!(target.nodes.contains_key("n1"));
         assert!(target.fields.contains_key("f1"));
@@ -491,7 +549,10 @@ mod tests {
     #[test]
     fn test_password_empty_string() {
         let mut c = make_test_cluster();
-        assert!(c.set_password("").is_ok(), "empty password should be accepted");
+        assert!(
+            c.set_password("").is_ok(),
+            "empty password should be accepted"
+        );
         assert!(c.unlock(""), "should unlock with empty password");
     }
 
@@ -501,8 +562,14 @@ mod tests {
     fn test_password_special_chars() {
         let mut c = make_test_cluster();
         let special = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
-        assert!(c.set_password(special).is_ok(), "special char password should be accepted");
-        assert!(c.unlock(special), "should unlock with special char password");
+        assert!(
+            c.set_password(special).is_ok(),
+            "special char password should be accepted"
+        );
+        assert!(
+            c.unlock(special),
+            "should unlock with special char password"
+        );
     }
 
     // ─── Password: Long ──────────────────────────────────
@@ -511,7 +578,10 @@ mod tests {
     fn test_password_long() {
         let mut c = make_test_cluster();
         let long = "a".repeat(1000);
-        assert!(c.set_password(&long).is_ok(), "long password should be accepted");
+        assert!(
+            c.set_password(&long).is_ok(),
+            "long password should be accepted"
+        );
         assert!(c.unlock(&long), "should unlock with long password");
     }
 
@@ -533,7 +603,10 @@ mod tests {
         // Change password
         c.change_password("mypassword", "newpassword").unwrap();
         assert!(c.unlock("newpassword"), "new password should work");
-        assert!(!c.unlock("mypassword"), "old password should no longer work");
+        assert!(
+            !c.unlock("mypassword"),
+            "old password should no longer work"
+        );
 
         // Clear password
         c.clear_password();

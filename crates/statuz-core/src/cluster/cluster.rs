@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use serde::{Deserialize, Serialize};
-use crate::graph::types::*;
 use crate::cluster::field::Field;
+use crate::graph::types::*;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Visibility of a Cluster
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -81,12 +81,12 @@ impl Cluster {
     }
 
     /// Get a node from the central registry.
-    pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
+    pub fn get_node(&self, id: &str) -> Option<&Node> {
         self.nodes.get(id)
     }
 
     /// Remove a node from the central registry and all fields.
-    pub fn unregister_node(&mut self, id: &NodeId) {
+    pub fn unregister_node(&mut self, id: &str) {
         self.nodes.remove(id);
         for field in self.fields.values_mut() {
             field.graph.remove_node(id);
@@ -100,28 +100,35 @@ impl Cluster {
     // ─── Field Management ─────────────────────────────────
 
     /// Create a new field in this cluster.
-    pub fn create_field(&mut self, id: FieldId, name: String, description: Option<String>) -> &mut Field {
-        let field = Field::new(id, name, description);
-        self.fields.entry(field.id.clone()).or_insert(field);
+    pub fn create_field(
+        &mut self,
+        id: FieldId,
+        name: String,
+        description: Option<String>,
+    ) -> &mut Field {
+        let fid = id.clone();
+        self.fields
+            .entry(fid.clone())
+            .or_insert_with(|| Field::new(id, name, description));
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        self.fields.get_mut(&field.id).unwrap()
+        self.fields.get_mut(&fid).unwrap()
     }
 
     /// Get a mutable reference to a field.
-    pub fn get_field_mut(&mut self, id: &FieldId) -> Option<&mut Field> {
+    pub fn get_field_mut(&mut self, id: &str) -> Option<&mut Field> {
         self.fields.get_mut(id)
     }
 
     /// Get a field by ID.
-    pub fn get_field(&self, id: &FieldId) -> Option<&Field> {
+    pub fn get_field(&self, id: &str) -> Option<&Field> {
         self.fields.get(id)
     }
 
     /// Remove a field and all its edges from the cluster.
-    pub fn remove_field(&mut self, id: &FieldId) {
+    pub fn remove_field(&mut self, id: &str) {
         self.fields.remove(id);
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -140,10 +147,10 @@ impl Cluster {
     /// This enables full bidirectional cross-field traversal and impact analysis.
     pub fn add_bridge(
         &mut self,
-        from_field: &FieldId,
-        to_field: &FieldId,
-        source_node: &NodeId,
-        target_node: &NodeId,
+        from_field: &str,
+        to_field: &str,
+        source_node: &str,
+        target_node: &str,
         description: String,
         weight: f64,
     ) -> Result<(), String> {
@@ -157,35 +164,44 @@ impl Cluster {
 
         // Validate nodes exist in central registry
         if !self.nodes.contains_key(source_node) {
-            return Err(format!("Source node '{}' not found in cluster registry", source_node));
+            return Err(format!(
+                "Source node '{}' not found in cluster registry",
+                source_node
+            ));
         }
         if !self.nodes.contains_key(target_node) {
-            return Err(format!("Target node '{}' not found in cluster registry", target_node));
+            return Err(format!(
+                "Target node '{}' not found in cluster registry",
+                target_node
+            ));
         }
 
-        let bridge_id = format!("bridge-{}-{}-{}-{}", from_field, source_node, to_field, target_node);
+        let bridge_id = format!(
+            "bridge-{}-{}-{}-{}",
+            from_field, source_node, to_field, target_node
+        );
 
         // Forward edge: stored in source field
         let forward_edge = Edge {
             id: format!("{}-fwd", bridge_id),
-            source: source_node.clone(),
-            target: target_node.clone(),
+            source: source_node.to_string(),
+            target: target_node.to_string(),
             relation: Relation::Bridges,
             weight,
             description: description.clone(),
-            target_field: Some(to_field.clone()),
+            target_field: Some(to_field.to_string()),
             meta: None,
         };
 
         // Reverse edge: stored in target field
         let reverse_edge = Edge {
             id: format!("{}-rev", bridge_id),
-            source: target_node.clone(),
-            target: source_node.clone(),
+            source: target_node.to_string(),
+            target: source_node.to_string(),
             relation: Relation::Bridges,
             weight,
             description: format!("{} (reverse)", description),
-            target_field: Some(from_field.clone()),
+            target_field: Some(from_field.to_string()),
             meta: None,
         };
 
@@ -218,8 +234,8 @@ impl Cluster {
     /// Returns a map of field_id → (nodes, edges) found in each field.
     pub fn traverse_across_fields(
         &self,
-        start_field: &FieldId,
-        from_node: &NodeId,
+        start_field: &str,
+        from_node: &str,
         relation: Option<&str>,
         max_depth: usize,
     ) -> HashMap<FieldId, (Vec<NodeId>, Vec<Edge>)> {
@@ -228,8 +244,14 @@ impl Cluster {
         let mut visited_nodes = HashSet::new();
 
         self._traverse_across(
-            start_field, from_node, relation, max_depth, 0,
-            &mut visited_fields, &mut visited_nodes, &mut result,
+            start_field,
+            from_node,
+            relation,
+            max_depth,
+            0,
+            &mut visited_fields,
+            &mut visited_nodes,
+            &mut result,
         );
 
         result
@@ -237,8 +259,8 @@ impl Cluster {
 
     fn _traverse_across(
         &self,
-        current_field: &FieldId,
-        current_node: &NodeId,
+        current_field: &str,
+        current_node: &str,
         relation: Option<&str>,
         max_depth: usize,
         depth: usize,
@@ -249,42 +271,62 @@ impl Cluster {
         if depth > max_depth {
             return;
         }
-        if visited_nodes.contains(current_node) && depth > 0 {
+        if visited_nodes.contains(current_node) {
             return;
         }
-        visited_nodes.insert(current_node.clone());
+        visited_nodes.insert(current_node.to_string());
 
         if let Some(field) = self.fields.get(current_field) {
-            let (nodes, edges) = if relation.is_some() {
-                field.graph.traverse(current_node, relation, false)
-            } else {
-                field.graph.traverse(current_node, None, true)
-            };
+            // Record the current node as part of this field's discovered set
+            // (including bridge entry points like the bridge target in f2)
+            let entry = result
+                .entry(current_field.to_string())
+                .or_insert_with(|| (Vec::new(), Vec::new()));
+            if !entry.0.iter().any(|n| n == current_node) {
+                entry.0.push(current_node.to_string());
+            }
+
+            let (nodes, edges) = field.graph.traverse(current_node, relation, true);
 
             // Collect results for this field
-            let entry = result.entry(current_field.clone()).or_insert_with(|| (Vec::new(), Vec::new()));
             for nid in &nodes {
                 if !visited_nodes.contains(nid) {
                     entry.0.push(nid.clone());
                 }
             }
             for e in &edges {
-                entry.1.push(e.clone());
+                entry.1.push((*e).clone());
             }
 
-            // Collect bridge edges to follow before recursive call (avoid borrow conflict)
-            let bridges: Vec<(FieldId, NodeId)> = edges.iter()
-                .filter(|e| e.target_field.is_some() && e.relation == Relation::Bridges)
-                .map(|e| (e.target_field.clone().unwrap(), e.target.clone()))
+            // Continue BFS along every edge: bridge edges hop to the target field,
+            // local edges continue within the current field (depth counts total hops)
+            let next: Vec<(FieldId, NodeId, bool)> = edges
+                .iter()
+                .map(|e| {
+                    let is_bridge = e.relation == Relation::Bridges && e.target_field.is_some();
+                    let target_field = if is_bridge {
+                        e.target_field.clone().unwrap()
+                    } else {
+                        current_field.to_string()
+                    };
+                    (target_field, e.target.clone(), is_bridge)
+                })
                 .collect();
 
-            for (target_field, target_node) in bridges {
-                if !visited_fields.contains(&target_field) && !visited_nodes.contains(&target_node) {
-                    visited_fields.insert(target_field);
+            for (target_field, target_node, is_bridge) in next {
+                if !visited_nodes.contains(&target_node) {
+                    if is_bridge {
+                        visited_fields.insert(target_field.clone());
+                    }
                     self._traverse_across(
-                        &target_field, &target_node,
-                        relation, max_depth, depth + 1,
-                        visited_fields, visited_nodes, result,
+                        &target_field,
+                        &target_node,
+                        relation,
+                        max_depth,
+                        depth + 1,
+                        visited_fields,
+                        visited_nodes,
+                        result,
                     );
                 }
             }
@@ -301,11 +343,11 @@ impl Cluster {
     /// 1. Starting from `changed`, find all nodes that directly point to it
     /// 2. Continue reverse traversal across all fields
     /// 3. When crossing a bridge edge, follow the reverse bridge to the other field
-    pub fn impact_across_fields(&self, changed: &NodeId) -> ImpactResult {
+    pub fn impact_across_fields(&self, changed: &str) -> ImpactResult {
         let mut affected = HashSet::new();
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
-        queue.push_back(changed.clone());
+        queue.push_back(changed.to_string());
 
         while let Some(current) = queue.pop_front() {
             if visited.contains(&current) {
@@ -323,16 +365,14 @@ impl Cluster {
                         queue.push_back(source.clone());
                     }
                     // If this edge is a bridge, follow it to the OTHER field
-                    if edge.relation == Relation::Bridges {
+                    if edge.relation == Relation::Bridges && edge.target_field.is_some() {
                         // The bridge's source is in the current field's perspective
                         // We need to also traverse the reverse side
-                        if let Some(ref target_field) = edge.target_field {
-                            // The bridge target points to another field
-                            // The source node is the one that's affected
-                            if !visited.contains(source) {
-                                affected.insert(source.clone());
-                                queue.push_back(source.clone());
-                            }
+                        // The bridge target points to another field
+                        // The source node is the one that's affected
+                        if !visited.contains(source) {
+                            affected.insert(source.clone());
+                            queue.push_back(source.clone());
                         }
                     }
                 }
@@ -344,7 +384,7 @@ impl Cluster {
         list.sort();
 
         ImpactResult {
-            changed: changed.clone(),
+            changed: changed.to_string(),
             affected: list.clone(),
             blast_radius: list,
             critical_path: false,
@@ -355,21 +395,27 @@ impl Cluster {
 
     /// Find the shortest path between two nodes, possibly crossing fields.
     /// Returns the path with field-level metadata for each step.
-    pub fn path_across_fields(&self, from: &NodeId, to: &NodeId, start_field: &FieldId) -> PathResult {
+    pub fn path_across_fields(&self, from: &str, to: &str, start_field: &str) -> PathResult {
         let mut visited = HashSet::new();
-        visited.insert(from.clone());
+        visited.insert(from.to_string());
         // BFS state: (node_id, current_field, path_edges, field_path)
         let mut queue: VecDeque<(NodeId, FieldId, Vec<Edge>, Vec<FieldId>)> = VecDeque::new();
-        queue.push_back((from.clone(), start_field.clone(), vec![], vec![start_field.clone()]));
+        queue.push_back((
+            from.to_string(),
+            start_field.to_string(),
+            vec![],
+            vec![start_field.to_string()],
+        ));
 
         while let Some((current, field_id, path, field_path)) = queue.pop_front() {
             if current == *to {
+                let length = path.len() as i32;
                 return PathResult {
-                    from: from.clone(),
-                    to: to.clone(),
+                    from: from.to_string(),
+                    to: to.to_string(),
                     path,
                     field_path,
-                    length: path.len() as i32,
+                    length,
                     exists: true,
                 };
             }
@@ -386,7 +432,12 @@ impl Cluster {
                             new_path.push(edges[i].clone());
                             new_field_path.push(field_id.clone());
                         }
-                        queue.push_back((neighbor.clone(), field_id.clone(), new_path, new_field_path));
+                        queue.push_back((
+                            neighbor.clone(),
+                            field_id.clone(),
+                            new_path,
+                            new_field_path,
+                        ));
                     }
                 }
 
@@ -401,7 +452,12 @@ impl Cluster {
                             let mut new_field_path = field_path.clone();
                             new_field_path.push(field_id.clone());
                             new_field_path.push(target_field.clone());
-                            queue.push_back((e.target.clone(), target_field.clone(), new_path, new_field_path));
+                            queue.push_back((
+                                e.target.clone(),
+                                target_field.clone(),
+                                new_path,
+                                new_field_path,
+                            ));
                         }
                     }
                 }
@@ -409,8 +465,8 @@ impl Cluster {
         }
 
         PathResult {
-            from: from.clone(),
-            to: to.clone(),
+            from: from.to_string(),
+            to: to.to_string(),
             path: vec![],
             field_path: vec![],
             length: -1,
@@ -531,10 +587,16 @@ impl Cluster {
         }
 
         DiffResult {
-            added_nodes, removed_nodes, changed_nodes,
-            added_edges, removed_edges, changed_edges,
-            added_fields, removed_fields,
-            added_bridges, removed_bridges,
+            added_nodes,
+            removed_nodes,
+            changed_nodes,
+            added_edges,
+            removed_edges,
+            changed_edges,
+            added_fields,
+            removed_fields,
+            added_bridges,
+            removed_bridges,
         }
     }
 
@@ -565,9 +627,19 @@ impl Cluster {
 
         // ─── 1. Field-level validation + foreign node check ──
         for (fid, field) in &self.fields {
-            // Delegate to GraphEngine::validate for orphan edges
+            // Delegate to GraphEngine::validate for orphan edges.
+            // In cluster context, edges may reference cluster-registry nodes that are
+            // not cached in the field's GraphEngine node map — those are NOT orphans
+            // (the registry is the authoritative node source), so drop those issues.
             let field_result = field.graph.validate();
             for issue in field_result.issues {
+                let references_registry_node = issue
+                    .affected_ids
+                    .iter()
+                    .any(|id| self.nodes.contains_key(id));
+                if issue.category == IssueCategory::OrphanEdge && references_registry_node {
+                    continue;
+                }
                 issues.push(issue);
             }
 
@@ -620,7 +692,10 @@ impl Cluster {
                     issues.push(ValidationIssue {
                         severity: IssueSeverity::Error,
                         category: IssueCategory::BrokenBridge,
-                        message: format!("Bridge '{}' references non-existent source node '{}'", bridge_id, bridge.source),
+                        message: format!(
+                            "Bridge '{}' references non-existent source node '{}'",
+                            bridge_id, bridge.source
+                        ),
                         affected_ids: vec![bridge_id.clone(), bridge.source.clone()],
                     });
                 }
@@ -628,7 +703,10 @@ impl Cluster {
                     issues.push(ValidationIssue {
                         severity: IssueSeverity::Error,
                         category: IssueCategory::BrokenBridge,
-                        message: format!("Bridge '{}' references non-existent target node '{}'", bridge_id, bridge.target),
+                        message: format!(
+                            "Bridge '{}' references non-existent target node '{}'",
+                            bridge_id, bridge.target
+                        ),
                         affected_ids: vec![bridge_id.clone(), bridge.target.clone()],
                     });
                 }
@@ -637,7 +715,10 @@ impl Cluster {
                         issues.push(ValidationIssue {
                             severity: IssueSeverity::Error,
                             category: IssueCategory::BrokenBridge,
-                            message: format!("Bridge '{}' references non-existent target field '{}'", bridge_id, tf),
+                            message: format!(
+                                "Bridge '{}' references non-existent target field '{}'",
+                                bridge_id, tf
+                            ),
                             affected_ids: vec![bridge_id.clone(), tf.clone()],
                         });
                     }
@@ -646,20 +727,31 @@ impl Cluster {
         }
 
         // ─── 3. Orphan nodes (warning only) ────────────────
+        // A node is "present" in a field if it appears as an edge endpoint there
+        // (field GraphEngines may not cache nodes — the registry is authoritative).
         if !self.fields.is_empty() {
             for (nid, _) in &self.nodes {
                 let mut found = false;
-                for field in self.fields.values() {
+                'fields: for field in self.fields.values() {
                     if field.graph.get_node(nid).is_some() {
                         found = true;
                         break;
+                    }
+                    for edge in field.graph.all_edges() {
+                        if &edge.source == nid || &edge.target == nid {
+                            found = true;
+                            break 'fields;
+                        }
                     }
                 }
                 if !found {
                     issues.push(ValidationIssue {
                         severity: IssueSeverity::Warning,
                         category: IssueCategory::OrphanNode,
-                        message: format!("Node '{}' is registered but not present in any field", nid),
+                        message: format!(
+                            "Node '{}' is registered but not present in any field",
+                            nid
+                        ),
                         affected_ids: vec![nid.clone()],
                     });
                 }
@@ -683,10 +775,27 @@ impl Cluster {
         depth: Option<usize>,
         relation: Option<&str>,
     ) -> Result<SubgraphResult, String> {
-        let field = self.fields.get(field_id).ok_or_else(|| {
-            format!("Field '{}' not found in cluster", field_id)
-        })?;
-        Ok(field.graph.subgraph(seeds, depth, relation))
+        let field = self
+            .fields
+            .get(field_id)
+            .ok_or_else(|| format!("Field '{}' not found in cluster", field_id))?;
+        let mut result = field.graph.subgraph(seeds, depth, relation);
+        // Enrich node data from the cluster registry (field GraphEngines may not
+        // cache nodes; the engine returns id-only placeholders for cache misses)
+        result.nodes = result
+            .nodes
+            .iter()
+            .map(|n| self.nodes.get(&n.id).cloned().unwrap_or_else(|| n.clone()))
+            .collect();
+        // Ensure seed nodes are present even if the engine didn't cache them
+        for seed in seeds {
+            if !result.nodes.iter().any(|n| &n.id == seed) {
+                if let Some(node) = self.nodes.get(seed) {
+                    result.nodes.push(node.clone());
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -697,7 +806,13 @@ mod tests {
     use super::*;
 
     fn node(id: &str, type_: &str, label: &str, status: NodeStatus) -> Node {
-        Node { id: id.into(), type_: type_.into(), label: label.into(), status, meta: None }
+        Node {
+            id: id.into(),
+            type_: type_.into(),
+            label: label.into(),
+            status,
+            meta: None,
+        }
     }
 
     /// Build a test cluster with:
@@ -726,18 +841,30 @@ mod tests {
         // Add edges in f1: a -> b -> c
         let f1 = cluster.fields.get_mut("f1").unwrap();
         f1.graph.add_edge(Edge {
-            id: "e1".into(), source: "a".into(), target: "b".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
-            target_field: None, meta: None,
+            id: "e1".into(),
+            source: "a".into(),
+            target: "b".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
         });
         f1.graph.add_edge(Edge {
-            id: "e2".into(), source: "b".into(), target: "c".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
-            target_field: None, meta: None,
+            id: "e2".into(),
+            source: "b".into(),
+            target: "c".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
         });
 
         // Bridge: f1.a → f2.d
-        cluster.add_bridge("f1", "f2", "a", "d", "bridge".into(), 1.0).unwrap();
+        cluster
+            .add_bridge("f1", "f2", "a", "d", "bridge".into(), 1.0)
+            .unwrap();
 
         cluster
     }
@@ -759,7 +886,10 @@ mod tests {
         let mut c = Cluster::new("id".into(), "test".into(), Visibility::Public);
         c.create_field("arch".into(), "Architecture".into(), None);
         assert_eq!(c.fields.len(), 1);
-        assert!(c.get_field("arch").is_some(), "field should exist after creation");
+        assert!(
+            c.get_field("arch").is_some(),
+            "field should exist after creation"
+        );
     }
 
     // ─── Register Node ───────────────────────────────────
@@ -768,11 +898,17 @@ mod tests {
     fn test_register_node() {
         let mut c = Cluster::new("id".into(), "test".into(), Visibility::Organization);
         let node = Node {
-            id: "n1".into(), type_: "test".into(), label: "N1".into(),
-            status: NodeStatus::Active, meta: None,
+            id: "n1".into(),
+            type_: "test".into(),
+            label: "N1".into(),
+            status: NodeStatus::Active,
+            meta: None,
         };
         c.register_node(node);
-        assert!(c.get_node("n1").is_some(), "node should be found after registration");
+        assert!(
+            c.get_node("n1").is_some(),
+            "node should be found after registration"
+        );
     }
 
     // ─── Unregister Node ─────────────────────────────────
@@ -781,12 +917,18 @@ mod tests {
     fn test_unregister_node() {
         let mut c = build_test_cluster();
         assert!(c.get_node("a").is_some());
-        c.unregister_node(&"a".into());
-        assert!(c.get_node("a").is_none(), "node should be removed from registry");
+        c.unregister_node("a");
+        assert!(
+            c.get_node("a").is_none(),
+            "node should be removed from registry"
+        );
         // Node should also be removed from all fields
         for field in c.fields.values() {
-            assert!(field.graph.get_node("a").is_none(),
-                "node should be removed from field '{}'", field.name);
+            assert!(
+                field.graph.get_node("a").is_none(),
+                "node should be removed from field '{}'",
+                field.name
+            );
         }
     }
 
@@ -797,8 +939,11 @@ mod tests {
         let mut c = Cluster::new("id".into(), "test".into(), Visibility::Private);
         for id in &["x", "y"] {
             c.register_node(Node {
-                id: id.to_string(), type_: "t".into(), label: id.to_string(),
-                status: NodeStatus::Active, meta: None,
+                id: id.to_string(),
+                type_: "t".into(),
+                label: id.to_string(),
+                status: NodeStatus::Active,
+                meta: None,
             });
         }
         c.create_field("f1".into(), "F1".into(), None);
@@ -808,8 +953,11 @@ mod tests {
 
         // Forward bridge should be visible in f1
         let f1 = c.get_field("f1").unwrap();
-        let (nodes, _) = f1.graph.traverse(&"x".into(), Some("bridges"), false);
-        assert!(nodes.contains(&"y".into()), "bridge target 'y' should be reachable from 'x' in f1");
+        let (nodes, _) = f1.graph.traverse("x", Some("bridges"), false);
+        assert!(
+            nodes.contains(&"y".to_string()),
+            "bridge target 'y' should be reachable from 'x' in f1"
+        );
     }
 
     // ─── Duplicate Bridge ────────────────────────────────
@@ -822,7 +970,11 @@ mod tests {
         assert!(result.is_ok(), "duplicate bridge should not error");
         // Bridge entries exist (overwritten in HashMap, same keys)
         let bridges = c.bridges.as_ref().unwrap();
-        assert_eq!(bridges.len(), 2, "should still have exactly 2 bridge entries (fwd + rev)");
+        assert_eq!(
+            bridges.len(),
+            2,
+            "should still have exactly 2 bridge entries (fwd + rev)"
+        );
     }
 
     // ─── Remove Field ────────────────────────────────────
@@ -833,8 +985,14 @@ mod tests {
         assert_eq!(c.fields.len(), 2);
         c.remove_field("f1");
         assert_eq!(c.fields.len(), 1, "one field should remain after removal");
-        assert!(c.get_field("f1").is_none(), "removed field should not be accessible");
-        assert!(c.get_field("f2").is_some(), "other field should still exist");
+        assert!(
+            c.get_field("f1").is_none(),
+            "removed field should not be accessible"
+        );
+        assert!(
+            c.get_field("f2").is_some(),
+            "other field should still exist"
+        );
     }
 
     // ─── Cross-Field Traverse ────────────────────────────
@@ -842,16 +1000,19 @@ mod tests {
     #[test]
     fn test_traverse_across_fields() {
         let c = build_test_cluster();
-        let result = c.traverse_across_fields(&"f1".into(), &"a".into(), None, 3);
+        let result = c.traverse_across_fields("f1", "a", None, 3);
         // Should find nodes in f1
         assert!(result.contains_key("f1"), "should have results for f1");
         let (f1_nodes, _) = result.get("f1").unwrap();
-        assert!(f1_nodes.contains(&"b".into()), "f1 should contain 'b'");
-        assert!(f1_nodes.contains(&"c".into()), "f1 should contain 'c'");
+        assert!(f1_nodes.contains(&"b".to_string()), "f1 should contain 'b'");
+        assert!(f1_nodes.contains(&"c".to_string()), "f1 should contain 'c'");
         // Should cross the bridge to f2
         assert!(result.contains_key("f2"), "should cross bridge to f2");
         let (f2_nodes, _) = result.get("f2").unwrap();
-        assert!(f2_nodes.contains(&"d".into()), "f2 should contain 'd' via bridge");
+        assert!(
+            f2_nodes.contains(&"d".to_string()),
+            "f2 should contain 'd' via bridge"
+        );
     }
 
     // ─── Cross-Field Impact ──────────────────────────────
@@ -862,18 +1023,36 @@ mod tests {
         // impact("a") looks for incoming edges to "a" across all fields.
         // In f2, the reverse bridge "d -> a" is an incoming edge to "a",
         // so "d" is affected when "a" changes.
-        let impact = c.impact_across_fields(&"a".into());
-        assert!(impact.affected.contains(&"d".into()),
-            "reverse bridge should make 'd' affected when 'a' changes");
+        let impact = c.impact_across_fields("a");
+        assert!(
+            impact.affected.contains(&"d".to_string()),
+            "reverse bridge should make 'd' affected when 'a' changes"
+        );
     }
 
     #[test]
     fn test_impact_across_fields_no_effect() {
-        let c = build_test_cluster();
-        // "d" has no incoming edges in any field, so nothing should be affected
-        let impact = c.impact_across_fields(&"d".into());
-        assert!(impact.affected.is_empty(),
-            "leaf node 'd' should affect no one");
+        let mut c = build_test_cluster();
+        // A registered node with no edges anywhere affects no one
+        c.register_node(Node {
+            id: "iso".into(),
+            type_: "test".into(),
+            label: "Isolated".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        });
+        let impact = c.impact_across_fields("iso");
+        assert!(
+            impact.affected.is_empty(),
+            "isolated node should affect no one"
+        );
+        // "d" has one incoming bridge edge (f1.a → f2.d), so changing d affects a
+        let impact_d = c.impact_across_fields("d");
+        assert_eq!(
+            impact_d.affected,
+            vec!["a".to_string()],
+            "changing 'd' should affect the bridge source 'a'"
+        );
     }
 
     // ─── Cross-Field Path ────────────────────────────────
@@ -882,7 +1061,7 @@ mod tests {
     fn test_path_across_fields_same_field() {
         let c = build_test_cluster();
         // a -> b -> c within f1
-        let path = c.path_across_fields(&"a".into(), &"c".into(), &"f1".into());
+        let path = c.path_across_fields("a", "c", "f1");
         assert!(path.exists, "path a->c within f1 should exist");
         assert_eq!(path.length, 2, "a->b->c is 2 steps");
     }
@@ -891,7 +1070,7 @@ mod tests {
     fn test_path_across_fields_cross_bridge() {
         let c = build_test_cluster();
         // a -> d via bridge (f1.a → f2.d)
-        let path = c.path_across_fields(&"a".into(), &"d".into(), &"f1".into());
+        let path = c.path_across_fields("a", "d", "f1");
         assert!(path.exists, "path a->d across bridge should exist");
         assert_eq!(path.length, 1, "a->d via bridge is 1 step");
     }
@@ -899,12 +1078,15 @@ mod tests {
     #[test]
     fn test_path_across_fields_nonexistent() {
         let c = build_test_cluster();
-        // No path from f1.a to f1.a (self-loop not created)
-        // Actually there's no edge from d to anything, so we can test d -> something
-        let path = c.path_across_fields(&"d".into(), &"a".into(), &"f2".into());
-        // d has no outgoing edges in f2, so no path back to a
-        assert!(!path.exists, "no path from d back to a");
+        // "c" is a leaf in f1 (no outgoing edges), so no path from c to d
+        let path = c.path_across_fields("c", "d", "f1");
+        assert!(!path.exists, "no path from leaf c to d");
         assert_eq!(path.length, -1);
+
+        // But d IS reachable from a: a →d via the f1→f2 bridge (stored as a→d in f1)
+        let path2 = c.path_across_fields("a", "d", "f1");
+        assert!(path2.exists, "bridge path a → d should exist");
+        assert_eq!(path2.length, 1);
     }
 
     // ─── Diff Tests ──────────────────────────────────────
@@ -940,7 +1122,7 @@ mod tests {
     fn test_diff_removed_node() {
         let c1 = build_test_cluster();
         let mut c2 = build_test_cluster();
-        c2.unregister_node(&"d".into());
+        c2.unregister_node("d");
         let diff = c1.diff(&c2);
         assert_eq!(diff.removed_nodes.len(), 1);
         assert_eq!(diff.removed_nodes[0].id, "d");
@@ -985,9 +1167,14 @@ mod tests {
         let mut c2 = build_test_cluster();
         let f2 = c2.fields.get_mut("f2").unwrap();
         f2.graph.add_edge(Edge {
-            id: "e-new".into(), source: "a".into(), target: "d".into(),
-            relation: Relation::Informs, weight: 0.5, description: "new edge".into(),
-            target_field: None, meta: None,
+            id: "e-new".into(),
+            source: "a".into(),
+            target: "d".into(),
+            relation: Relation::Informs,
+            weight: 0.5,
+            description: "new edge".into(),
+            target_field: None,
+            meta: None,
         });
         let diff = c1.diff(&c2);
         assert_eq!(diff.added_edges.len(), 1);
@@ -996,11 +1183,11 @@ mod tests {
 
     #[test]
     fn test_diff_removed_edge() {
-        let mut c1 = build_test_cluster();
+        let c1 = build_test_cluster();
         let mut c2 = build_test_cluster();
         // Remove edge e1 from c2's field f1
         let f2 = c2.fields.get_mut("f1").unwrap();
-        f2.graph.remove_edge(&"e1".into());
+        f2.graph.remove_edge("e1");
         let diff = c1.diff(&c2);
         assert_eq!(diff.removed_edges.len(), 1);
         assert_eq!(diff.removed_edges[0].id, "e1");
@@ -1042,13 +1229,21 @@ mod tests {
         let mut c = build_test_cluster();
         let f1 = c.fields.get_mut("f1").unwrap();
         f1.graph.add_edge(Edge {
-            id: "bad-bridge".into(), source: "a".into(), target: "b".into(),
-            relation: Relation::Bridges, weight: 1.0, description: "broken".into(),
-            target_field: Some("non-existent-field".into()), meta: None,
+            id: "bad-bridge".into(),
+            source: "a".into(),
+            target: "b".into(),
+            relation: Relation::Bridges,
+            weight: 1.0,
+            description: "broken".into(),
+            target_field: Some("non-existent-field".into()),
+            meta: None,
         });
         let result = c.validate();
         assert!(!result.is_valid);
-        assert!(result.issues.iter().any(|i| i.category == IssueCategory::BrokenBridge));
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i.category == IssueCategory::BrokenBridge));
     }
 
     #[test]
@@ -1056,13 +1251,21 @@ mod tests {
         let mut c = build_test_cluster();
         let f1 = c.fields.get_mut("f1").unwrap();
         f1.graph.add_edge(Edge {
-            id: "foreign-edge".into(), source: "a".into(), target: "foreign-node".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: "foreign".into(),
-            target_field: None, meta: None,
+            id: "foreign-edge".into(),
+            source: "a".into(),
+            target: "foreign-node".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "foreign".into(),
+            target_field: None,
+            meta: None,
         });
         let result = c.validate();
         assert!(!result.is_valid);
-        assert!(result.issues.iter().any(|i| i.category == IssueCategory::ForeignNode));
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i.category == IssueCategory::ForeignNode));
     }
 
     #[test]
@@ -1072,7 +1275,10 @@ mod tests {
         let result = c.validate();
         // Orphan node is a Warning, so cluster is still valid
         assert!(result.is_valid);
-        assert!(result.issues.iter().any(|i| i.category == IssueCategory::OrphanNode));
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i.category == IssueCategory::OrphanNode));
     }
 
     #[test]
@@ -1092,7 +1298,8 @@ mod tests {
         let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
         node_ids.sort();
         assert_eq!(node_ids, vec!["a", "b"]);
-        assert_eq!(result.edges.len(), 2);
+        // Local edges only (bridge edges point outside the field)
+        assert_eq!(result.edges.len(), 1);
     }
 
     #[test]
@@ -1101,7 +1308,11 @@ mod tests {
         let result = c.subgraph("nonexistent", &["a".into()], None, None);
         assert!(result.is_err());
         let err_msg = result.err().unwrap();
-        assert!(err_msg.contains("not found"), "error message should indicate field not found, got: {}", err_msg);
+        assert!(
+            err_msg.contains("not found"),
+            "error message should indicate field not found, got: {}",
+            err_msg
+        );
     }
 
     #[test]

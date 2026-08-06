@@ -1,9 +1,10 @@
-use std::collections::HashMap;
 use crate::graph::types::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ─── Adjacency Cell ──────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdjacencyCell {
     pub node_id: NodeId,
     /// relation → edges going out from this node
@@ -16,11 +17,11 @@ pub struct AdjacencyCell {
 
 /// In-memory directed graph with adjacency list.
 /// The runtime heart of Statuz. Everything else reads from this.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphEngine {
-    nodes: HashMap<NodeId, Node>,
-    edges: HashMap<EdgeId, Edge>,
-    adj: HashMap<NodeId, AdjacencyCell>,
+    pub(crate) nodes: HashMap<NodeId, Node>,
+    pub(crate) edges: HashMap<EdgeId, Edge>,
+    pub(crate) adj: HashMap<NodeId, AdjacencyCell>,
 }
 
 impl GraphEngine {
@@ -35,9 +36,10 @@ impl GraphEngine {
     // ─── Mutations ───────────────────────────────────────
 
     pub fn add_node(&mut self, node: Node) {
-        self.nodes.insert(node.id.clone(), node);
-        self.adj.entry(node.id.clone()).or_insert_with(|| AdjacencyCell {
-            node_id: node.id,
+        let id = node.id.clone();
+        self.nodes.insert(id.clone(), node);
+        self.adj.entry(id.clone()).or_insert_with(|| AdjacencyCell {
+            node_id: id,
             outgoing: HashMap::new(),
             incoming: HashMap::new(),
         });
@@ -58,21 +60,23 @@ impl GraphEngine {
             outgoing: HashMap::new(),
             incoming: HashMap::new(),
         });
-        cell.outgoing.entry(rel.clone()).or_insert_with(Vec::new).push(
-            self.edges.get(&id).unwrap().clone()
-        );
+        cell.outgoing
+            .entry(rel.clone())
+            .or_insert_with(Vec::new)
+            .push(self.edges.get(&id).unwrap().clone());
 
         let cell = self.adj.entry(target).or_insert_with(|| AdjacencyCell {
             node_id: String::new(),
             outgoing: HashMap::new(),
             incoming: HashMap::new(),
         });
-        cell.incoming.entry(rel).or_insert_with(Vec::new).push(
-            self.edges.get(&id).unwrap().clone()
-        );
+        cell.incoming
+            .entry(rel)
+            .or_insert_with(Vec::new)
+            .push(self.edges.get(&id).unwrap().clone());
     }
 
-    pub fn remove_node(&mut self, id: &NodeId) {
+    pub fn remove_node(&mut self, id: &str) {
         if let Some(cell) = self.adj.get(id) {
             for (_, edges) in &cell.outgoing {
                 for e in edges {
@@ -91,7 +95,7 @@ impl GraphEngine {
 
     /// Remove a single edge from the graph by its ID.
     /// Removes from edge registry, source's outgoing adjacency, and target's incoming adjacency.
-    pub fn remove_edge(&mut self, id: &EdgeId) {
+    pub fn remove_edge(&mut self, id: &str) {
         if let Some(edge) = self.edges.remove(id) {
             let rel = edge.relation.as_str().to_string();
             // Remove from source's outgoing
@@ -117,11 +121,11 @@ impl GraphEngine {
 
     // ─── Accessors ────────────────────────────────────────
 
-    pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
+    pub fn get_node(&self, id: &str) -> Option<&Node> {
         self.nodes.get(id)
     }
 
-    pub fn get_edge(&self, id: &EdgeId) -> Option<&Edge> {
+    pub fn get_edge(&self, id: &str) -> Option<&Edge> {
         self.edges.get(id)
     }
 
@@ -142,28 +146,34 @@ impl GraphEngine {
     }
 
     /// Get all outgoing edges from a node, optionally filtered by relation
-    pub fn outgoing_edges(&self, node_id: &NodeId, relation: Option<&str>) -> Vec<&Edge> {
+    pub fn outgoing_edges(&self, node_id: &str, relation: Option<&str>) -> Vec<&Edge> {
         let cell = match self.adj.get(node_id) {
             Some(c) => c,
             None => return vec![],
         };
 
         if let Some(rel) = relation {
-            cell.outgoing.get(rel).map(|v| v.iter().collect()).unwrap_or_default()
+            cell.outgoing
+                .get(rel)
+                .map(|v| v.iter().collect())
+                .unwrap_or_default()
         } else {
             cell.outgoing.values().flat_map(|v| v.iter()).collect()
         }
     }
 
     /// Get all incoming edges to a node, optionally filtered by relation
-    pub fn incoming_edges(&self, node_id: &NodeId, relation: Option<&str>) -> Vec<&Edge> {
+    pub fn incoming_edges(&self, node_id: &str, relation: Option<&str>) -> Vec<&Edge> {
         let cell = match self.adj.get(node_id) {
             Some(c) => c,
             None => return vec![],
         };
 
         if let Some(rel) = relation {
-            cell.incoming.get(rel).map(|v| v.iter().collect()).unwrap_or_default()
+            cell.incoming
+                .get(rel)
+                .map(|v| v.iter().collect())
+                .unwrap_or_default()
         } else {
             cell.incoming.values().flat_map(|v| v.iter()).collect()
         }
@@ -230,27 +240,49 @@ mod tests {
         g.add_node(node);
         assert_eq!(g.node_count(), 1);
         assert!(g.get_node("test-node").is_some());
-        let (nodes, _) = g.traverse(&"test-node".into(), None, false);
+        let (nodes, _) = g.traverse("test-node", None, false);
         assert!(nodes.is_empty());
     }
 
     #[test]
     fn test_duplicate_edge() {
         let mut g = GraphEngine::new();
-        let n1 = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
-        let n2 = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
+        let n1 = Node {
+            id: "a".into(),
+            type_: "t".into(),
+            label: "A".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
+        let n2 = Node {
+            id: "b".into(),
+            type_: "t".into(),
+            label: "B".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
         g.add_node(n1);
         g.add_node(n2);
 
         let e1 = Edge {
-            id: "e1".into(), source: "a".into(), target: "b".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: "first".into(),
-            target_field: None, meta: None,
+            id: "e1".into(),
+            source: "a".into(),
+            target: "b".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "first".into(),
+            target_field: None,
+            meta: None,
         };
         let e2 = Edge {
-            id: "e2".into(), source: "a".into(), target: "b".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: "duplicate".into(),
-            target_field: None, meta: None,
+            id: "e2".into(),
+            source: "a".into(),
+            target: "b".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "duplicate".into(),
+            target_field: None,
+            meta: None,
         };
         g.add_edge(e1);
         g.add_edge(e2);
@@ -258,7 +290,7 @@ mod tests {
         // Both edges should be stored (different IDs)
         assert_eq!(g.edge_count(), 2);
         // Both should appear in outgoing
-        let outgoing = g.outgoing_edges(&"a".into(), Some("depends_on"));
+        let outgoing = g.outgoing_edges("a", Some("depends_on"));
         assert_eq!(outgoing.len(), 2);
     }
 
@@ -266,33 +298,61 @@ mod tests {
     fn test_remove_nonexistent_node() {
         let mut g = GraphEngine::new();
         // Should not panic
-        g.remove_node(&"nonexistent".into());
+        g.remove_node("nonexistent");
         assert_eq!(g.node_count(), 0);
     }
 
     #[test]
     fn test_remove_node_cascade() {
         let mut g = GraphEngine::new();
-        let n1 = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
-        let n2 = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
-        let n3 = Node { id: "c".into(), type_: "t".into(), label: "C".into(), status: NodeStatus::Active, meta: None };
+        let n1 = Node {
+            id: "a".into(),
+            type_: "t".into(),
+            label: "A".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
+        let n2 = Node {
+            id: "b".into(),
+            type_: "t".into(),
+            label: "B".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
+        let n3 = Node {
+            id: "c".into(),
+            type_: "t".into(),
+            label: "C".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
         g.add_node(n1);
         g.add_node(n2);
         g.add_node(n3);
 
         g.add_edge(Edge {
-            id: "e1".into(), source: "a".into(), target: "b".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
-            target_field: None, meta: None,
+            id: "e1".into(),
+            source: "a".into(),
+            target: "b".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "".into(),
+            target_field: None,
+            meta: None,
         });
         g.add_edge(Edge {
-            id: "e2".into(), source: "b".into(), target: "c".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
-            target_field: None, meta: None,
+            id: "e2".into(),
+            source: "b".into(),
+            target: "c".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "".into(),
+            target_field: None,
+            meta: None,
         });
 
         assert_eq!(g.edge_count(), 2);
-        g.remove_node(&"b".into());
+        g.remove_node("b");
         assert_eq!(g.node_count(), 2); // a and c remain
         assert_eq!(g.edge_count(), 0); // all edges referencing b are removed
         assert!(g.get_node("a").is_some());
@@ -330,7 +390,7 @@ mod tests {
         assert_eq!(g.edge_count(), 99);
 
         // Verify chain by traversing from node-0
-        let (nodes, _) = g.traverse(&"node-0".into(), None, false);
+        let (nodes, _) = g.traverse("node-0", None, false);
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0], "node-1");
     }
@@ -338,57 +398,97 @@ mod tests {
     #[test]
     fn test_outgoing_incoming_edges() {
         let mut g = GraphEngine::new();
-        let a = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
-        let b = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
+        let a = Node {
+            id: "a".into(),
+            type_: "t".into(),
+            label: "A".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
+        let b = Node {
+            id: "b".into(),
+            type_: "t".into(),
+            label: "B".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
         g.add_node(a);
         g.add_node(b);
 
         g.add_edge(Edge {
-            id: "e1".into(), source: "a".into(), target: "b".into(),
-            relation: Relation::Produces, weight: 1.0, description: "".into(),
-            target_field: None, meta: None,
+            id: "e1".into(),
+            source: "a".into(),
+            target: "b".into(),
+            relation: Relation::Produces,
+            weight: 1.0,
+            description: "".into(),
+            target_field: None,
+            meta: None,
         });
 
-        let outgoing = g.outgoing_edges(&"a".into(), None);
+        let outgoing = g.outgoing_edges("a", None);
         assert_eq!(outgoing.len(), 1);
-        let incoming = g.incoming_edges(&"b".into(), None);
+        let incoming = g.incoming_edges("b", None);
         assert_eq!(incoming.len(), 1);
 
         // Filter by relation
-        let filtered = g.outgoing_edges(&"a".into(), Some("produces"));
+        let filtered = g.outgoing_edges("a", Some("produces"));
         assert_eq!(filtered.len(), 1);
-        let no_match = g.outgoing_edges(&"a".into(), Some("consumes"));
+        let no_match = g.outgoing_edges("a", Some("consumes"));
         assert_eq!(no_match.len(), 0);
     }
 
     #[test]
     fn test_remove_edge() {
         let mut g = GraphEngine::new();
-        let n1 = Node { id: "a".into(), type_: "t".into(), label: "A".into(), status: NodeStatus::Active, meta: None };
-        let n2 = Node { id: "b".into(), type_: "t".into(), label: "B".into(), status: NodeStatus::Active, meta: None };
+        let n1 = Node {
+            id: "a".into(),
+            type_: "t".into(),
+            label: "A".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
+        let n2 = Node {
+            id: "b".into(),
+            type_: "t".into(),
+            label: "B".into(),
+            status: NodeStatus::Active,
+            meta: None,
+        };
         g.add_node(n1);
         g.add_node(n2);
         g.add_edge(Edge {
-            id: "e1".into(), source: "a".into(), target: "b".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
-            target_field: None, meta: None,
+            id: "e1".into(),
+            source: "a".into(),
+            target: "b".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "".into(),
+            target_field: None,
+            meta: None,
         });
         assert_eq!(g.edge_count(), 1);
 
-        g.remove_edge(&"e1".into());
+        g.remove_edge("e1");
         assert_eq!(g.edge_count(), 0);
         // Source's outgoing should be empty
-        let outgoing = g.outgoing_edges(&"a".into(), None);
-        assert!(outgoing.is_empty(), "outgoing edges should be empty after removing the only edge");
+        let outgoing = g.outgoing_edges("a", None);
+        assert!(
+            outgoing.is_empty(),
+            "outgoing edges should be empty after removing the only edge"
+        );
         // Target's incoming should be empty
-        let incoming = g.incoming_edges(&"b".into(), None);
-        assert!(incoming.is_empty(), "incoming edges should be empty after removing the only edge");
+        let incoming = g.incoming_edges("b", None);
+        assert!(
+            incoming.is_empty(),
+            "incoming edges should be empty after removing the only edge"
+        );
     }
 
     #[test]
     fn test_remove_nonexistent_edge() {
         let mut g = GraphEngine::new();
-        g.remove_edge(&"nonexistent".into());
+        g.remove_edge("nonexistent");
         // Should not panic and edge count stays 0
         assert_eq!(g.edge_count(), 0);
     }
@@ -397,17 +497,28 @@ mod tests {
     fn test_to_json_and_from_json() {
         let mut g = GraphEngine::new();
         g.add_node(Node {
-            id: "n1".into(), type_: "t".into(), label: "N1".into(),
-            status: NodeStatus::Active, meta: None,
+            id: "n1".into(),
+            type_: "t".into(),
+            label: "N1".into(),
+            status: NodeStatus::Active,
+            meta: None,
         });
         g.add_node(Node {
-            id: "n2".into(), type_: "t".into(), label: "N2".into(),
-            status: NodeStatus::Active, meta: None,
+            id: "n2".into(),
+            type_: "t".into(),
+            label: "N2".into(),
+            status: NodeStatus::Active,
+            meta: None,
         });
         g.add_edge(Edge {
-            id: "e1".into(), source: "n1".into(), target: "n2".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: "".into(),
-            target_field: None, meta: None,
+            id: "e1".into(),
+            source: "n1".into(),
+            target: "n2".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "".into(),
+            target_field: None,
+            meta: None,
         });
 
         let json = g.to_json();

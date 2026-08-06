@@ -50,7 +50,12 @@ impl Field {
     }
 
     /// Traverse within this field, optionally crossing bridges to other fields.
-    pub fn traverse(&self, from: &NodeId, relation: Option<&str>, cross_field: bool) -> (Vec<NodeId>, Vec<Edge>) {
+    pub fn traverse(
+        &self,
+        from: &str,
+        relation: Option<&str>,
+        cross_field: bool,
+    ) -> (Vec<NodeId>, Vec<Edge>) {
         let (ids, edges) = if cross_field {
             self.graph.traverse(from, relation, true)
         } else {

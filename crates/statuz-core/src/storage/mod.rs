@@ -56,11 +56,18 @@ impl std::fmt::Display for StorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StorageError::InvalidMagic(magic) => {
-                write!(f, "invalid magic bytes: expected {:02X?}, got {:02X?}", MAGIC_BYTES, magic)
+                write!(
+                    f,
+                    "invalid magic bytes: expected {:02X?}, got {:02X?}",
+                    MAGIC_BYTES, magic
+                )
             }
             StorageError::UnsupportedVersion(v) => {
-                write!(f, "unsupported version 0x{:04X} (supported: 0x{:04X}..=0x{:04X})",
-                    v, MIN_SUPPORTED_VERSION, CURRENT_VERSION)
+                write!(
+                    f,
+                    "unsupported version 0x{:04X} (supported: 0x{:04X}..=0x{:04X})",
+                    v, MIN_SUPPORTED_VERSION, CURRENT_VERSION
+                )
             }
             StorageError::Corrupted(msg) => write!(f, "corrupted file: {}", msg),
             StorageError::HashMismatch => write!(f, "content hash mismatch: data may be corrupted"),
@@ -108,7 +115,8 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<[u8; 32], StorageError> {
         2,         // 2 iterations
         1,         // 1 degree of parallelism
         Some(32),  // 32-byte output
-    ).map_err(|e| StorageError::CryptoError(format!("argon2 params: {}", e)))?;
+    )
+    .map_err(|e| StorageError::CryptoError(format!("argon2 params: {}", e)))?;
 
     let context = argon2::Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let mut key = [0u8; 32];
@@ -153,9 +161,17 @@ pub fn serialize_cluster_with_options(
     compress: bool,
     password: Option<&str>,
 ) -> Result<Vec<u8>, StorageError> {
-    // Step 1: msgpack encode
-    let mut content = rmp_serde::to_vec(cluster)
-        .map_err(|e| StorageError::EncodeError(e.to_string()))?;
+    // Step 1: msgpack encode.
+    // Struct-as-map (field-name-keyed) so `skip_serializing_if` optional fields
+    // round-trip safely — array (positional) mode breaks when fields are skipped.
+    let mut buf = Vec::new();
+    {
+        let mut serializer = rmp_serde::Serializer::new(&mut buf).with_struct_map();
+        cluster
+            .serialize(&mut serializer)
+            .map_err(|e| StorageError::EncodeError(e.to_string()))?;
+    }
+    let mut content = buf;
 
     // Step 2: optional compression
     let mut flags = FLAG_NONE;
@@ -181,12 +197,12 @@ pub fn serialize_cluster_with_options(
 
     // Step 5: write binary
     let mut buf = Vec::with_capacity(HEADER_SIZE + SALT_SIZE + content.len() + 32);
-    buf.extend_from_slice(&MAGIC_BYTES);                           // 4 bytes
-    buf.extend_from_slice(&CURRENT_VERSION.to_le_bytes());         // 2 bytes
-    buf.extend_from_slice(&flags.to_le_bytes());                   // 2 bytes
-    buf.extend_from_slice(&salt);                                  // 16 bytes
-    buf.extend_from_slice(&content);                               // variable
-    buf.extend_from_slice(hash.as_bytes());                        // 32 bytes
+    buf.extend_from_slice(&MAGIC_BYTES); // 4 bytes
+    buf.extend_from_slice(&CURRENT_VERSION.to_le_bytes()); // 2 bytes
+    buf.extend_from_slice(&flags.to_le_bytes()); // 2 bytes
+    buf.extend_from_slice(&salt); // 16 bytes
+    buf.extend_from_slice(&content); // variable
+    buf.extend_from_slice(hash.as_bytes()); // 32 bytes
 
     Ok(buf)
 }
@@ -201,8 +217,11 @@ pub fn deserialize_cluster(data: &[u8]) -> Result<Cluster, StorageError> {
 }
 
 /// Deserialize with optional password for encrypted files.
-pub fn deserialize_cluster_with_password(data: &[u8], password: Option<&str>) -> Result<Cluster, StorageError> {
-    let (version, flags, content_start, min_size) = parse_header(data)?;
+pub fn deserialize_cluster_with_password(
+    data: &[u8],
+    password: Option<&str>,
+) -> Result<Cluster, StorageError> {
+    let (_version, flags, content_start, min_size) = parse_header(data)?;
 
     // Extract content and hash
     let hash_start = data.len() - 32;
@@ -212,7 +231,9 @@ pub fn deserialize_cluster_with_password(data: &[u8], password: Option<&str>) ->
     // Check minimum size
     if data.len() < min_size {
         return Err(StorageError::Corrupted(format!(
-            "file too short: {} bytes (minimum {})", data.len(), min_size
+            "file too short: {} bytes (minimum {})",
+            data.len(),
+            min_size
         )));
     }
 
@@ -224,12 +245,8 @@ pub fn deserialize_cluster_with_password(data: &[u8], password: Option<&str>) ->
 
     let mut decoded_content = content.to_vec();
 
-    // Decompress (if compressed)
-    if flags & FLAG_COMPRESSED != 0 {
-        decoded_content = decompress_content(&decoded_content)?;
-    }
-
-    // Decrypt (if encrypted)
+    // Decrypt (if encrypted) — encryption wraps the (possibly compressed) content,
+    // so decryption MUST happen before decompression.
     if flags & FLAG_ENCRYPTED != 0 {
         let salt = &data[HEADER_SIZE..HEADER_SIZE + SALT_SIZE];
         let pwd = password.ok_or_else(|| {
@@ -238,7 +255,14 @@ pub fn deserialize_cluster_with_password(data: &[u8], password: Option<&str>) ->
         decoded_content = decrypt_content(&decoded_content, pwd, salt)?;
     }
 
-    // Decode cluster from msgpack
+    // Decompress (if compressed)
+    if flags & FLAG_COMPRESSED != 0 {
+        decoded_content = decompress_content(&decoded_content)?;
+    }
+
+    // Decode cluster from msgpack.
+    // The decoder auto-detects array/map representation; the serializer writes
+    // struct-as-map so skipped optional fields round-trip safely.
     let cluster: Cluster = rmp_serde::from_slice(&decoded_content)
         .map_err(|e| StorageError::DecodeError(e.to_string()))?;
 
@@ -251,7 +275,9 @@ pub fn deserialize_cluster_with_password(data: &[u8], password: Option<&str>) ->
 fn parse_header(data: &[u8]) -> Result<(u16, u16, usize, usize), StorageError> {
     if data.len() < HEADER_SIZE {
         return Err(StorageError::Corrupted(format!(
-            "file too short: {} bytes (minimum {} for header)", data.len(), HEADER_SIZE
+            "file too short: {} bytes (minimum {} for header)",
+            data.len(),
+            HEADER_SIZE
         )));
     }
 
@@ -272,9 +298,9 @@ fn parse_header(data: &[u8]) -> Result<(u16, u16, usize, usize), StorageError> {
 
     // Determine content start (v0x0001: no salt, v0x0002+: has salt)
     let (content_start, min_size) = if version >= 0x0002 {
-        (HEADER_SIZE + SALT_SIZE, HEADER_SIZE + SALT_SIZE + 32)
+        (HEADER_SIZE + SALT_SIZE, MIN_FILE_SIZE_V2)
     } else {
-        (HEADER_SIZE, HEADER_SIZE + 32)
+        (HEADER_SIZE, MIN_FILE_SIZE_V1)
     };
 
     Ok((version, flags, content_start, min_size))
@@ -294,7 +320,9 @@ pub fn verify_stz_file(data: &[u8]) -> Result<(), StorageError> {
 
     if data.len() < min_size {
         return Err(StorageError::Corrupted(format!(
-            "file too short: {} bytes (minimum {})", data.len(), min_size
+            "file too short: {} bytes (minimum {})",
+            data.len(),
+            min_size
         )));
     }
 
@@ -314,14 +342,12 @@ pub fn verify_stz_file(data: &[u8]) -> Result<(), StorageError> {
 
 /// Export a Cluster to human-readable JSON for debugging.
 pub fn export_cluster_json(cluster: &Cluster) -> Result<String, StorageError> {
-    serde_json::to_string_pretty(cluster)
-        .map_err(|e| StorageError::EncodeError(e.to_string()))
+    serde_json::to_string_pretty(cluster).map_err(|e| StorageError::EncodeError(e.to_string()))
 }
 
 /// Export a Cluster to compact JSON (smaller, no whitespace).
 pub fn export_cluster_json_compact(cluster: &Cluster) -> Result<String, StorageError> {
-    serde_json::to_string(cluster)
-        .map_err(|e| StorageError::EncodeError(e.to_string()))
+    serde_json::to_string(cluster).map_err(|e| StorageError::EncodeError(e.to_string()))
 }
 
 // ─── Hash ID Generation ─────────────────────────────────────
@@ -337,6 +363,7 @@ pub fn generate_cluster_id(cluster: &Cluster) -> ClusterId {
 /// Verify a password against the cluster's stored hash.
 /// Password is optional — if the cluster has no password_hash, it's unlocked.
 pub fn verify_password(cluster: &Cluster, password: &str) -> bool {
+    use argon2::password_hash::PasswordVerifier;
     match &cluster.password_hash {
         None => true,
         Some(hash) => {
@@ -375,8 +402,11 @@ mod tests {
     fn make_test_cluster() -> Cluster {
         let mut c = Cluster::new("test-id".into(), "Storage Test".into(), Visibility::Public);
         c.register_node(Node {
-            id: "n1".into(), type_: "test".into(), label: "Node 1".into(),
-            status: NodeStatus::Active, meta: None,
+            id: "n1".into(),
+            type_: "test".into(),
+            label: "Node 1".into(),
+            status: NodeStatus::Active,
+            meta: None,
         });
         c.create_field("f1".into(), "Field 1".into(), None);
         c
@@ -387,8 +417,11 @@ mod tests {
         let mut c = Cluster::new("large-id".into(), "Large".into(), Visibility::Private);
         for i in 0..1000 {
             c.register_node(Node {
-                id: format!("n{}", i), type_: "test".into(), label: format!("Node {}", i),
-                status: NodeStatus::Active, meta: None,
+                id: format!("n{}", i),
+                type_: "test".into(),
+                label: format!("Node {}", i),
+                status: NodeStatus::Active,
+                meta: None,
             });
         }
         c
@@ -416,7 +449,10 @@ mod tests {
         let restored = deserialize_cluster(&data).unwrap();
         assert_eq!(restored.nodes.len(), 1000, "all 1000 nodes should survive");
         assert!(restored.get_node("n0").is_some(), "first node should exist");
-        assert!(restored.get_node("n999").is_some(), "last node should exist");
+        assert!(
+            restored.get_node("n999").is_some(),
+            "last node should exist"
+        );
     }
 
     // ─── Truncated Data ──────────────────────────────────
@@ -428,7 +464,10 @@ mod tests {
         // Truncate by removing the last 10 bytes (part of the hash)
         let truncated = &data[..data.len() - 10];
         let result = deserialize_cluster(truncated);
-        assert!(result.is_err(), "truncated data should fail deserialization");
+        assert!(
+            result.is_err(),
+            "truncated data should fail deserialization"
+        );
         match result {
             Err(StorageError::Corrupted(_)) | Err(StorageError::HashMismatch) => { /* expected */ }
             Err(e) => panic!("expected Corrupted or HashMismatch, got: {:?}", e),
@@ -464,7 +503,10 @@ mod tests {
         c.set_password("secret123").unwrap();
         let data = serialize_cluster(&c).unwrap();
         let restored = deserialize_cluster(&data).unwrap();
-        assert!(restored.password_hash.is_some(), "password hash should survive round-trip");
+        assert!(
+            restored.password_hash.is_some(),
+            "password hash should survive round-trip"
+        );
         assert!(restored.unlock("secret123"), "correct password should work");
         assert!(!restored.unlock("wrong"), "wrong password should fail");
     }
@@ -475,12 +517,21 @@ mod tests {
     fn test_json_export_format() {
         let c = make_test_cluster();
         let json = export_cluster_json(&c).unwrap();
-        assert!(json.contains("Storage Test"), "JSON should contain cluster name");
+        assert!(
+            json.contains("Storage Test"),
+            "JSON should contain cluster name"
+        );
         assert!(json.contains("n1"), "JSON should contain node id");
         assert!(json.contains('\n'), "pretty JSON should have newlines");
         let compact = export_cluster_json_compact(&c).unwrap();
-        assert!(compact.len() < json.len(), "compact JSON should be smaller than pretty");
-        assert!(!compact.contains('\n'), "compact JSON should not have newlines");
+        assert!(
+            compact.len() < json.len(),
+            "compact JSON should be smaller than pretty"
+        );
+        assert!(
+            !compact.contains('\n'),
+            "compact JSON should not have newlines"
+        );
     }
 
     // ─── Verify STZ File ─────────────────────────────────
@@ -489,7 +540,10 @@ mod tests {
     fn test_verify_stz_file_valid() {
         let c = make_test_cluster();
         let data = serialize_cluster(&c).unwrap();
-        assert!(verify_stz_file(&data).is_ok(), "valid file should pass verification");
+        assert!(
+            verify_stz_file(&data).is_ok(),
+            "valid file should pass verification"
+        );
     }
 
     #[test]
@@ -524,12 +578,19 @@ mod tests {
         let c = make_large_cluster();
         let data = serialize_cluster_with_options(&c, true, None).unwrap();
         let restored = deserialize_cluster(&data).unwrap();
-        assert_eq!(restored.nodes.len(), 1000, "compressed round-trip should preserve nodes");
+        assert_eq!(
+            restored.nodes.len(),
+            1000,
+            "compressed round-trip should preserve nodes"
+        );
 
         // Verify content section is smaller than raw (for large cluster)
         // Header(8) + salt(16) + content + hash(32)
         let raw = serialize_cluster(&c).unwrap();
-        assert!(data.len() < raw.len(), "compressed file should be smaller than raw");
+        assert!(
+            data.len() < raw.len(),
+            "compressed file should be smaller than raw"
+        );
     }
 
     // ─── Encryption Round-trip ───────────────────────────
@@ -539,8 +600,15 @@ mod tests {
         let c = make_test_cluster();
         let data = serialize_cluster_with_options(&c, false, Some("p@ssw0rd!")).unwrap();
         let restored = deserialize_cluster_with_password(&data, Some("p@ssw0rd!")).unwrap();
-        assert_eq!(restored.name, c.name, "encrypted round-trip should preserve name");
-        assert_eq!(restored.nodes.len(), c.nodes.len(), "encrypted round-trip should preserve nodes");
+        assert_eq!(
+            restored.name, c.name,
+            "encrypted round-trip should preserve name"
+        );
+        assert_eq!(
+            restored.nodes.len(),
+            c.nodes.len(),
+            "encrypted round-trip should preserve nodes"
+        );
     }
 
     // ─── Encryption Wrong Password ───────────────────────
@@ -575,11 +643,18 @@ mod tests {
         let c = make_large_cluster();
         let data = serialize_cluster_with_options(&c, true, Some("secret-key")).unwrap();
         let restored = deserialize_cluster_with_password(&data, Some("secret-key")).unwrap();
-        assert_eq!(restored.nodes.len(), 1000, "compress+encrypt round-trip should preserve nodes");
+        assert_eq!(
+            restored.nodes.len(),
+            1000,
+            "compress+encrypt round-trip should preserve nodes"
+        );
 
         // Verify it's smaller than unencrypted+uncompressed
         let raw = serialize_cluster(&c).unwrap();
-        assert!(data.len() < raw.len(), "compress+encrypt should be smaller than raw");
+        assert!(
+            data.len() < raw.len(),
+            "compress+encrypt should be smaller than raw"
+        );
     }
 
     // ─── Backward Compatibility: v0x0001 Loading ─────────
@@ -588,18 +663,26 @@ mod tests {
     fn test_v1_backward_compatibility() {
         // Create a v0x0001 format file manually (no salt)
         let c = make_test_cluster();
-        let content = rmp_serde::to_vec(&c).unwrap();
+        let mut content_buf = Vec::new();
+        {
+            let mut serializer = rmp_serde::Serializer::new(&mut content_buf).with_struct_map();
+            c.serialize(&mut serializer).unwrap();
+        }
+        let content = content_buf;
         let hash = blake3::hash(&content);
 
         let mut buf = Vec::with_capacity(8 + content.len() + 32);
-        buf.extend_from_slice(&MAGIC_BYTES);           // 4 bytes
+        buf.extend_from_slice(&MAGIC_BYTES); // 4 bytes
         buf.extend_from_slice(&0x0001u16.to_le_bytes()); // version = 0x0001
         buf.extend_from_slice(&0x0000u16.to_le_bytes()); // flags = none
-        buf.extend_from_slice(&content);                // content
-        buf.extend_from_slice(hash.as_bytes());         // hash
+        buf.extend_from_slice(&content); // content
+        buf.extend_from_slice(hash.as_bytes()); // hash
 
         let restored = deserialize_cluster(&buf).unwrap();
-        assert_eq!(restored.name, c.name, "v0x0001 format should load correctly");
+        assert_eq!(
+            restored.name, c.name,
+            "v0x0001 format should load correctly"
+        );
         assert_eq!(restored.nodes.len(), c.nodes.len());
     }
 }

@@ -1,12 +1,17 @@
-use std::collections::{HashMap, VecDeque, HashSet};
-use crate::graph::types::*;
 use crate::graph::engine::GraphEngine;
+use crate::graph::types::*;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 impl GraphEngine {
     /// Q1: "What does this node connect to?"
     /// Traverse from a node following a relation (or all relations).
     /// If `cross_field` is true, also follows bridge edges to other fields.
-    pub fn traverse(&self, from: &NodeId, relation: Option<&str>, cross_field: bool) -> (Vec<NodeId>, Vec<&Edge>) {
+    pub fn traverse(
+        &self,
+        from: &str,
+        relation: Option<&str>,
+        cross_field: bool,
+    ) -> (Vec<NodeId>, Vec<&Edge>) {
         let cell = match self.adj.get(from) {
             Some(c) => c,
             None => return (vec![], vec![]),
@@ -18,7 +23,8 @@ impl GraphEngine {
         if let Some(rel) = relation {
             if let Some(rel_edges) = cell.outgoing.get(rel) {
                 for e in rel_edges {
-                    if cross_field || e.target_field.is_none() {
+                    // Explicitly asking for bridge edges shows them even in local mode
+                    if cross_field || e.target_field.is_none() || rel == "bridges" {
                         edges.push(e);
                         seen.insert(e.target.clone());
                     }
@@ -41,15 +47,17 @@ impl GraphEngine {
 
     /// Q2: "If this node changes, who is affected?"
     /// Reverse BFS — find all nodes that depend on the changed node (transitively).
-    pub fn impact(&self, changed: &NodeId) -> ImpactResult {
+    pub fn impact(&self, changed: &str) -> ImpactResult {
         let cell = match self.adj.get(changed) {
             Some(c) => c,
-            None => return ImpactResult {
-                changed: changed.clone(),
-                affected: vec![],
-                blast_radius: vec![],
-                critical_path: false,
-            },
+            None => {
+                return ImpactResult {
+                    changed: changed.to_string(),
+                    affected: vec![],
+                    blast_radius: vec![],
+                    critical_path: false,
+                }
+            }
         };
 
         let mut affected: Vec<NodeId> = Vec::new();
@@ -87,7 +95,7 @@ impl GraphEngine {
         let critical_path = centrality.iter().any(|id| id == changed);
 
         ImpactResult {
-            changed: changed.clone(),
+            changed: changed.to_string(),
             affected: {
                 affected.sort();
                 affected.dedup();
@@ -102,11 +110,11 @@ impl GraphEngine {
     /// Q3: "How do I get from A to B?"
     /// BFS shortest path through the graph.
     /// If `cross_field` is true, follows bridge edges across fields.
-    pub fn path(&self, from: &NodeId, to: &NodeId, cross_field: bool) -> PathResult {
+    pub fn path(&self, from: &str, to: &str, cross_field: bool) -> PathResult {
         if from == to {
             return PathResult {
-                from: from.clone(),
-                to: to.clone(),
+                from: from.to_string(),
+                to: to.to_string(),
                 path: vec![],
                 field_path: vec![],
                 length: 0,
@@ -116,8 +124,8 @@ impl GraphEngine {
 
         if !self.nodes.contains_key(from) || !self.nodes.contains_key(to) {
             return PathResult {
-                from: from.clone(),
-                to: to.clone(),
+                from: from.to_string(),
+                to: to.to_string(),
                 path: vec![],
                 field_path: vec![],
                 length: -1,
@@ -126,10 +134,10 @@ impl GraphEngine {
         }
 
         let mut visited = HashSet::new();
-        visited.insert(from.clone());
+        visited.insert(from.to_string());
         let mut parent: HashMap<NodeId, (NodeId, Edge)> = HashMap::new();
         let mut queue: VecDeque<NodeId> = VecDeque::new();
-        queue.push_back(from.clone());
+        queue.push_back(from.to_string());
 
         'bfs: while let Some(current) = queue.pop_front() {
             if current == *to {
@@ -156,8 +164,8 @@ impl GraphEngine {
 
         if !parent.contains_key(to) {
             return PathResult {
-                from: from.clone(),
-                to: to.clone(),
+                from: from.to_string(),
+                to: to.to_string(),
                 path: vec![],
                 field_path: vec![],
                 length: -1,
@@ -167,7 +175,7 @@ impl GraphEngine {
 
         // Reconstruct path
         let mut path: Vec<Edge> = Vec::new();
-        let mut current = to.clone();
+        let mut current = to.to_string();
         while let Some((prev, edge)) = parent.get(&current) {
             path.push(edge.clone());
             current = prev.clone();
@@ -177,12 +185,13 @@ impl GraphEngine {
         }
         path.reverse();
 
+        let length = path.len() as i32;
         PathResult {
-            from: from.clone(),
-            to: to.clone(),
+            from: from.to_string(),
+            to: to.to_string(),
             path,
             field_path: vec![],
-            length: path.len() as i32,
+            length,
             exists: true,
         }
     }
@@ -212,11 +221,11 @@ impl GraphEngine {
     }
 
     /// Transitive closure: get ALL nodes reachable from `id` (BFS)
-    pub fn reachable(&self, from: &NodeId) -> Vec<NodeId> {
+    pub fn reachable(&self, from: &str) -> Vec<NodeId> {
         let mut visited = HashSet::new();
-        visited.insert(from.clone());
+        visited.insert(from.to_string());
         let mut queue: VecDeque<NodeId> = VecDeque::new();
-        queue.push_back(from.clone());
+        queue.push_back(from.to_string());
 
         while let Some(current) = queue.pop_front() {
             if let Some(cell) = self.adj.get(&current) {
@@ -245,8 +254,12 @@ impl GraphEngine {
         for (id, cell) in &self.adj {
             let mut out_count = 0;
             let mut in_count = 0;
-            for (_, e) in &cell.outgoing { out_count += e.len(); }
-            for (_, e) in &cell.incoming { in_count += e.len(); }
+            for (_, e) in &cell.outgoing {
+                out_count += e.len();
+            }
+            for (_, e) in &cell.incoming {
+                in_count += e.len();
+            }
 
             if out_count == 0 && in_count == 0 {
                 orphans.push(id.clone());
@@ -309,9 +322,17 @@ impl GraphEngine {
     /// Extract a subgraph starting from seed nodes via BFS.
     /// depth: None = unlimited, Some(0) = seeds only
     /// relation: optional relation filter
-    pub fn subgraph(&self, seeds: &[NodeId], depth: Option<usize>, relation: Option<&str>) -> SubgraphResult {
+    pub fn subgraph(
+        &self,
+        seeds: &[NodeId],
+        depth: Option<usize>,
+        relation: Option<&str>,
+    ) -> SubgraphResult {
         if seeds.is_empty() {
-            return SubgraphResult { nodes: vec![], edges: vec![] };
+            return SubgraphResult {
+                nodes: vec![],
+                edges: vec![],
+            };
         }
 
         let max_depth = depth.unwrap_or(usize::MAX);
@@ -321,7 +342,7 @@ impl GraphEngine {
         let mut result_edges: Vec<Edge> = Vec::new();
         let mut queue: VecDeque<(NodeId, usize)> = VecDeque::new();
 
-        // Init: seed nodes
+        // Init: seed nodes (only if known to the engine — unknown seeds yield nothing)
         for seed in seeds {
             if !visited_nodes.contains(seed) {
                 visited_nodes.insert(seed.clone());
@@ -339,7 +360,10 @@ impl GraphEngine {
             }
 
             let edges: Vec<Edge> = if let Some(rel) = relation {
-                self.outgoing_edges(&current, Some(rel)).into_iter().cloned().collect()
+                self.outgoing_edges(&current, Some(rel))
+                    .into_iter()
+                    .cloned()
+                    .collect()
             } else {
                 let mut all = Vec::new();
                 if let Some(cell) = self.adj.get(&current) {
@@ -361,15 +385,29 @@ impl GraphEngine {
                 }
                 if !visited_nodes.contains(&edge.target) {
                     visited_nodes.insert(edge.target.clone());
-                    if let Some(node) = self.nodes.get(&edge.target) {
-                        result_nodes.push(node.clone());
-                    }
+                    result_nodes.push(self.node_or_minimal(&edge.target));
                     queue.push_back((edge.target.clone(), current_depth + 1));
                 }
             }
         }
 
-        SubgraphResult { nodes: result_nodes, edges: result_edges }
+        SubgraphResult {
+            nodes: result_nodes,
+            edges: result_edges,
+        }
+    }
+
+    /// Return the cached node if present; otherwise a minimal id-only placeholder.
+    /// Cluster-level subgraphs enrich these placeholders from the cluster registry
+    /// (field GraphEngines may not cache nodes — the registry is authoritative).
+    fn node_or_minimal(&self, id: &str) -> Node {
+        self.nodes.get(id).cloned().unwrap_or_else(|| Node {
+            id: id.to_string(),
+            type_: String::new(),
+            label: String::new(),
+            status: NodeStatus::Active,
+            meta: None,
+        })
     }
 
     // ─── Validate ─────────────────────────────────────────
@@ -384,7 +422,10 @@ impl GraphEngine {
                 issues.push(ValidationIssue {
                     severity: IssueSeverity::Error,
                     category: IssueCategory::OrphanEdge,
-                    message: format!("Edge '{}' references non-existent source node '{}'", edge.id, edge.source),
+                    message: format!(
+                        "Edge '{}' references non-existent source node '{}'",
+                        edge.id, edge.source
+                    ),
                     affected_ids: vec![edge.id.clone(), edge.source.clone()],
                 });
             }
@@ -392,7 +433,10 @@ impl GraphEngine {
                 issues.push(ValidationIssue {
                     severity: IssueSeverity::Error,
                     category: IssueCategory::OrphanEdge,
-                    message: format!("Edge '{}' references non-existent target node '{}'", edge.id, edge.target),
+                    message: format!(
+                        "Edge '{}' references non-existent target node '{}'",
+                        edge.id, edge.target
+                    ),
                     affected_ids: vec![edge.id.clone(), edge.target.clone()],
                 });
             }
@@ -410,7 +454,13 @@ mod tests {
     use super::*;
 
     fn node(id: &str, type_: &str, label: &str, status: NodeStatus) -> Node {
-        Node { id: id.into(), type_: type_.into(), label: label.into(), status, meta: None }
+        Node {
+            id: id.into(),
+            type_: type_.into(),
+            label: label.into(),
+            status,
+            meta: None,
+        }
     }
 
     /// Build a test graph:
@@ -432,11 +482,11 @@ mod tests {
             });
         }
         let edges: [(&str, &str, &str, &str, f64); 5] = [
-            ("e1", "a", "a", "depends_on", 1.0),  // self-loop
+            ("e1", "a", "a", "depends_on", 1.0), // self-loop
             ("e2", "a", "b", "depends_on", 1.0),
             ("e3", "b", "c", "depends_on", 1.0),
             ("e4", "c", "d", "depends_on", 1.0),
-            ("e5", "a", "e", "produces",   1.0),
+            ("e5", "a", "e", "produces", 1.0),
         ];
         for (id, src, tgt, rel, w) in &edges {
             g.add_edge(Edge {
@@ -458,7 +508,7 @@ mod tests {
     #[test]
     fn test_empty_graph_traverse() {
         let g = GraphEngine::new();
-        let (nodes, edges) = g.traverse(&"nonexistent".into(), None, false);
+        let (nodes, edges) = g.traverse("nonexistent", None, false);
         assert!(nodes.is_empty());
         assert!(edges.is_empty());
     }
@@ -466,7 +516,7 @@ mod tests {
     #[test]
     fn test_empty_graph_impact() {
         let g = GraphEngine::new();
-        let impact = g.impact(&"nonexistent".into());
+        let impact = g.impact("nonexistent");
         assert!(impact.affected.is_empty());
         assert!(!impact.critical_path);
     }
@@ -474,7 +524,7 @@ mod tests {
     #[test]
     fn test_empty_graph_path() {
         let g = GraphEngine::new();
-        let path = g.path(&"nonexistent".into(), &"other".into(), false);
+        let path = g.path("nonexistent", "other", false);
         assert!(!path.exists);
         assert_eq!(path.length, -1);
     }
@@ -484,7 +534,7 @@ mod tests {
     #[test]
     fn test_traverse_nonexistent() {
         let g = build_test_graph();
-        let (nodes, edges) = g.traverse(&"zzz".into(), None, false);
+        let (nodes, edges) = g.traverse("zzz", None, false);
         assert!(nodes.is_empty());
         assert!(edges.is_empty());
     }
@@ -492,14 +542,14 @@ mod tests {
     #[test]
     fn test_impact_nonexistent() {
         let g = build_test_graph();
-        let impact = g.impact(&"zzz".into());
+        let impact = g.impact("zzz");
         assert!(impact.affected.is_empty());
     }
 
     #[test]
     fn test_path_to_nonexistent() {
         let g = build_test_graph();
-        let path = g.path(&"a".into(), &"zzz".into(), false);
+        let path = g.path("a", "zzz", false);
         assert!(!path.exists);
         assert_eq!(path.length, -1);
     }
@@ -507,7 +557,7 @@ mod tests {
     #[test]
     fn test_path_from_nonexistent() {
         let g = build_test_graph();
-        let path = g.path(&"zzz".into(), &"a".into(), false);
+        let path = g.path("zzz", "a", false);
         assert!(!path.exists);
         assert_eq!(path.length, -1);
     }
@@ -517,9 +567,12 @@ mod tests {
     #[test]
     fn test_self_loop_traverse() {
         let g = build_test_graph();
-        let (nodes, _) = g.traverse(&"a".into(), None, false);
+        let (nodes, _) = g.traverse("a", None, false);
         // Self-loop e1: a -> a, so 'a' appears in the result
-        assert!(nodes.contains(&"a".into()), "self-loop should make 'a' reachable from 'a'");
+        assert!(
+            nodes.contains(&"a".to_string()),
+            "self-loop should make 'a' reachable from 'a'"
+        );
     }
 
     // ─── Single Layer Path ───────────────────────────────
@@ -527,7 +580,7 @@ mod tests {
     #[test]
     fn test_single_layer_path() {
         let g = build_test_graph();
-        let path = g.path(&"a".into(), &"b".into(), false);
+        let path = g.path("a", "b", false);
         assert!(path.exists, "a -> b should exist");
         assert_eq!(path.length, 1);
     }
@@ -535,7 +588,7 @@ mod tests {
     #[test]
     fn test_single_layer_path_produces() {
         let g = build_test_graph();
-        let path = g.path(&"a".into(), &"e".into(), false);
+        let path = g.path("a", "e", false);
         assert!(path.exists, "a -> e should exist (produces)");
         assert_eq!(path.length, 1);
     }
@@ -545,7 +598,7 @@ mod tests {
     #[test]
     fn test_multi_layer_path() {
         let g = build_test_graph();
-        let path = g.path(&"a".into(), &"d".into(), false);
+        let path = g.path("a", "d", false);
         assert!(path.exists, "a -> b -> c -> d should exist");
         assert_eq!(path.length, 3);
     }
@@ -556,7 +609,7 @@ mod tests {
     fn test_no_path_disconnected() {
         let g = build_test_graph();
         // f is isolated — no path from a
-        let path = g.path(&"a".into(), &"f".into(), false);
+        let path = g.path("a", "f", false);
         assert!(!path.exists);
         assert_eq!(path.length, -1);
     }
@@ -567,7 +620,7 @@ mod tests {
     fn test_directionality_a_to_b_yes() {
         let g = build_test_graph();
         // a -> b exists
-        let path = g.path(&"a".into(), &"b".into(), false);
+        let path = g.path("a", "b", false);
         assert!(path.exists);
     }
 
@@ -575,7 +628,7 @@ mod tests {
     fn test_directionality_b_to_a_no() {
         let g = build_test_graph();
         // b -> a does NOT exist (graph is directed)
-        let path = g.path(&"b".into(), &"a".into(), false);
+        let path = g.path("b", "a", false);
         assert!(!path.exists);
         assert_eq!(path.length, -1);
     }
@@ -586,7 +639,10 @@ mod tests {
     fn test_centrality_hub_node() {
         let g = build_test_graph();
         let top = g.centrality(5);
-        assert!(!top.is_empty(), "centrality should return at least one node");
+        assert!(
+            !top.is_empty(),
+            "centrality should return at least one node"
+        );
         // 'a' has highest degree:
         //   outgoing: e1(self), e2, e5 = 3
         //   incoming: e1(self)        = 1
@@ -601,7 +657,10 @@ mod tests {
         let g = build_test_graph();
         let h = g.health();
         // f is isolated: 0 outgoing, 0 incoming
-        assert!(h.orphans.contains(&"f".into()), "f should be an orphan");
+        assert!(
+            h.orphans.contains(&"f".to_string()),
+            "f should be an orphan"
+        );
     }
 
     #[test]
@@ -610,8 +669,8 @@ mod tests {
         let h = g.health();
         // d: 0 outgoing, 1 incoming (e4) -> sink
         // e: 0 outgoing, 1 incoming (e5) -> sink
-        assert!(h.sinks.contains(&"d".into()), "d should be a sink");
-        assert!(h.sinks.contains(&"e".into()), "e should be a sink");
+        assert!(h.sinks.contains(&"d".to_string()), "d should be a sink");
+        assert!(h.sinks.contains(&"e".to_string()), "e should be a sink");
     }
 
     #[test]
@@ -640,18 +699,21 @@ mod tests {
     #[test]
     fn test_reachable_from_a() {
         let g = build_test_graph();
-        let mut reachable = g.reachable(&"a".into());
+        let mut reachable = g.reachable("a");
         reachable.sort();
-        // a can reach: a (self-loop), b, c, d, e
-        // reachable() removes the start node, so: a, b, c, d, e
-        assert_eq!(reachable, vec!["a", "b", "c", "d", "e"]);
+        // reachable() = transitive closure via one-or-more edges; the start
+        // node itself is removed even when a self-loop exists.
+        assert_eq!(reachable, vec!["b", "c", "d", "e"]);
     }
 
     #[test]
     fn test_reachable_from_f_isolated() {
         let g = build_test_graph();
-        let reachable = g.reachable(&"f".into());
-        assert!(reachable.is_empty(), "isolated node should have no reachable nodes");
+        let reachable = g.reachable("f");
+        assert!(
+            reachable.is_empty(),
+            "isolated node should have no reachable nodes"
+        );
     }
 
     // ─── Subgraph Tests ──────────────────────────────────
@@ -680,7 +742,11 @@ mod tests {
         let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
         node_ids.sort();
         // a -> b, a -> e, self-loop a->a
-        assert_eq!(node_ids, vec!["a", "b", "e"], "depth 1 from 'a' should reach a, b, e");
+        assert_eq!(
+            node_ids,
+            vec!["a", "b", "e"],
+            "depth 1 from 'a' should reach a, b, e"
+        );
         assert_eq!(result.edges.len(), 3);
     }
 
@@ -711,7 +777,11 @@ mod tests {
         let result = g.subgraph(&["a".into()], None, None);
         let mut node_ids: Vec<_> = result.nodes.iter().map(|n| n.id.as_str()).collect();
         node_ids.sort();
-        assert_eq!(node_ids, vec!["a", "b", "c", "d", "e"], "f is isolated, not reachable");
+        assert_eq!(
+            node_ids,
+            vec!["a", "b", "c", "d", "e"],
+            "f is isolated, not reachable"
+        );
     }
 
     #[test]
@@ -755,13 +825,21 @@ mod tests {
         let mut g = GraphEngine::new();
         g.add_node(node("a", "t", "A", NodeStatus::Active));
         g.add_edge(Edge {
-            id: "orphan".into(), source: "zzz".into(), target: "a".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
-            target_field: None, meta: None,
+            id: "orphan".into(),
+            source: "zzz".into(),
+            target: "a".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
         });
         let result = g.validate();
         assert!(!result.is_valid);
-        assert!(result.issues.iter().any(|i| i.category == IssueCategory::OrphanEdge));
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i.category == IssueCategory::OrphanEdge));
     }
 
     #[test]
@@ -769,22 +847,35 @@ mod tests {
         let mut g = GraphEngine::new();
         g.add_node(node("a", "t", "A", NodeStatus::Active));
         g.add_edge(Edge {
-            id: "orphan".into(), source: "a".into(), target: "zzz".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
-            target_field: None, meta: None,
+            id: "orphan".into(),
+            source: "a".into(),
+            target: "zzz".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
         });
         let result = g.validate();
         assert!(!result.is_valid);
-        assert!(result.issues.iter().any(|i| i.category == IssueCategory::OrphanEdge));
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i.category == IssueCategory::OrphanEdge));
     }
 
     #[test]
     fn test_validate_both_ends_orphan() {
         let mut g = GraphEngine::new();
         g.add_edge(Edge {
-            id: "double-orphan".into(), source: "xxx".into(), target: "yyy".into(),
-            relation: Relation::DependsOn, weight: 1.0, description: String::new(),
-            target_field: None, meta: None,
+            id: "double-orphan".into(),
+            source: "xxx".into(),
+            target: "yyy".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
         });
         let result = g.validate();
         assert!(!result.is_valid);
