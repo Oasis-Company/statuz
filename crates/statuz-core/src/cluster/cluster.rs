@@ -252,7 +252,14 @@ impl Cluster {
             result: HashMap::new(),
         };
 
-        self._traverse_across(start_field, from_node, relation, max_depth, 0, &mut traversal);
+        self._traverse_across(
+            start_field,
+            from_node,
+            relation,
+            max_depth,
+            0,
+            &mut traversal,
+        );
 
         traversal.result
     }

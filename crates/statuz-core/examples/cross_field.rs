@@ -51,17 +51,13 @@ fn main() {
     cluster.create_field("data".into(), "Data Flow".into(), None);
 
     // Field "arch": api-gateway delegates auth to auth-service
-    cluster
-        .get_field_mut("arch")
-        .unwrap()
-        .graph
-        .add_edge(edge(
-            "e1",
-            "api-gateway",
-            "auth-service",
-            Relation::DependsOn,
-            "API Gateway delegates auth",
-        ));
+    cluster.get_field_mut("arch").unwrap().graph.add_edge(edge(
+        "e1",
+        "api-gateway",
+        "auth-service",
+        Relation::DependsOn,
+        "API Gateway delegates auth",
+    ));
 
     // Field "data": auth-service reads db, redis-cache feeds db
     let data = cluster.get_field_mut("data").unwrap();
@@ -92,8 +88,12 @@ fn main() {
         )
         .unwrap();
 
-    println!("📦 Cluster: {} ({} nodes, {} fields)",
-        cluster.name, cluster.nodes.len(), cluster.fields.len());
+    println!(
+        "📦 Cluster: {} ({} nodes, {} fields)",
+        cluster.name,
+        cluster.nodes.len(),
+        cluster.fields.len()
+    );
     for (fid, field) in &cluster.fields {
         println!("   ─ Field '{}': {} edges", fid, field.graph.edge_count());
     }
@@ -103,7 +103,12 @@ fn main() {
     println!("━━━ Q1: traverse_across_fields(\"arch\", \"api-gateway\") ━━━");
     let result = cluster.traverse_across_fields("arch", "api-gateway", None, 3);
     for (fid, (nodes, edges)) in &result {
-        println!("  Field '{}': {} nodes, {} edges", fid, nodes.len(), edges.len());
+        println!(
+            "  Field '{}': {} nodes, {} edges",
+            fid,
+            nodes.len(),
+            edges.len()
+        );
         for nid in nodes {
             println!("     • {}", nid);
         }
@@ -113,7 +118,10 @@ fn main() {
     // ─── Q2: cross-field impact ──────────────────────────────
     println!("━━━ Q2: impact_across_fields(\"db-primary\") ━━━");
     let impact = cluster.impact_across_fields("db-primary");
-    println!("   If db-primary changes, {} nodes affected:", impact.affected.len());
+    println!(
+        "   If db-primary changes, {} nodes affected:",
+        impact.affected.len()
+    );
     for nid in &impact.affected {
         println!("     ⚡ {}", nid);
     }

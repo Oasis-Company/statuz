@@ -147,15 +147,15 @@ impl GraphEngine {
             if let Some(cell) = self.adj.get(&current) {
                 for edges in cell.outgoing.values() {
                     for e in edges {
-                        if (cross_field || e.target_field.is_none())
-                            && !visited.contains(&e.target) {
-                                visited.insert(e.target.clone());
-                                parent.insert(e.target.clone(), (current.clone(), e.clone()));
-                                queue.push_back(e.target.clone());
-                                if e.target == *to {
-                                    break 'bfs;
-                                }
+                        if (cross_field || e.target_field.is_none()) && !visited.contains(&e.target)
+                        {
+                            visited.insert(e.target.clone());
+                            parent.insert(e.target.clone(), (current.clone(), e.clone()));
+                            queue.push_back(e.target.clone());
+                            if e.target == *to {
+                                break 'bfs;
                             }
+                        }
                     }
                 }
             }

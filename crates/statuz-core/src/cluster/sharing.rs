@@ -33,8 +33,7 @@ impl Default for CloneOptions {
 // ─── Merge Strategy ─────────────────────────────────────────
 
 /// Strategy for handling ID conflicts during merge.
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum MergeStrategy {
     /// Skip conflicting items — keep existing, ignore incoming
     #[default]
@@ -46,7 +45,6 @@ pub enum MergeStrategy {
     /// Merge metadata — merge meta fields for nodes
     MergeMeta,
 }
-
 
 // ─── Merge Result ────────────────────────────────────────────
 

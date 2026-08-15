@@ -783,12 +783,7 @@ fn run_self_test() {
     // ─── Phase 3: Cross-Field Bridge (Forward) ────────────────
     println!("\n━━━ Phase 3: Cross-Field Bridge (Forward: system-arch → data-flow) ━━━");
     println!("\n  Cross-field traverse from orchestrator (system-arch → data-flow):");
-    let cross = cluster.traverse_across_fields(
-        "system-arch",
-        "orchestrator",
-        None,
-        2,
-    );
+    let cross = cluster.traverse_across_fields("system-arch", "orchestrator", None, 2);
     for (fid, (nodes, edges)) in &cross {
         println!(
             "   Field '{}': {} nodes, {} edges",
@@ -805,12 +800,7 @@ fn run_self_test() {
 
     // ─── Phase 4: Bidirectional Bridge (Reverse: data-flow → system-arch) ────
     println!("\n━━━ Phase 4: Bidirectional Bridge (Reverse: data-flow → system-arch) ━━━");
-    let cross_rev = cluster.traverse_across_fields(
-        "data-flow",
-        "redis-cache",
-        None,
-        2,
-    );
+    let cross_rev = cluster.traverse_across_fields("data-flow", "redis-cache", None, 2);
     let mut found_reverse = false;
     for (fid, (nodes, _)) in &cross_rev {
         println!("   Field '{}': {} nodes", fid, nodes.len());
@@ -831,11 +821,7 @@ fn run_self_test() {
     // ─── Phase 5: Cross-Field Path ─────────────────────────────
     println!("\n━━━ Phase 5: Cross-Field Path ━━━");
     println!("\n  Cross-field path: api-gateway → redis-cache");
-    let cf_path = cluster.path_across_fields(
-        "api-gateway",
-        "redis-cache",
-        "system-arch",
-    );
+    let cf_path = cluster.path_across_fields("api-gateway", "redis-cache", "system-arch");
     if cf_path.exists {
         println!(
             "   Path found ({} steps) across {} fields!",
