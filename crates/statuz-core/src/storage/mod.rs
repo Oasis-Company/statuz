@@ -263,8 +263,12 @@ pub fn deserialize_cluster_with_password(
     // Decode cluster from msgpack.
     // The decoder auto-detects array/map representation; the serializer writes
     // struct-as-map so skipped optional fields round-trip safely.
-    let cluster: Cluster = rmp_serde::from_slice(&decoded_content)
+    let mut cluster: Cluster = rmp_serde::from_slice(&decoded_content)
         .map_err(|e| StorageError::DecodeError(e.to_string()))?;
+
+    // Rebuild derived in-memory indexes (field degree indexes + cross-field
+    // inverted index) so loaded clusters query at full speed (D1').
+    cluster.rebuild_indexes();
 
     Ok(cluster)
 }

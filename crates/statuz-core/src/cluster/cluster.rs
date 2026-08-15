@@ -1,6 +1,7 @@
 use crate::cluster::field::Field;
 use crate::graph::types::*;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Mutable state shared across the cross-field BFS recursion.
@@ -8,6 +9,20 @@ struct CrossFieldTraversal {
     visited_fields: HashSet<FieldId>,
     visited_nodes: HashSet<NodeId>,
     result: HashMap<FieldId, (Vec<NodeId>, Vec<Edge>)>,
+}
+
+/// Derived cross-field incoming-edge index: node → the source nodes of every
+/// incoming edge across ALL fields (including bridge edges).
+///
+/// Built by `build_incoming_index`; invalidated by mutations (see
+/// `invalidate_index`); never serialized. The `edge_counts` fingerprint lets
+/// `impact_across_fields` detect mutations that bypass cluster methods
+/// (e.g. direct `fields.get_mut(...).graph.add_edge(...)`).
+#[derive(Debug, Clone)]
+pub(crate) struct IncomingIndex {
+    sources: HashMap<NodeId, Vec<NodeId>>,
+    /// (field_id, edge_count) snapshot at build time.
+    edge_counts: Vec<(FieldId, usize)>,
 }
 
 /// Visibility of a Cluster
@@ -53,6 +68,11 @@ pub struct Cluster {
     pub updated_at: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<HashMap<String, String>>,
+    /// Derived cross-field incoming-edge index (see `IncomingIndex`).
+    /// `None` = stale/never built → rebuilt on demand by `impact_across_fields`.
+    /// Never serialized — keeps the disk format and content IDs stable.
+    #[serde(skip)]
+    pub(crate) incoming_index: RefCell<Option<IncomingIndex>>,
 }
 
 impl Cluster {
@@ -72,6 +92,7 @@ impl Cluster {
             created_at: now,
             updated_at: now,
             meta: None,
+            incoming_index: RefCell::new(None),
         }
     }
 
@@ -98,6 +119,7 @@ impl Cluster {
         for field in self.fields.values_mut() {
             field.graph.remove_node(id);
         }
+        self.invalidate_index();
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -124,8 +146,19 @@ impl Cluster {
         self.fields.get_mut(&fid).unwrap()
     }
 
+    /// Mark the derived cross-field index stale. Called by every mutating
+    /// cluster method and by `get_field_mut` (mutable field access may change
+    /// edges). The index is rebuilt on demand by `impact_across_fields`.
+    pub(crate) fn invalidate_index(&mut self) {
+        self.incoming_index = RefCell::new(None);
+    }
+
     /// Get a mutable reference to a field.
+    ///
+    /// Invalidates the cross-field index: the returned `&mut Field` may be
+    /// used to add/remove edges directly.
     pub fn get_field_mut(&mut self, id: &str) -> Option<&mut Field> {
+        self.invalidate_index();
         self.fields.get_mut(id)
     }
 
@@ -137,6 +170,7 @@ impl Cluster {
     /// Remove a field and all its edges from the cluster.
     pub fn remove_field(&mut self, id: &str) {
         self.fields.remove(id);
+        self.invalidate_index();
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -229,6 +263,7 @@ impl Cluster {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
+        self.invalidate_index();
 
         Ok(())
     }
@@ -347,11 +382,68 @@ impl Cluster {
     ///
     /// "If this node changes, who is affected across the entire cluster?"
     ///
-    /// Uses reverse BFS across ALL fields:
-    /// 1. Starting from `changed`, find all nodes that directly point to it
-    /// 2. Continue reverse traversal across all fields
-    /// 3. When crossing a bridge edge, follow the reverse bridge to the other field
+    /// Reverse BFS through a derived inverted index (node → incoming sources
+    /// across ALL fields, including bridges). The index is rebuilt on demand
+    /// when stale: after any cluster mutation, or when per-field edge counts
+    /// changed (catches direct field-graph mutations that bypass cluster
+    /// methods). Correctness never depends on the index — a stale index is
+    /// always rebuilt before use.
     pub fn impact_across_fields(&self, changed: &str) -> ImpactResult {
+        // Ensure the inverted index is fresh.
+        let stale = match self.incoming_index.borrow().as_ref() {
+            None => true,
+            Some(idx) => idx.edge_counts != self.current_edge_counts(),
+        };
+        if stale {
+            let built = self.build_incoming_index();
+            *self.incoming_index.borrow_mut() = Some(built);
+        }
+        let idx = self.incoming_index.borrow();
+
+        let mut affected = HashSet::new();
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(changed.to_string());
+
+        while let Some(current) = queue.pop_front() {
+            if visited.contains(&current) {
+                continue;
+            }
+            visited.insert(current.clone());
+
+            // Reverse BFS: who points to `current`? (all fields, incl. bridges)
+            if let Some(incoming) = idx.as_ref() {
+                if let Some(sources) = incoming.sources.get(&current) {
+                    for source in sources {
+                        // Mirror the reference scan exactly: `affected` doubles
+                        // as the enqueue-dedup set, `visited` marks processed
+                        // nodes (enqueue must NOT mark visited, or the BFS
+                        // would stop after the first level).
+                        if !visited.contains(source) && !affected.contains(source) {
+                            affected.insert(source.clone());
+                            queue.push_back(source.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        affected.remove(changed);
+        let mut list: Vec<NodeId> = affected.into_iter().collect();
+        list.sort();
+
+        ImpactResult {
+            changed: changed.to_string(),
+            affected: list.clone(),
+            blast_radius: list,
+            critical_path: false,
+        }
+    }
+
+    /// Reference implementation: per-node × per-field reverse BFS scan.
+    /// Test-only oracle for the inverted-index path (D1' correctness gate).
+    #[cfg(test)]
+    pub(crate) fn impact_across_fields_scan(&self, changed: &str) -> ImpactResult {
         let mut affected = HashSet::new();
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
@@ -396,6 +488,51 @@ impl Cluster {
             affected: list.clone(),
             blast_radius: list,
             critical_path: false,
+        }
+    }
+
+    /// Current (field_id, edge_count) fingerprint used for index freshness.
+    fn current_edge_counts(&self) -> Vec<(FieldId, usize)> {
+        let mut counts: Vec<(FieldId, usize)> = self
+            .fields
+            .iter()
+            .map(|(fid, field)| (fid.clone(), field.graph.edge_count()))
+            .collect();
+        counts.sort();
+        counts
+    }
+
+    /// Build the cross-field inverted index from live field state.
+    fn build_incoming_index(&self) -> IncomingIndex {
+        let mut sources: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+        for field in self.fields.values() {
+            for (node_id, cell) in &field.graph.adj {
+                for edges in cell.incoming.values() {
+                    for edge in edges {
+                        sources
+                            .entry(node_id.clone())
+                            .or_default()
+                            .push(edge.source.clone());
+                    }
+                }
+            }
+        }
+        IncomingIndex {
+            sources,
+            edge_counts: self.current_edge_counts(),
+        }
+    }
+
+    /// Rebuild derived field-level indexes (degree indexes) after
+    /// deserialization so loaded clusters query at full speed (D1').
+    ///
+    /// The cluster cross-field inverted index is intentionally NOT built here:
+    /// its build cost (~O(E) String-keyed inserts) would blow the load budget
+    /// (T4). It is built lazily on the first `impact_across_fields` call and
+    /// invalidated by every mutation.
+    pub(crate) fn rebuild_indexes(&mut self) {
+        for field in self.fields.values_mut() {
+            field.graph.rebuild_degrees();
         }
     }
 
@@ -1330,5 +1467,251 @@ mod tests {
         let result = c.subgraph("f1", &[], None, None).unwrap();
         assert!(result.nodes.is_empty());
         assert!(result.edges.is_empty());
+    }
+
+    // ─── Inverted Index Property Tests (D1') ─────────────
+
+    /// Deterministic LCG for reproducible random graph scenarios.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn new(seed: u64) -> Self {
+            Lcg(seed)
+        }
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            self.0 >> 33
+        }
+        fn below(&mut self, n: usize) -> usize {
+            if n == 0 {
+                0
+            } else {
+                (self.next() % n as u64) as usize
+            }
+        }
+    }
+
+    /// 100 random cluster scenarios × random queries: the inverted-index path
+    /// must produce identical results to the reference scan (100/100).
+    #[test]
+    fn test_inverted_index_matches_scan_100_scenarios() {
+        for scenario in 0..100u64 {
+            let mut rng = Lcg::new(0xD1E6_0000 + scenario);
+            let mut c = Cluster::new("prop".into(), "Prop".into(), Visibility::Private);
+            let n_fields = 2 + rng.below(3);
+            for f in 0..n_fields {
+                c.create_field(format!("f{}", f), format!("Field {}", f), None);
+            }
+            let n_nodes = 4 + rng.below(15);
+            for i in 0..n_nodes {
+                c.register_node(Node {
+                    id: format!("n{}", i),
+                    type_: "t".into(),
+                    label: "N".into(),
+                    status: NodeStatus::Active,
+                    meta: None,
+                });
+            }
+            for edge_id in 0..rng.below(40) {
+                let fid = format!("f{}", rng.below(n_fields));
+                if let Some(f) = c.get_field_mut(&fid) {
+                    f.graph.add_edge(Edge {
+                        id: format!("e{}", edge_id),
+                        source: format!("n{}", rng.below(n_nodes)),
+                        target: format!("n{}", rng.below(n_nodes)),
+                        relation: Relation::DependsOn,
+                        weight: 0.5,
+                        description: String::new(),
+                        target_field: None,
+                        meta: None,
+                    });
+                }
+            }
+            for _ in 0..rng.below(6) {
+                let fi = rng.below(n_fields);
+                let fj = (fi + 1 + rng.below(n_fields - 1)) % n_fields;
+                let _ = c.add_bridge(
+                    &format!("f{}", fi),
+                    &format!("f{}", fj),
+                    &format!("n{}", rng.below(n_nodes)),
+                    &format!("n{}", rng.below(n_nodes)),
+                    "b".into(),
+                    0.8,
+                );
+            }
+            for _ in 0..8 {
+                let changed = format!("n{}", rng.below(n_nodes));
+                let indexed = c.impact_across_fields(&changed);
+                let scanned = c.impact_across_fields_scan(&changed);
+                assert_eq!(
+                    indexed.affected, scanned.affected,
+                    "scenario {} node {}: affected mismatch",
+                    scenario, changed
+                );
+                assert_eq!(
+                    indexed.blast_radius, scanned.blast_radius,
+                    "scenario {} node {}: blast_radius mismatch",
+                    scenario, changed
+                );
+            }
+        }
+    }
+
+    /// Mutations through cluster methods must invalidate the index; results
+    /// must stay correct afterwards (rebuild on demand).
+    #[test]
+    fn test_inverted_index_invalidated_by_cluster_mutations() {
+        let mut c = Cluster::new("mut".into(), "Mut".into(), Visibility::Private);
+        c.create_field("f1".into(), "F1".into(), None);
+        for id in ["n0", "n1", "n2"] {
+            c.register_node(node(id, "t", id, NodeStatus::Active));
+        }
+        let f = c.get_field_mut("f1").unwrap();
+        f.graph.add_edge(Edge {
+            id: "e1".into(),
+            source: "n1".into(),
+            target: "n0".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
+        });
+
+        let impact_before = c.impact_across_fields("n0");
+        assert_eq!(impact_before.affected, vec!["n1".to_string()]);
+        assert!(
+            c.incoming_index.borrow().is_some(),
+            "index must be built after a query"
+        );
+
+        // Mutation via cluster API (get_field_mut) — must invalidate the index.
+        let f = c.get_field_mut("f1").unwrap();
+        f.graph.add_edge(Edge {
+            id: "e2".into(),
+            source: "n2".into(),
+            target: "n0".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
+        });
+        assert!(
+            c.incoming_index.borrow().is_none(),
+            "get_field_mut must invalidate the index"
+        );
+
+        let impact_after = c.impact_across_fields("n0");
+        assert_eq!(
+            impact_after.affected,
+            vec!["n1".to_string(), "n2".to_string()]
+        );
+        assert_eq!(
+            impact_after.affected,
+            c.impact_across_fields_scan("n0").affected
+        );
+    }
+
+    /// Direct field-graph mutation (bypassing cluster methods) is detected by
+    /// the edge-count fingerprint: results must stay correct.
+    #[test]
+    fn test_inverted_index_detects_direct_field_mutation() {
+        let mut c = Cluster::new("bypass".into(), "Bypass".into(), Visibility::Private);
+        c.create_field("f1".into(), "F1".into(), None);
+        for id in ["n0", "n1", "n2"] {
+            c.register_node(node(id, "t", id, NodeStatus::Active));
+        }
+        let f = c.get_field_mut("f1").unwrap();
+        f.graph.add_edge(Edge {
+            id: "e1".into(),
+            source: "n1".into(),
+            target: "n0".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
+        });
+
+        let _ = c.impact_across_fields("n0"); // build the index
+        assert!(c.incoming_index.borrow().is_some());
+
+        // Direct mutation bypassing cluster methods: `fields` map + `graph`.
+        c.fields.get_mut("f1").unwrap().graph.add_edge(Edge {
+            id: "e2".into(),
+            source: "n2".into(),
+            target: "n0".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
+        });
+
+        let impact = c.impact_across_fields("n0");
+        assert_eq!(
+            impact.affected,
+            c.impact_across_fields_scan("n0").affected,
+            "fingerprint must catch direct field mutations"
+        );
+        assert!(impact.affected.contains(&"n2".to_string()));
+    }
+
+    /// Serialization round-trip must not change query results; `rebuild_indexes`
+    /// restores full-speed indexes after load.
+    #[test]
+    fn test_rebuild_indexes_after_deserialization() {
+        let mut c = Cluster::new("rt".into(), "RT".into(), Visibility::Private);
+        c.create_field("f1".into(), "F1".into(), None);
+        c.register_node(node("n0", "t", "N0", NodeStatus::Active));
+        c.register_node(node("n1", "t", "N1", NodeStatus::Active));
+        let f = c.get_field_mut("f1").unwrap();
+        f.graph.add_edge(Edge {
+            id: "e1".into(),
+            source: "n1".into(),
+            target: "n0".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: String::new(),
+            target_field: None,
+            meta: None,
+        });
+
+        let expected = c.impact_across_fields("n0");
+
+        // struct-as-map: `skip_serializing_if` fields misalign in array mode.
+        let mut buf = Vec::new();
+        let mut serializer = rmp_serde::Serializer::new(&mut buf).with_struct_map();
+        c.serialize(&mut serializer).expect("serialize cluster");
+        let mut restored: Cluster = rmp_serde::from_slice(&buf).expect("deserialize cluster");
+        assert!(
+            restored.incoming_index.borrow().is_none(),
+            "index must not survive serialization"
+        );
+        assert!(
+            !restored.fields.get("f1").unwrap().graph.degrees_valid,
+            "field degree indexes must not survive serialization"
+        );
+
+        // rebuild_indexes: degree indexes rebuilt eagerly; the cluster
+        // inverted index stays lazy (built on first impact_across_fields).
+        restored.rebuild_indexes();
+        assert!(
+            restored.incoming_index.borrow().is_none(),
+            "cluster index is lazy — built on first impact_across_fields"
+        );
+        assert!(restored.fields.get("f1").unwrap().graph.degrees_valid);
+        assert_eq!(
+            restored.impact_across_fields("n0").affected,
+            expected.affected
+        );
+        assert!(
+            restored.incoming_index.borrow().is_some(),
+            "first query must build the cluster index"
+        );
     }
 }

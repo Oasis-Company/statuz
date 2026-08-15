@@ -22,6 +22,17 @@ pub struct GraphEngine {
     pub(crate) nodes: HashMap<NodeId, Node>,
     pub(crate) edges: HashMap<EdgeId, Edge>,
     pub(crate) adj: HashMap<NodeId, AdjacencyCell>,
+    /// Incremental in/out degree index: node → (in_count, out_count).
+    /// Derived structure — never serialized, keeping the disk format and
+    /// content-addressable IDs stable. Maintained O(1) by every mutation;
+    /// rebuilt after serde deserialization by `rebuild_degrees()`.
+    #[serde(skip)]
+    pub(crate) degrees: HashMap<NodeId, (usize, usize)>,
+    /// Whether `degrees` mirrors `adj`. False only after serde deserialization;
+    /// `centrality` falls back to a recompute scan until `rebuild_degrees()` runs,
+    /// so correctness never depends on the index.
+    #[serde(skip)]
+    pub(crate) degrees_valid: bool,
 }
 
 impl GraphEngine {
@@ -30,6 +41,8 @@ impl GraphEngine {
             nodes: HashMap::new(),
             edges: HashMap::new(),
             adj: HashMap::new(),
+            degrees: HashMap::new(),
+            degrees_valid: true,
         }
     }
 
@@ -38,6 +51,7 @@ impl GraphEngine {
     pub fn add_node(&mut self, node: Node) {
         let id = node.id.clone();
         self.nodes.insert(id.clone(), node);
+        self.degrees.entry(id.clone()).or_insert((0, 0));
         self.adj.entry(id.clone()).or_insert_with(|| AdjacencyCell {
             node_id: id,
             outgoing: HashMap::new(),
@@ -55,42 +69,71 @@ impl GraphEngine {
 
         self.edges.insert(id.clone(), edge);
 
-        let cell = self.adj.entry(source).or_insert_with(|| AdjacencyCell {
-            node_id: String::new(),
-            outgoing: HashMap::new(),
-            incoming: HashMap::new(),
-        });
+        let cell = self
+            .adj
+            .entry(source.clone())
+            .or_insert_with(|| AdjacencyCell {
+                node_id: String::new(),
+                outgoing: HashMap::new(),
+                incoming: HashMap::new(),
+            });
         cell.outgoing
             .entry(rel.clone())
             .or_default()
             .push(self.edges.get(&id).unwrap().clone());
 
-        let cell = self.adj.entry(target).or_insert_with(|| AdjacencyCell {
-            node_id: String::new(),
-            outgoing: HashMap::new(),
-            incoming: HashMap::new(),
-        });
+        let cell = self
+            .adj
+            .entry(target.clone())
+            .or_insert_with(|| AdjacencyCell {
+                node_id: String::new(),
+                outgoing: HashMap::new(),
+                incoming: HashMap::new(),
+            });
         cell.incoming
             .entry(rel)
             .or_default()
             .push(self.edges.get(&id).unwrap().clone());
+
+        // Maintain incremental degree index: out for source, in for target.
+        // Self-loops count once in each direction — matches `centrality` semantics.
+        let d = self.degrees.entry(source).or_insert((0, 0));
+        d.1 += 1;
+        let d = self.degrees.entry(target).or_insert((0, 0));
+        d.0 += 1;
     }
 
     pub fn remove_node(&mut self, id: &str) {
         if let Some(cell) = self.adj.get(id) {
             for edges in cell.outgoing.values() {
                 for e in edges {
-                    self.edges.remove(&e.id);
+                    // Decrement only when the edge was actually in the registry:
+                    // adjacency cells can hold "phantom" entries left behind by
+                    // earlier removals, and those must not be double-decremented.
+                    if self.edges.remove(&e.id).is_some() {
+                        // The removed outgoing edge e: id -> target no longer
+                        // contributes an incoming count to its target.
+                        if let Some(d) = self.degrees.get_mut(&e.target) {
+                            d.0 = d.0.saturating_sub(1);
+                        }
+                    }
                 }
             }
             for edges in cell.incoming.values() {
                 for e in edges {
-                    self.edges.remove(&e.id);
+                    if self.edges.remove(&e.id).is_some() {
+                        // The removed incoming edge source -> id no longer
+                        // contributes an outgoing count to its source.
+                        if let Some(d) = self.degrees.get_mut(&e.source) {
+                            d.1 = d.1.saturating_sub(1);
+                        }
+                    }
                 }
             }
         }
         self.nodes.remove(id);
         self.adj.remove(id);
+        self.degrees.remove(id);
     }
 
     /// Remove a single edge from the graph by its ID.
@@ -98,6 +141,14 @@ impl GraphEngine {
     pub fn remove_edge(&mut self, id: &str) {
         if let Some(edge) = self.edges.remove(id) {
             let rel = edge.relation.as_str().to_string();
+            // Maintain incremental degree index (saturating: the index may be
+            // partially stale before the first `rebuild_degrees()`).
+            if let Some(d) = self.degrees.get_mut(&edge.source) {
+                d.1 = d.1.saturating_sub(1);
+            }
+            if let Some(d) = self.degrees.get_mut(&edge.target) {
+                d.0 = d.0.saturating_sub(1);
+            }
             // Remove from source's outgoing
             if let Some(cell) = self.adj.get_mut(&edge.source) {
                 if let Some(edges) = cell.outgoing.get_mut(&rel) {

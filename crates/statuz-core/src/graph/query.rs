@@ -2,6 +2,47 @@ use crate::graph::engine::GraphEngine;
 use crate::graph::types::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
+/// Deterministic top-k degree selection: nodes with the largest total degree
+/// (in + out), ties broken by node id.
+///
+/// Phase 1 scans totals with usize-only compares (no string hashing/compare in
+/// the hot path — a full sort with a `(total, id)` comparator regresses badly
+/// on graphs with many equal-degree nodes). Phase 2 collects the candidates at
+/// or above the boundary total (few nodes in practice) and sorts them
+/// deterministically. A pure function of the map content — iteration order
+/// does not affect the result, so the index path and the recompute path agree.
+fn select_top_k(degrees: &HashMap<NodeId, (usize, usize)>, limit: usize) -> Vec<NodeId> {
+    if limit == 0 || degrees.is_empty() {
+        return Vec::new();
+    }
+
+    // Phase 1: keep the `limit` largest totals (usize compares only).
+    let mut window: Vec<usize> = Vec::with_capacity(limit + 1);
+    for (in_d, out_d) in degrees.values() {
+        window.push(in_d + out_d);
+        if window.len() > limit {
+            let mut min_idx = 0;
+            for i in 1..window.len() {
+                if window[i] < window[min_idx] {
+                    min_idx = i;
+                }
+            }
+            window.swap_remove(min_idx);
+        }
+    }
+    let boundary = window.iter().copied().min().unwrap_or(0);
+
+    // Phase 2: candidates at/above the boundary; deterministic tie-break by id.
+    let mut candidates: Vec<(usize, NodeId)> = degrees
+        .iter()
+        .filter(|(_, (in_d, out_d))| in_d + out_d >= boundary)
+        .map(|(id, (in_d, out_d))| (in_d + out_d, id.clone()))
+        .collect();
+    candidates.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    candidates.truncate(limit);
+    candidates.into_iter().map(|(_, id)| id).collect()
+}
+
 impl GraphEngine {
     /// Q1: "What does this node connect to?"
     /// Traverse from a node following a relation (or all relations).
@@ -199,26 +240,61 @@ impl GraphEngine {
 
     /// Degree centrality — simplest measure of importance.
     /// Returns nodes sorted by total degree (in + out), descending.
+    ///
+    /// Reads the incremental degree index when it is valid (top-k selection
+    /// with no edge iteration); falls back to a full recompute when the index
+    /// is stale (e.g. right after deserialization, before `rebuild_degrees()`
+    /// runs). Ties are broken by node id — deterministic.
     pub fn centrality(&self, limit: usize) -> Vec<NodeId> {
-        let mut scores: HashMap<NodeId, usize> = HashMap::new();
-
-        for (id, cell) in &self.adj {
-            let mut degree = 0;
-            for edges in cell.outgoing.values() {
-                degree += edges.len();
-            }
-            for edges in cell.incoming.values() {
-                degree += edges.len();
-            }
-            scores.insert(id.clone(), degree);
+        if self.degrees_valid {
+            select_top_k(&self.degrees, limit)
+        } else {
+            self.centrality_recompute(limit)
         }
-
-        let mut sorted: Vec<(NodeId, usize)> = scores.into_iter().collect();
-        sorted.sort_by_key(|x| std::cmp::Reverse(x.1));
-        sorted.truncate(limit);
-        sorted.into_iter().map(|(id, _)| id).collect()
     }
 
+    /// Reference centrality: recomputes degrees from live state, then applies
+    /// the same deterministic top-k selection. Used as the fallback when the
+    /// degree index is invalid and as the correctness oracle for property tests.
+    fn centrality_recompute(&self, limit: usize) -> Vec<NodeId> {
+        select_top_k(&self.recompute_degrees(), limit)
+    }
+
+    /// Full O(V+E) degree recompute — shared by `rebuild_degrees` and property
+    /// tests. Registry-based, mirroring the incremental index exactly.
+    pub(crate) fn recompute_degrees(&self) -> HashMap<NodeId, (usize, usize)> {
+        let mut degrees: HashMap<NodeId, (usize, usize)> = HashMap::with_capacity(self.adj.len());
+        for id in self.adj.keys() {
+            degrees.insert(id.clone(), (0, 0));
+        }
+        for edge in self.edges.values() {
+            // get_mut avoids a String clone per edge in the common case
+            // (all endpoints are pre-inserted from `adj`); entry() tolerates
+            // inconsistent state where an edge endpoint is missing from adj.
+            match degrees.get_mut(&edge.source) {
+                Some(d) => d.1 += 1,
+                None => {
+                    let d = degrees.entry(edge.source.clone()).or_insert((0, 0));
+                    d.1 += 1;
+                }
+            }
+            match degrees.get_mut(&edge.target) {
+                Some(d) => d.0 += 1,
+                None => {
+                    let d = degrees.entry(edge.target.clone()).or_insert((0, 0));
+                    d.0 += 1;
+                }
+            }
+        }
+        degrees
+    }
+
+    /// Rebuild the incremental degree index from the adjacency structure.
+    /// Called by `Cluster::rebuild_indexes()` after deserialization.
+    pub(crate) fn rebuild_degrees(&mut self) {
+        self.degrees = self.recompute_degrees();
+        self.degrees_valid = true;
+    }
     /// Transitive closure: get ALL nodes reachable from `id` (BFS)
     pub fn reachable(&self, from: &str) -> Vec<NodeId> {
         let mut visited = HashSet::new();
@@ -887,5 +963,166 @@ mod tests {
         let result = g.validate();
         assert!(result.is_valid);
         assert!(result.issues.is_empty());
+    }
+
+    // ─── Degree Index Property Tests (D1') ───────────────
+
+    /// Deterministic LCG for reproducible random mutation sequences.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn new(seed: u64) -> Self {
+            Lcg(seed)
+        }
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            self.0 >> 33
+        }
+        fn below(&mut self, n: usize) -> usize {
+            if n == 0 {
+                0
+            } else {
+                (self.next() % n as u64) as usize
+            }
+        }
+    }
+
+    /// Random mutation sequences must leave the incremental degree index
+    /// identical to a full recompute scan (100 scenarios).
+    #[test]
+    fn test_degree_index_matches_recompute_after_random_mutations() {
+        for scenario in 0..100u64 {
+            let mut rng = Lcg::new(0xD1E6_0000 + scenario);
+            let mut g = GraphEngine::new();
+            let n = 5 + rng.below(30);
+            for i in 0..n {
+                g.add_node(node(&format!("n{}", i), "t", "N", NodeStatus::Active));
+            }
+            let initial_edges = rng.below(60);
+            for edge_counter in 0..initial_edges {
+                g.add_edge(Edge {
+                    id: format!("e{}", edge_counter),
+                    source: format!("n{}", rng.below(n)),
+                    target: format!("n{}", rng.below(n)),
+                    relation: Relation::DependsOn,
+                    weight: 1.0,
+                    description: String::new(),
+                    target_field: None,
+                    meta: None,
+                });
+            }
+            let n_ops = rng.below(40);
+            for i in 0..n_ops {
+                match rng.below(4) {
+                    0 => {
+                        g.add_node(node(
+                            &format!("x{}", rng.below(1000)),
+                            "t",
+                            "X",
+                            NodeStatus::Active,
+                        ));
+                    }
+                    1 => {
+                        g.remove_node(&format!("n{}", rng.below(n)));
+                    }
+                    2 => {
+                        // Id derived from the iteration index: unique per op.
+                        g.add_edge(Edge {
+                            id: format!("e{}", initial_edges + i),
+                            source: format!("n{}", rng.below(n)),
+                            target: format!("n{}", rng.below(n)),
+                            relation: Relation::DependsOn,
+                            weight: 1.0,
+                            description: String::new(),
+                            target_field: None,
+                            meta: None,
+                        });
+                    }
+                    _ => {
+                        // Bound may exceed the current max id — removing a
+                        // non-existent edge is a no-op, which is fine here.
+                        g.remove_edge(&format!("e{}", rng.below(initial_edges + i)));
+                    }
+                }
+            }
+            let recomputed = g.recompute_degrees();
+            assert_eq!(
+                g.degrees, recomputed,
+                "scenario {}: incremental degree index diverged from recompute",
+                scenario
+            );
+        }
+    }
+
+    /// Index-based centrality must be byte-identical to the reference
+    /// implementation (both use the same deterministic tie-break).
+    #[test]
+    fn test_centrality_index_matches_recompute() {
+        for scenario in 0..50u64 {
+            let mut rng = Lcg::new(0xCE17 + scenario);
+            let mut g = GraphEngine::new();
+            let n = 4 + rng.below(20);
+            for i in 0..n {
+                g.add_node(node(&format!("n{}", i), "t", "N", NodeStatus::Active));
+            }
+            let n_edges = rng.below(50);
+            for edge_counter in 0..n_edges {
+                g.add_edge(Edge {
+                    id: format!("e{}", edge_counter),
+                    source: format!("n{}", rng.below(n)),
+                    target: format!("n{}", rng.below(n)),
+                    relation: Relation::DependsOn,
+                    weight: 1.0,
+                    description: String::new(),
+                    target_field: None,
+                    meta: None,
+                });
+            }
+            assert!(
+                g.degrees_valid,
+                "mutations must keep the degree index valid"
+            );
+            assert_eq!(
+                g.centrality(5),
+                g.centrality_recompute(5),
+                "scenario {}: index centrality diverged from reference",
+                scenario
+            );
+        }
+    }
+
+    /// After serde deserialization the index is invalid; centrality must fall
+    /// back to recompute (correctness preserved) and recover after rebuild.
+    #[test]
+    fn test_centrality_falls_back_after_deserialization() {
+        use serde::Serialize;
+        let g = build_test_graph();
+        // struct-as-map: `skip_serializing_if` fields misalign in array mode.
+        let mut buf = Vec::new();
+        let mut serializer = rmp_serde::Serializer::new(&mut buf).with_struct_map();
+        g.serialize(&mut serializer).expect("serialize graph");
+        let restored: GraphEngine = rmp_serde::from_slice(&buf).expect("deserialize graph");
+
+        assert!(
+            !restored.degrees_valid,
+            "deserialized graph must start with an invalid degree index"
+        );
+        assert_eq!(
+            restored.centrality(5),
+            g.centrality(5),
+            "fallback recompute must match the index result"
+        );
+
+        let mut rebuilt = restored;
+        rebuilt.rebuild_degrees();
+        assert!(rebuilt.degrees_valid, "rebuild must re-validate the index");
+        assert_eq!(
+            rebuilt.centrality(5),
+            g.centrality(5),
+            "index path after rebuild must match the original"
+        );
     }
 }

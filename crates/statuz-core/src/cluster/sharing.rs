@@ -148,6 +148,9 @@ impl Cluster {
     /// Returns a MergeResult with detailed statistics.
     pub fn merge_from(&mut self, source: &Cluster, strategy: &MergeStrategy) -> MergeResult {
         let mut result = MergeResult::new();
+        // Merging mutates fields/edges directly — the derived cross-field
+        // index must be invalidated (rebuilt on next `impact_across_fields`).
+        self.invalidate_index();
 
         // ─── Merge Nodes ─────────────────────────────────
         for (node_id, node) in &source.nodes {

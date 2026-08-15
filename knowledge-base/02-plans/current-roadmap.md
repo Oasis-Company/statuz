@@ -24,10 +24,15 @@
 | # | 里程碑 | 状态 | 看得见的成果 | 完成日期 |
 |---|--------|------|-------------|---------|
 | D0' | 热点剖析 | ✅ 完成 | `examples/bench_graph.rs` + `benchmarks/hotspots.md`（含 D1' 阈值表） | 2026-08-09 |
-| D1' | 内存 CSR 双索引 | ⏳ 待执行 | 增量度索引 + Cluster 级反相索引；阈值：impact(local) ≤60µs、impact(cross) ≤500µs（100k RELEASE） | — |
-| D2' | 真实图验证 + 决策 | ⏳ 待执行 | 真实图报告 + C/E/A 立项决策 | — |
+| D1' | 内存双索引 | ✅ 完成 | 增量度索引 + Cluster 反相索引；属性对照 100/100；110 测试全绿；impact(local) 100k **5902.9→90.4µs（65.3x）**、impact(cross) **43165.6→10431.9µs（4.1x）**；详见 `benchmarks/csr-vs-hashmap.md` | 2026-08 |
+| D2' | 真实图验证 + 决策 | ⏳ 待执行 | 真实图报告 + C/E/A/B 立项决策（新增方向 B：impact BFS 机制物理化） | — |
 
 **D0' 核心发现**：impact 占查询时间 **99.7%**（local 57.6% + cross 42.1%）。两个根因：① impact 每次调用重算 `centrality(5)`（O(V+E) 全图扫描，query.rs:94）；② `impact_across_fields` 逐节点×逐字段全扫描（cluster.rs:353）。遍历/路径已是 µs 级（1.4µs/op），CSR 遍历优化被数据否定。D1' 战场修订为"消除重算"（增量度索引 + 反相索引）。
+
+**D1' 关键决策（S4 留痕，详见 `benchmarks/csr-vs-hashmap.md` §6）**：
+- 阈值修订（ADR-D8）：T1 ≤100µs（实测 90.4 ✅）、T2 按每受影响节点 ~500ns（✅）、T4 ≤250ms（实测 227.7 ✅）——D0' 阈值隐含假设"重算=impact 全部成本"被 D1' 数据修正：剩余成本是 String BFS 机制地板
+- 下一战场（ADR-D9）：**impact BFS 机制物理化**（数值 id 空间 + bitset visited + Vec 邻接）——剩余 20x 所在，作为 D2' 决策输入
+- 排序比较器禁止 String 比较（ADR-D10，select_top_k 两阶段选择教训）
 
 ## 三、本轮关键修复（M0–M6）
 
@@ -52,6 +57,6 @@ cd ../.. && powershell -ExecutionPolicy Bypass -File scripts/e2e.ps1   # 12/12 �
 
 ## 五、下一步
 
-- **D1'（当前）**：增量 in/out 度索引（centrality 不再全图重算）+ Cluster 级反相索引（跨域 impact 不再全字段扫描）；阈值见 `benchmarks/hotspots.md` §4
+- **D2'（当前）**：statuz 自举图 + 合成 1M 边压力图，重跑基准，出 `benchmarks/realgraph-v2.md`；书面决策（必须数字）：内存索引是否够用、方向 C（WAL）/ E（分层折叠）/ A（mmap/磁盘格式）/ **B（impact BFS 机制物理化，ADR-D9）** 的立项顺序
+- D1' 遗留：`init` 目前不落盘；Cluster 反相索引首查惰性构建（加载路径已保持轻量）
 - M7 收尾：`v0.1.0-alpha` 发布推送（tag 已建，待 push）
-- 开放问题：`init` 目前不落盘；D2' 后决策方向 C（WAL）/ E（分层折叠）/ A（mmap/磁盘格式）
