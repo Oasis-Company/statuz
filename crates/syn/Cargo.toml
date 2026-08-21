@@ -6,3 +6,5 @@ description = "Syn — change decision and audit for Statuz clusters (placeholde
 
 [dependencies]
 statuz-core = { path = "../statuz-core" }
+serde = { version = "1", features = ["derive"] }
+rmp-serde = "1"
