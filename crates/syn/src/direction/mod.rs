@@ -7,3 +7,4 @@ pub mod carrier;
 pub mod coedit;
 pub mod h3_eval;
 pub mod seed;
+pub mod store;

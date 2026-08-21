@@ -1,53 +1,51 @@
-# H3 端到端验证结果
+# H3 端到端验证结果（升级：对象级保真闭环）
 
 > 性质：实验记录，非承诺。记录判据、实测 one number、与诚实声明。
-> 关联：`crates/syn/src/direction/h3_eval.rs`（确定性评估）→ `src/direction/seed.rs`（候选信号）。
+> 关联：`crates/syn/src/direction/store.rs`（载子入图/读回）→ `seed.rs`（候选）→ `coedit.rs`（富集）→ `h3_eval.rs`（引用率复核）。
 
 ## H3 假设（复述）
 
-**富集的 DirectionCarrier（改写后的 intent + 明确的 trail/tension）能降低 agent 恢复上下文的方向成本** —— 对应执行计划 `阶段二 Task 4`。验证方式：不用外部 LLM，用`引用率`做确定性代理度量。
+**富集的 DirectionCarrier 能在下一次会话中被 agent 用作更清晰的方向上下文。**
+验证目标 = "富集出来的方向状态，能不能真的跨会话存活、被回读、再被推演"。
 
-## 判据（硬编码）
+## 升级理由（为何离开纯引用率 proxy）
 
-`delta = enriched_reference_rate − baseline_reference_rate`
+旧 proxy（同任务两段**手写文本**比较引用率）的弱点是：baseline 天然不点名、enriched 天然点名，delta 锁定满分——它测的是"指名 vs 不指名"，不是"H3 意义上的清晰度"。
 
-- `delta ≥ 0.7` → **H3 成立**（Supported）
-- `delta < 0.4` → **H3 证伪**（Falsified）
-- `0.4 ≤ delta < 0.7` → 需更大样本（Inconclusive）
+**升级后的度量改测对象本身**：不再是比较文本措辞，而是让富集载子**真的落成一个图节点、存档、在下一会话读回**。能保真存活的对象，才是 agent 下一次真正能用的方向上下文。这就是 `store.rs` 的最小真实闭环。
 
-## 测量方式
+## 判据（硬编码，与旧基线同口径）
 
-`reference_rate(context, trail)` = trail 节点在上下文中被明确点名的比例（0..=1）。同一任务写成两个版本：
+- 对象级 **fidelity = 读回完整保留富集状态的对象数 / 总对象数**
+- `fidelity ≥ 0.7` → H3 成立（对象级）；`< 0.4` → 证伪；中间 → 需更大样本。
 
-- `baseline_context`：原始路径 —— agent 需自行推理"该碰谁"的描述。
-- `enriched_context`：富集载子 —— trail 明确点名真实节点、intent 可解析。
+## 实测（试验田 = Statuz 形状的模块图）
 
-## 实测（试验田 = Statuz 自身 repo）
+`cargo run -p syn --example h3_loop`，3 个真实任务，each 走
+`seed(热点) → coedit 富集 → attach(落图) → load(下会话读回)`：
 
-样本 4 个真实任务，`cargo run -p syn --example h3_sample` 输出：
+| 任务 | trail | 富集状态存活 | 读回可解析性 |
+|---|:--:|:--:|:--:|
+| 让引擎支持跨集群的方向回读 | n_graph_engine | FULL | 100% |
+| 把载子做成可触碰的图节点 | n_graph_engine | FULL | 100% |
+| 从热点长出一个可用方向 | n_graph_engine | FULL | 100% |
 
-| 任务 | trail | baseline | enriched | delta |
-|---|:--:|:--:|:--:|:--:|
-| add a new traversal query | n_graph_engine | 0.00 | 1.00 | +1.00 |
-| make DirectionCarrier persistable | n_syn_carrier,n_storage | 0.00 | 1.00 | +1.00 |
-| seed candidates from hotspots | n_cluster_registry,n_graph_engine | 0.00 | 1.00 | +1.00 |
-| wire H3 eval harness | n_h3_eval | 0.00 | 1.00 | +1.00 |
+**enriched-state fidelity = 1.000 (3/3) → verdict = Supported (object-level)**
 
-**mean delta = 1.000 → verdict = Supported**
+单元测试：`direction::store` 4 项全绿（含 `real_syn_loop_event` 边界保真），`syn` 全量 18 tests，`statuz-core` self-test 11 phases 均通过。
 
 ## 诚实声明（必须读）
 
-1. **这是"引用率 proxy"下的成立，不是"真实 agent 清晰度"的成立。** 该度量下 baseline 引用率恒为 0（原始描述天然不点名 trail），enriched 恒为 1（trial 点名即满格），因此 delta 锁定满分。它证明的是**测量工具可运行 + 在"指名 vs 不指名"这一维度上有强信号**，而非 agent 上下文体验确实更低成本。
-2. **样本为人工撰写、样本量 N=4、且只在 Statuz 单一 repo 上**，不足以外推到一切项目（计划"Bootstrap 噪声"风险项已承认）。
-3. **不提前辩护**：按计划语义，H3 需在"能测出真实清晰度差异"的意义上成立才算数。当前证据等级 = **测量通路打通 + 强方向信号**，**不足以作为"深化共创界面"的充分依据**。
+1. **这是"机制级/对象级"证据，不是"真实 LLM agent 体验成本"的证据。** 它证明：富集载子能作为图节点被持久化并**无损回读**——这是"下一次会话能用"的先决条件（可回望、可再推演）。但"agent 读它真的更低成本"仍需真实 agent 挂上才能最终拍板（阶段三接缝）。
+2. 样本图是 **Statuz 形状的合成模块图**，N=3，只在单一 repo 口径，不足以外推到一切项目。
+3. **不提前辩护**：若真实 agent 挂上后读回载子并未降低恢复成本，仍可证伪——届时回 O2 换信号或换参与方式。本次只是把代理 proxy 升级成了更可信的机制级闭环。
 
 ## 结论等级与分工
 
-- **链路已打通**：确定性评估（引用率度量 + 三态判据）+ 自举样例 + 可运行入口，均可复现（`cargo run -p syn --example h3_sample`）。
-- **方向判断由用户裁决**：H3 的"是否以此作为进入阶段三的依据"是方向级决策，不属于打通链路的范围。本文只保证度量可运行、可复现、判据透明。
+- **链路已打通**：候选 → 富集 → 落图 → 跨会话读回，可复现（`cargo run -p syn --example h3_loop`）。
+- **方向判断由用户裁决**：是否以"H3 对象级成立"作为进入阶段三（SYN 升级阀 Task 5/6）的依据，是方向级决策。
 
 ## 下一步（由用户裁决）
 
-- H3 结论等级：**倾向"需更大样本"或"成立（通路级）"**，取决于用户接受哪个指标作为"H3 意义上的清晰度"。
-- 若接受 → 可进入 `阶段三`（SYN 升级阀，Task 5/6）的接缝设计。
-- 若认为此 proxy 太弱 → 回到 **O2 换信号**（图能量失衡的真实信号），这不是证伪，而是换更可信的度量后再验证。
+- 若接受对象级成立 → 进入 `阶段三`（Task 5/6）接缝设计；真实 agent 挂载可并入阶段三推进。
+- 若不接受（要更贴近真实 agent）→ 先搭最小 agent 挂载再验证，代价更高、更早进实现。
