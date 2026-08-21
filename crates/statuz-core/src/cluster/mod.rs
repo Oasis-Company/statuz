@@ -4,5 +4,5 @@ pub mod field;
 pub mod sharing;
 
 pub use cluster::Cluster;
-pub use field::Field;
+pub use field::{Field, FieldType};
 pub use sharing::{CloneOptions, MergeResult, MergeStrategy};
