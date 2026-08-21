@@ -4,3 +4,4 @@
 //! escalation belong here, not in the kernel.
 
 pub mod carrier;
+pub mod seed;
