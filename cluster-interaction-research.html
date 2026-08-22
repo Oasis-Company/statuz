@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statuz Cluster 创建交互调研报告</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #0a0a0a;
+    --fg-secondary: #525252;
+    --fg-tertiary: #a3a3a3;
+    --border: #e5e5e5;
+    --border-strong: #d4d4d4;
+    --bg-code: #f5f5f5;
+    --bg-table-header: #fafafa;
+    --accent: #18181b;
+    --accent-fg: #ffffff;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --max-width: 820px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans CJK SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 80px 32px 120px;
+  }
+
+  /* Header */
+  .report-header {
+    border-bottom: 2px solid var(--fg);
+    padding-bottom: 32px;
+    margin-bottom: 48px;
+  }
+  .report-meta {
+    font-size: 12px;
+    color: var(--fg-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
+  }
+  .report-title {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+  .report-subtitle {
+    font-size: 16px;
+    color: var(--fg-secondary);
+    font-weight: 400;
+  }
+
+  /* Sections */
+  section {
+    margin-bottom: 56px;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-top: 32px;
+    margin-bottom: 12px;
+  }
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 8px;
+    color: var(--fg-secondary);
+  }
+
+  p {
+    margin-bottom: 14px;
+  }
+
+  /* Lists */
+  ul, ol {
+    margin-bottom: 14px;
+    padding-left: 24px;
+  }
+  li {
+    margin-bottom: 6px;
+  }
+
+  /* Code */
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    font-size: 13px;
+    background: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 13px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  th {
+    text-align: left;
+    font-weight: 600;
+    padding: 10px 14px;
+    background: var(--bg-table-header);
+    border-bottom: 2px solid var(--border-strong);
+    font-size: 13px;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Callouts */
+  .callout {
+    border-left: 3px solid var(--fg);
+    padding: 12px 20px;
+    margin-bottom: 16px;
+    background: var(--bg-table-header);
+    border-radius: 0 4px 4px 0;
+  }
+  .callout-warning {
+    border-left-color: var(--amber);
+    background: #fffbeb;
+  }
+  .callout-critical {
+    border-left-color: var(--red);
+    background: #fef2f2;
+  }
+  .callout-info {
+    border-left-color: var(--fg-tertiary);
+  }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .badge-ok { background: #dcfce7; color: #166534; }
+  .badge-warn { background: #fef3c7; color: #92400e; }
+  .badge-bad { background: #fee2e2; color: #991b1b; }
+  .badge-na { background: #f3f4f6; color: #6b7280; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .flow-step {
+    background: var(--fg);
+    color: var(--accent-fg);
+    padding: 6px 14px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--fg-tertiary);
+    font-size: 16px;
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--bg-table-header);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 28px;
+    margin-bottom: 48px;
+  }
+  .toc-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-secondary);
+    margin-bottom: 12px;
+  }
+  .toc ol {
+    padding-left: 20px;
+    margin: 0;
+  }
+  .toc li {
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+  .toc a {
+    color: var(--fg);
+    text-decoration: none;
+  }
+  .toc a:hover {
+    text-decoration: underline;
+  }
+
+  /* Quote */
+  blockquote {
+    border-left: 3px solid var(--border-strong);
+    padding-left: 20px;
+    margin: 16px 0;
+    color: var(--fg-secondary);
+    font-style: italic;
+  }
+
+  /* Footer */
+  .report-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    margin-top: 64px;
+    font-size: 13px;
+    color: var(--fg-tertiary);
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .container { padding: 40px 20px 80px; }
+    .report-title { font-size: 24px; }
+    h2 { font-size: 19px; }
+    pre { padding: 12px; font-size: 12px; }
+    .flow { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ====== HEADER ====== -->
+<div class="report-header">
+  <div class="report-meta">调研报告 / Research Report &nbsp;·&nbsp; 2026-07-30</div>
+  <h1 class="report-title">Statuz Cluster 创建交互调研报告</h1>
+  <p class="report-subtitle">从引擎就绪到用户可用：Cluster 创建与项目信息存储的交互方式选型</p>
+</div>
+
+<!-- ====== TOC ====== -->
+<div class="toc">
+  <div class="toc-title">目录</div>
+  <ol>
+    <li><a href="#summary">执行摘要</a></li>
+    <li><a href="#current-state">现状评估</a></li>
+    <li><a href="#problem">问题定义：七个关键缺口</a></li>
+    <li><a href="#options">交互方式选项分析</a></li>
+    <li><a href="#prototype-scope">原型范围定义</a></li>
+    <li><a href="#recommendation">推荐方案</a></li>
+    <li><a href="#decisions">关键技术决策</a></li>
+    <li><a href="#risks">风险评估</a></li>
+    <li><a href="#roadmap">实施路线图</a></li>
+    <li><a href="#appendix">附录：调研素材索引</a></li>
+  </ol>
+</div>
+
+<!-- ====== 1. EXECUTIVE SUMMARY ====== -->
+<section id="summary">
+  <h2>一、执行摘要</h2>
+
+  <p>Statuz 的 Rust 图引擎（<code>statuz-core</code>）在算法层已经<strong>完全实现并可工作</strong>——图引擎、Cluster 容器、Field 子图、Bridge 跨字段桥接、存储格式（msgpack + blake3 + argon2）、五大核心查询（traverse / impact / path / subgraph / validate）均有完整实现和单元测试覆盖。自测通过 11 个阶段约 70 个断言。</p>
+
+  <p>然而，引擎就绪并不意味着用户可用。<strong>当前 CLI 与引擎之间存在严重的交互断层</strong>：<code>init</code> 命令创建的 Cluster 仅存在于内存中，进程结束即丢失；<code>save</code> 命令使用硬编码的演示数据（<code>build_test_cluster()</code>），与 <code>init</code> 创建的对象毫无关联；不存在任何添加节点、创建字段、添加边或执行查询的 CLI 命令。交互示例文件 <code>statuz交互示例.md</code> 是一个 0 字节空文件——交互设计处于完全空白状态。</p>
+
+  <div class="callout callout-critical">
+    <strong>核心结论：</strong>问题不在于"如何造出屌炸天的 Cluster"，而在于<strong>如何让用户通过 CLI 把项目信息存进去并查出来</strong>。引擎 API（<code>Cluster::new</code>, <code>register_node</code>, <code>create_field</code>, <code>add_bridge</code> 等）已经完整可用，缺口完全在 CLI 交互层。
+  </div>
+
+  <p>本报告调研了五种交互方式（纯 CLI CRUD、交互式 REPL、文件驱动导入、Dashboard Web UI、自然语言 Describe→Discover→Confirm），分析了它们在实现成本、用户体验、原型适配度和长期价值四个维度上的权衡。推荐方案为<strong>分阶段推进</strong>：Phase 1 实现 CLI CRUD 命令 + 修复 init/save 链路（1-2 天）；Phase 2 增加 JSON 批量导入（1 天）；Phase 3 增加交互式 REPL（2-3 天）；Dashboard 推迟到引擎交互验证完成后。</p>
+</section>
+
+<!-- ====== 2. CURRENT STATE ====== -->
+<section id="current-state">
+  <h2>二、现状评估</h2>
+
+  <h3>2.1 引擎层：完整可用</h3>
+
+  <p>Rust 引擎 <code>crates/statuz-core</code> 的核心模块均已完整实现：</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>模块</th>
+        <th>文件</th>
+        <th>行数</th>
+        <th>状态</th>
+        <th>关键能力</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Graph Engine</td>
+        <td><code>graph/engine.rs</code></td>
+        <td>420</td>
+        <td><span class="badge badge-ok">完整</span></td>
+        <td>邻接表存储、增删节点/边、级联删除、JSON 序列化</td>
+      </tr>
+      <tr>
+        <td>Graph Query</td>
+        <td><code>graph/query.rs</code></td>
+        <td>801</td>
+        <td><span class="badge badge-ok">完整</span></td>
+        <td>traverse, impact (反向BFS), path (BFS最短路径), subgraph, validate, centrality, health</td>
+      </tr>
+      <tr>
+        <td>Graph Types</td>
+        <td><code>graph/types.rs</code></td>
+        <td>295</td>
+        <td><span class="badge badge-ok">完整</span></td>
+        <td>Node, Edge, Relation (8预定义+Custom), NodeStatus, 查询结果类型, SYN类型</td>
+      </tr>
+      <tr>
+        <td>Cluster</td>
+        <td><code>cluster/cluster.rs</code></td>
+        <td>1114</td>
+        <td><span class="badge badge-ok">完整</span></td>
+        <td>节点注册表、字段管理、桥接（双向）、跨字段查询、Diff、Validate、Subgraph</td>
+      </tr>
+      <tr>
+        <td>Field</td>
+        <td><code>cluster/field.rs</code></td>
+        <td>61</td>
+        <td><span class="badge badge-ok">完整</span></td>
+        <td>子图容器，内含独立 GraphEngine 实例</td>
+      </tr>
+      <tr>
+        <td>Sharing</td>
+        <td><code>cluster/sharing.rs</code></td>
+        <td>555</td>
+        <td><span class="badge badge-ok">完整</span></td>
+        <td>Clone (深拷贝+新ID), Merge (4种策略), Password (argon2), Visibility</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td><code>storage/mod.rs</code></td>
+        <td>605</td>
+        <td><span class="badge badge-ok">完整</span></td>
+        <td>STZ二进制格式 (v0x0002), msgpack+zstd+chacha20+blake3, 向后兼容v0x0001</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>引擎的公共 API（<code>lib.rs</code>）导出了完整的类型和方法：<code>Cluster::new()</code>, <code>cluster.register_node()</code>, <code>cluster.create_field()</code>, <code>cluster.add_bridge()</code>, <code>cluster.traverse_across_fields()</code>, <code>cluster.impact_across_fields()</code>, <code>cluster.path_across_fields()</code>, <code>cluster.subgraph()</code>, <code>cluster.validate()</code>, <code>cluster.diff()</code> 等。这些方法全部有对应的单元测试。</p>
+
+  <h3>2.2 CLI 层：存在严重交互断层</h3>
+
+  <p>CLI（<code>main.rs</code>, 940 行）使用 <code>clap</code> 定义了 10 个命令，但命令之间存在断裂：</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>命令</th>
+        <th>功能</th>
+        <th>问题</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>init</code></td>
+        <td>创建 Cluster</td>
+        <td><span class="badge badge-bad">不持久化</span> 仅在内存创建并打印，进程结束即丢失。ID 使用 <code>uuid::Uuid::new_v4()</code> 而非 <code>generate_cluster_id()</code> 的 blake3 内容寻址。</td>
+      </tr>
+      <tr>
+        <td><code>save</code></td>
+        <td>保存为 .stz</td>
+        <td><span class="badge badge-bad">使用演示数据</span> 调用硬编码的 <code>build_test_cluster()</code>，不接受用户输入，与 <code>init</code> 创建的 Cluster 无关。</td>
+      </tr>
+      <tr>
+        <td><code>show</code></td>
+        <td>显示信息</td>
+        <td><span class="badge badge-warn">只读</span> 可读取 .stz 文件并打印基本信息，但无法编辑。</td>
+      </tr>
+      <tr>
+        <td><code>load</code></td>
+        <td>加载 .stz</td>
+        <td><span class="badge badge-warn">只读</span> 反序列化并打印，加载后无法继续操作。</td>
+      </tr>
+      <tr>
+        <td><code>verify</code></td>
+        <td>完整性校验</td>
+        <td><span class="badge badge-ok">正常</span> 轻量级 blake3 校验。</td>
+      </tr>
+      <tr>
+        <td><code>export</code></td>
+        <td>导出 JSON</td>
+        <td><span class="badge badge-ok">正常</span> 但只导出，不能反向导入。</td>
+      </tr>
+      <tr>
+        <td><code>clone</code> / <code>merge</code></td>
+        <td>共享操作</td>
+        <td><span class="badge badge-ok">正常</span> 功能完整。</td>
+      </tr>
+      <tr>
+        <td><code>set-password</code> / <code>set-visibility</code></td>
+        <td>访问控制</td>
+        <td><span class="badge badge-ok">正常</span> 功能完整。</td>
+      </tr>
+      <tr>
+        <td><code>self-test</code></td>
+        <td>集成自测</td>
+        <td><span class="badge badge-ok">正常</span> 11 阶段 ~70 断言。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warning">
+    <strong>关键发现：</strong><code>init</code> → <code>save</code> 之间没有数据传递。用户执行 <code>statuz init --name "My Project"</code> 后，创建的 Cluster 不会被传递给 <code>statuz save</code>。<code>save</code> 总是保存硬编码的 7 节点演示数据。这意味着<strong>当前不存在任何方式让用户通过 CLI 创建并保存自己的 Cluster</strong>。
+  </div>
+
+  <h3>2.3 表征层：纯占位符</h3>
+
+  <p>三个伴随 crate（<code>arrow-map</code>, <code>niche</code>, <code>syn</code>）均只有 7 行占位代码——一个返回 <code>&'static str</code> 的 <code>placeholder()</code> 函数。它们对应的理想化交互能力（自然语言→图翻译、语义解释、变更提案守门）目前完全不存在。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Crate</th>
+        <th>理想角色</th>
+        <th>当前状态</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>arrow-map</code></td>
+        <td>输入翻译器：将人类/LLM 语言转为 typed arrows</td>
+        <td><span class="badge badge-bad">占位符</span></td>
+      </tr>
+      <tr>
+        <td><code>niche</code></td>
+        <td>状态解释器：语义判断与生态位推断</td>
+        <td><span class="badge badge-bad">占位符</span></td>
+      </tr>
+      <tr>
+        <td><code>syn</code></td>
+        <td>回写守门人：变更提案机制</td>
+        <td><span class="badge badge-bad">占位符</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.4 Dashboard：不存在</h3>
+
+  <p>当前 Rust 项目中没有任何 Web/UI 代码。<code>packages/cli/src/dashboard/command.ts</code>（858 行）是冻结的旧 TypeScript 代码，基于 YAML 旧范式，与 Rust 引擎完全无关。设计文档将 Dashboard 定位为 Phase 6（累计 50 天开发量），且明确声明"不会做 VS Code 扩展，将自研 statuzIDE"。</p>
+
+  <h3>2.5 能力总览</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>层级</th>
+        <th>状态</th>
+        <th>说明</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>引擎算法</td>
+        <td><span class="badge badge-ok">就绪</span></td>
+        <td>图操作、查询、存储、共享全部可用</td>
+      </tr>
+      <tr>
+        <td>CLI 读取</td>
+        <td><span class="badge badge-warn">部分</span></td>
+        <td>show/load/verify/export 可用，但无法编辑</td>
+      </tr>
+      <tr>
+        <td>CLI 写入</td>
+        <td><span class="badge badge-bad">断裂</span></td>
+        <td>init 不持久化，save 用演示数据</td>
+      </tr>
+      <tr>
+        <td>CLI 查询</td>
+        <td><span class="badge badge-bad">缺失</span></td>
+        <td>无 traverse/impact/path/subgraph 命令</td>
+      </tr>
+      <tr>
+        <td>表征层</td>
+        <td><span class="badge badge-bad">占位符</span></td>
+        <td>arrow-map/niche/syn 未实现</td>
+      </tr>
+      <tr>
+        <td>Dashboard</td>
+        <td><span class="badge badge-na">不存在</span></td>
+        <td>Phase 6，远期目标</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ====== 3. PROBLEM DEFINITION ====== -->
+<section id="problem">
+  <h2>三、问题定义：七个关键缺口</h2>
+
+  <p>通过对比引擎 API 与 CLI 命令，识别出以下七个阻碍用户创建和使用 Cluster 的关键缺口：</p>
+
+  <h3>缺口 1：init 不持久化</h3>
+  <p><code>statuz init --name "My Project"</code> 在内存中创建 Cluster 对象并打印信息，但不写入任何文件。进程结束后 Cluster 丢失。用户无法保存自己创建的 Cluster。</p>
+
+  <h3>缺口 2：save 使用硬编码演示数据</h3>
+  <p><code>statuz save --output project.stz</code> 调用 <code>build_test_cluster()</code> 函数，该函数返回一个包含 7 个节点、2 个字段、1 个桥接的硬编码演示 Cluster。用户无法保存自己通过 <code>init</code> 创建的 Cluster。</p>
+
+  <h3>缺口 3：init 与 save 之间无连接</h3>
+  <p>这是缺口 1 和 2 的直接后果。<code>init</code> 创建的 Cluster 对象不会以任何形式传递给 <code>save</code>。两个命令各自独立运行，没有共享状态。</p>
+
+  <h3>缺口 4：无节点/字段/边/桥接的添加命令</h3>
+  <p>引擎 API 提供了 <code>register_node()</code>, <code>create_field()</code>, <code>add_bridge()</code>, 以及 GraphEngine 的 <code>add_node()</code> / <code>add_edge()</code>，但 CLI 没有暴露任何这些操作。用户无法通过命令行向 Cluster 添加内容。</p>
+
+  <h3>缺口 5：无查询命令</h3>
+  <p>五大核心查询（traverse, impact, path, subgraph, validate）在引擎层完整实现，但 CLI 没有任何命令调用它们。用户无法通过命令行查询 Cluster 内的拓扑关系。</p>
+
+  <h3>缺口 6：无交互式模式</h3>
+  <p>所有 CLI 命令都是一次性的——执行一次即退出。不存在 REPL（Read-Eval-Print Loop）或交互式 Shell，用户无法在一个会话中连续操作 Cluster。</p>
+
+  <h3>缺口 7：ID 生成不一致</h3>
+  <p><code>init</code> 使用 <code>format!("cluster-{}", uuid::Uuid::new_v4())</code> 生成 Cluster ID，而存储模块提供了 <code>generate_cluster_id()</code>（基于 blake3 内容寻址哈希）。两者不一致，且 <code>Cargo.toml</code> 中未声明 <code>uuid</code> 依赖（可能是编译错误或 workspace 隐式依赖）。</p>
+
+  <div class="callout">
+    <strong>缺口映射：</strong>缺口 1-3 是<strong>链路断裂</strong>（init→save 不通），修复后用户可以创建并保存空 Cluster。缺口 4-5 是<strong>功能缺失</strong>（无 CRUD、无查询），修复后用户可以填充和查询 Cluster。缺口 6 是<strong>体验优化</strong>。缺口 7 是<strong>一致性修复</strong>。
+  </div>
+</section>
+
+<!-- ====== 4. OPTIONS ANALYSIS ====== -->
+<section id="options">
+  <h2>四、交互方式选项分析</h2>
+
+  <p>本节分析五种可能的 Cluster 创建交互方式，从实现成本、用户体验、原型适配度和长期价值四个维度进行评估。</p>
+
+  <h3>选项 A：纯 CLI CRUD 命令</h3>
+
+  <p>每个操作是一个独立的 CLI 子命令，通过 <code>--path</code> 指定 .stz 文件，命令执行时加载→修改→保存。</p>
+
+  <pre><code># 创建并保存 Cluster
+statuz init --name "My Project" --output project.stz
+
+# 添加字段
+statuz add-field --path project.stz --id arch --name "System Architecture"
+
+# 添加节点
+statuz add-node --path project.stz --id api-gateway --type service --label "API Gateway"
+statuz add-node --path project.stz --id auth-service --type service --label "Auth Service"
+
+# 在字段内添加边
+statuz add-edge --path project.stz --field arch \
+  --from api-gateway --to auth-service --relation depends-on
+
+# 查询
+statuz query traverse --path project.stz --node api-gateway --field arch
+statuz query impact --path project.stz --node auth-service</code></pre>
+
+  <table>
+    <tbody>
+      <tr>
+        <td><strong>实现成本</strong></td>
+        <td>低 — 每个命令是 <code>load → engine API → save</code> 的简单封装，clap derive 宏处理参数解析</td>
+      </tr>
+      <tr>
+        <td><strong>用户体验</strong></td>
+        <td>中 — 可脚本化、可组合、每次操作原子化；但构建复杂图时较繁琐</td>
+      </tr>
+      <tr>
+        <td><strong>原型适配</strong></td>
+        <td><span class="badge badge-ok">最佳</span> — 最小改动实现"能存项目信息"的目标</td>
+      </tr>
+      <tr>
+        <td><strong>长期价值</strong></td>
+        <td>高 — CLI 命令是所有上层交互（REPL、Dashboard、MCP）的基础</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>选项 B：交互式 REPL</h3>
+
+  <p>进入一个持续运行的交互式 Shell，在会话内维护 Cluster 状态，支持连续操作。</p>
+
+  <pre><code>$ statuz shell --path project.stz
+statuz> add-field arch "System Architecture"
+statuz> add-node api-gateway --type service --label "API Gateway"
+statuz> add-node auth-service --type service --label "Auth Service"
+statuz> add-edge api-gateway -> auth-service --field arch --relation depends-on
+statuz> query traverse api-gateway --field arch
+  → auth-service (depends-on)
+statuz> save
+statuz> exit</code></pre>
+
+  <table>
+    <tbody>
+      <tr>
+        <td><strong>实现成本</strong></td>
+        <td>中 — 需要 REPL 循环、命令解析器、会话状态管理、错误恢复</td>
+      </tr>
+      <tr>
+        <td><strong>用户体验</strong></td>
+        <td>好 — 即时反馈、快速迭代、无需重复输入 <code>--path</code></td>
+      </tr>
+      <tr>
+        <td><strong>原型适配</strong></td>
+        <td><span class="badge badge-warn">良好</span> — 在 CLI CRUD 之上构建，是增强而非替代</td>
+      </tr>
+      <tr>
+        <td><strong>长期价值</strong></td>
+        <td>中 — 对开发者友好，但对非技术用户和 Agent 不如 CLI 命令直接</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>选项 C：文件驱动导入</h3>
+
+  <p>用户在结构化文件（JSON 或 Markdown）中定义 Cluster 内容，通过 <code>import</code> 命令一次性导入。</p>
+
+  <pre><code>// project-graph.json
+{
+  "name": "My Project",
+  "fields": [
+    {
+      "id": "arch",
+      "name": "System Architecture",
+      "nodes": [
+        { "id": "api-gateway", "type": "service", "label": "API Gateway" },
+        { "id": "auth-service", "type": "service", "label": "Auth Service" }
+      ],
+      "edges": [
+        { "from": "api-gateway", "to": "auth-service", "relation": "depends-on" }
+      ]
+    }
+  ]
+}
+
+# 导入
+statuz import --from project-graph.json --output project.stz</code></pre>
+
+  <table>
+    <tbody>
+      <tr>
+        <td><strong>实现成本</strong></td>
+        <td>低 — JSON 反序列化 + 引擎 API 调用，可复用 serde</td>
+      </tr>
+      <tr>
+        <td><strong>用户体验</strong></td>
+        <td>中 — 适合批量数据，不适合增量编辑；可版本控制</td>
+      </tr>
+      <tr>
+        <td><strong>原型适配</strong></td>
+        <td><span class="badge badge-ok">良好</span> — 与 CLI CRUD 互补，解决"一次性导入大量数据"场景</td>
+      </tr>
+      <tr>
+        <td><strong>长期价值</strong></td>
+        <td>高 — 导入/导出是任何系统的必备能力，也为 arrow-map 提供输出目标</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>选项 D：Dashboard Web UI</h3>
+
+  <p>基于 Web 的可视化界面，支持图形化创建节点、拖拽连线、力导向布局展示。</p>
+
+  <table>
+    <tbody>
+      <tr>
+        <td><strong>实现成本</strong></td>
+        <td>高 — 需要前后端、图形渲染（D3.js/Cytoscape.js）、状态同步</td>
+      </tr>
+      <tr>
+        <td><strong>用户体验</strong></td>
+        <td>优秀 — 直观、可视化、最符合"Describe→Discover→Confirm"的理想</td>
+      </tr>
+      <tr>
+        <td><strong>原型适配</strong></td>
+        <td><span class="badge badge-bad">不适合</span> — 设计文档定位为 Phase 6（50 天），远超原型范围</td>
+      </tr>
+      <tr>
+        <td><strong>长期价值</strong></td>
+        <td>高 — 人类管理 Statuz 的控制中枢</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>选项 E：自然语言 Describe→Discover→Confirm</h3>
+
+  <p>用户用自然语言描述项目，<code>arrow-map</code> 翻译为 typed arrows，<code>niche</code> 做语义推断，用户确认后写入 Cluster。</p>
+
+  <table>
+    <tbody>
+      <tr>
+        <td><strong>实现成本</strong></td>
+        <td>极高 — 需要 arrow-map + niche + syn 三个 crate 完整实现 + LLM 集成</td>
+      </tr>
+      <tr>
+        <td><strong>用户体验</strong></td>
+        <td>极致 — "Statuz understood my project" 的定义性体验</td>
+      </tr>
+      <tr>
+        <td><strong>原型适配</strong></td>
+        <td><span class="badge badge-bad">不适合</span> — 三个 crate 目前是占位符</td>
+      </tr>
+      <tr>
+        <td><strong>长期价值</strong></td>
+        <td>最高 — 这是 Statuz 的核心竞争力和设计哲学终点</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>综合对比</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>选项</th>
+        <th>实现成本</th>
+        <th>用户体验</th>
+        <th>原型适配</th>
+        <th>长期价值</th>
+        <th>推荐阶段</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A. CLI CRUD</td>
+        <td>低</td>
+        <td>中</td>
+        <td><span class="badge badge-ok">最佳</span></td>
+        <td>高（基础设施）</td>
+        <td>Phase 1</td>
+      </tr>
+      <tr>
+        <td>C. JSON 导入</td>
+        <td>低</td>
+        <td>中</td>
+        <td><span class="badge badge-ok">良好</span></td>
+        <td>高（必备）</td>
+        <td>Phase 2</td>
+      </tr>
+      <tr>
+        <td>B. 交互式 REPL</td>
+        <td>中</td>
+        <td>好</td>
+        <td><span class="badge badge-warn">良好</span></td>
+        <td>中</td>
+        <td>Phase 3</td>
+      </tr>
+      <tr>
+        <td>D. Dashboard</td>
+        <td>高</td>
+        <td>优秀</td>
+        <td><span class="badge badge-bad">不适合</span></td>
+        <td>高</td>
+        <td>Phase 4+</td>
+      </tr>
+      <tr>
+        <td>E. 自然语言</td>
+        <td>极高</td>
+        <td>极致</td>
+        <td><span class="badge badge-bad">不适合</span></td>
+        <td>最高</td>
+        <td>远期愿景</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ====== 5. PROTOTYPE SCOPE ====== -->
+<section id="prototype-scope">
+  <h2>五、原型范围定义</h2>
+
+  <h3>5.1 "能储存项目信息的原型"是什么</h3>
+
+  <p>根据设计哲学文档和 AGENTS.md，"项目信息"在新范式里没有独立的一级概念——项目、组件、文件、人都是 Cluster 内的 Node，由 Edge 定义关系，由 Field 提供不同视角。"储存项目信息"等于<strong>把项目的实体与依赖关系建模为 Cluster 内的 nodes + edges + fields</strong>。</p>
+
+  <p>一个"能储存项目信息的原型"应满足以下用户故事：</p>
+
+  <ol>
+    <li><strong>创建</strong>：用户能创建一个空的 Cluster 并保存到文件</li>
+    <li><strong>建模</strong>：用户能向 Cluster 添加字段（视角）、节点（实体）、边（关系）、桥接（跨字段连接）</li>
+    <li><strong>查询</strong>：用户能对 Cluster 执行五大查询，获取拓扑关系信息</li>
+    <li><strong>持久化</strong>：所有操作自动保存到 .stz 文件，下次可以加载继续</li>
+    <li><strong>验证</strong>：用户能验证 Cluster 的结构一致性</li>
+  </ol>
+
+  <h3>5.2 原型不包含什么</h3>
+
+  <ul>
+    <li>Dashboard / Web UI（Phase 6）</li>
+    <li>自然语言→图翻译（arrow-map，未实现）</li>
+    <li>语义推断（niche，未实现）</li>
+    <li>变更提案机制（syn，未实现）</li>
+    <li>权重衰减、主动释放、注意力层（核心研究难题，存疑）</li>
+    <li>MCP 桥接（Phase 3）</li>
+    <li>多 Agent 协调器（Phase 5）</li>
+  </ul>
+
+  <h3>5.3 成功标准</h3>
+
+  <p>设计文档将北极星指标定义为"agent 跨 session 的上下文恢复成本"。但对于原型阶段，更务实的成功标准是：</p>
+
+  <blockquote>
+    "一个开发者能在 10 分钟内通过 CLI 创建一个包含 2 个字段、10 个节点、15 条边的 Cluster，保存为 .stz 文件，执行 traverse 查询获取依赖关系，并能在下次 session 中加载继续编辑。"
+  </blockquote>
+</section>
+
+<!-- ====== 6. RECOMMENDATION ====== -->
+<section id="recommendation">
+  <h2>六、推荐方案</h2>
+
+  <h3>6.1 总体策略：CLI 先行，分阶段增强</h3>
+
+  <p>推荐采用<strong>选项 A（CLI CRUD）作为 Phase 1</strong>，辅以<strong>选项 C（JSON 导入）作为 Phase 2</strong>，后续视需要增加<strong>选项 B（REPL）</strong>。理由如下：</p>
+
+  <ol>
+    <li><strong>引擎 API 已就绪</strong>——所有需要的操作（<code>Cluster::new</code>, <code>register_node</code>, <code>create_field</code>, <code>add_bridge</code>, <code>traverse</code> 等）在引擎层已实现并测试通过，CLI 命令只是薄封装</li>
+    <li><strong>CLI 是所有上层交互的基础</strong>——REPL 可以复用 CLI 命令解析器，Dashboard 后端可以复用 CLI 逻辑，MCP 工具可以包装 CLI 命令</li>
+    <li><strong>最小改动实现最大价值</strong>——修复 init/save 链路 + 添加 CRUD 命令，预计 1-2 天即可让用户开始存储项目信息</li>
+    <li><strong>与设计哲学一致</strong>——"Core 是底座，dashboard 才是盖摩天大楼的地方"，先把底座的交互通道打通</li>
+  </ol>
+
+  <h3>6.2 Phase 1：CLI CRUD 命令</h3>
+
+  <p>修复现有命令断裂 + 添加核心 CRUD 和查询命令。</p>
+
+  <h4>6.2.1 修复 init — 持久化到文件</h4>
+
+  <pre><code># 当前（断裂）
+statuz init --name "My Project"
+# → 仅打印，不保存
+
+# 修复后
+statuz init --name "My Project" --output project.stz
+# → 创建 Cluster + 生成 blake3 ID + 保存到 project.stz</code></pre>
+
+  <p>修改要点：</p>
+  <ul>
+    <li><code>init</code> 接受 <code>--output</code> 参数，创建后立即序列化保存</li>
+    <li>使用 <code>generate_cluster_id()</code>（blake3 内容寻址）替代 UUID</li>
+    <li>可选：<code>--visibility</code> 和 <code>--password</code> 参数透传</li>
+  </ul>
+
+  <h4>6.2.2 修复 save — 保存指定 Cluster</h4>
+
+  <pre><code># 当前（断裂）
+statuz save --output project.stz
+# → 总是保存 build_test_cluster() 演示数据
+
+# 修复后：save 变为"重新序列化已有文件"或弃用
+# 增量操作由 add-node/add-edge 等命令自动保存</code></pre>
+
+  <p>修改要点：</p>
+  <ul>
+    <li><code>save</code> 不再调用 <code>build_test_cluster()</code></li>
+    <li>所有 mutation 命令（add-node, add-edge 等）在执行后自动保存</li>
+    <li><code>build_test_cluster()</code> 保留用于 <code>self-test</code>，但不暴露给用户命令</li>
+  </ul>
+
+  <h4>6.2.3 新增 CRUD 命令</h4>
+
+  <table>
+    <thead>
+      <tr>
+        <th>命令</th>
+        <th>引擎 API</th>
+        <th>参数</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>add-node</code></td>
+        <td><code>cluster.register_node(node)</code></td>
+        <td><code>--path, --id, --type, --label, --status</code></td>
+      </tr>
+      <tr>
+        <td><code>remove-node</code></td>
+        <td><code>cluster.unregister_node(&id)</code></td>
+        <td><code>--path, --id</code></td>
+      </tr>
+      <tr>
+        <td><code>add-field</code></td>
+        <td><code>cluster.create_field(id, name, desc)</code></td>
+        <td><code>--path, --id, --name, --description</code></td>
+      </tr>
+      <tr>
+        <td><code>remove-field</code></td>
+        <td><code>cluster.remove_field(&id)</code></td>
+        <td><code>--path, --id</code></td>
+      </tr>
+      <tr>
+        <td><code>add-edge</code></td>
+        <td><code>field.graph.add_edge(edge)</code></td>
+        <td><code>--path, --field, --from, --to, --relation, --weight, --description</code></td>
+      </tr>
+      <tr>
+        <td><code>remove-edge</code></td>
+        <td><code>field.graph.remove_edge(&id)</code></td>
+        <td><code>--path, --field, --id</code></td>
+      </tr>
+      <tr>
+        <td><code>add-bridge</code></td>
+        <td><code>cluster.add_bridge(...)</code></td>
+        <td><code>--path, --from-field, --to-field, --from-node, --to-node, --description</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>6.2.4 新增查询命令</h4>
+
+  <table>
+    <thead>
+      <tr>
+        <th>命令</th>
+        <th>引擎 API</th>
+        <th>参数</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>query traverse</code></td>
+        <td><code>cluster.traverse_across_fields(...)</code></td>
+        <td><code>--path, --node, --field, --relation, --max-depth</code></td>
+      </tr>
+      <tr>
+        <td><code>query impact</code></td>
+        <td><code>cluster.impact_across_fields(...)</code></td>
+        <td><code>--path, --node</code></td>
+      </tr>
+      <tr>
+        <td><code>query path</code></td>
+        <td><code>cluster.path_across_fields(...)</code></td>
+        <td><code>--path, --from, --to</code></td>
+      </tr>
+      <tr>
+        <td><code>query subgraph</code></td>
+        <td><code>cluster.subgraph(...)</code></td>
+        <td><code>--path, --field, --seeds, --depth, --relation</code></td>
+      </tr>
+      <tr>
+        <td><code>validate</code></td>
+        <td><code>cluster.validate()</code></td>
+        <td><code>--path</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>6.2.5 完整用户流程</h4>
+
+  <div class="flow">
+    <span class="flow-step">init</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">add-field</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">add-node</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">add-edge</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">query</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">show</span>
+  </div>
+
+  <pre><code># 1. 创建 Cluster
+statuz init --name "E-Commerce Platform" --output shop.stz
+
+# 2. 添加字段（视角）
+statuz add-field --path shop.stz --id arch --name "Architecture"
+statuz add-field --path shop.stz --id data --name "Data Flow"
+
+# 3. 添加节点（实体）
+statuz add-node --path shop.stz --id api-gateway --type service --label "API Gateway"
+statuz add-node --path shop.stz --id auth-service --type service --label "Auth Service"
+statuz add-node --path shop.stz --id db-primary --type database --label "Primary DB"
+statuz add-node --path shop.stz --id redis-cache --type cache --label "Redis Cache"
+
+# 4. 在字段内添加边（关系）
+statuz add-edge --path shop.stz --field arch \
+  --from api-gateway --to auth-service --relation depends-on
+statuz add-edge --path shop.stz --field arch \
+  --from auth-service --to db-primary --relation depends-on
+statuz add-edge --path shop.stz --field data \
+  --from api-gateway --to redis-cache --relation produces
+
+# 5. 添加跨字段桥接
+statuz add-bridge --path shop.stz \
+  --from-field arch --to-field data \
+  --from-node api-gateway --to-node api-gateway \
+  --description "Same service, different view"
+
+# 6. 查询
+statuz query traverse --path shop.stz --node api-gateway --field arch
+statuz query impact --path shop.stz --node db-primary
+statuz validate --path shop.stz
+
+# 7. 查看
+statuz show --path shop.stz</code></pre>
+
+  <h3>6.3 Phase 2：JSON 批量导入/导出</h3>
+
+  <p>在 Phase 1 的基础上，增加 <code>import</code> 命令，支持从 JSON 文件批量导入 Cluster 内容。这使得用户可以用编辑器批量编写图结构，然后一次性导入。</p>
+
+  <ul>
+    <li><code>statuz import --from graph.json --output shop.stz</code> — 从 JSON 创建新 Cluster</li>
+    <li><code>statuz export --path shop.stz --output graph.json</code> — 导出为 JSON（已有 <code>export</code> 命令，需确认格式对齐）</li>
+    <li>JSON schema 与 <code>export_cluster_json()</code> 的输出格式对齐</li>
+  </ul>
+
+  <h3>6.4 Phase 3：交互式 REPL（可选）</h3>
+
+  <p>在 CLI CRUD 命令稳定后，可增加 <code>statuz shell</code> 交互模式。REPL 复用 Phase 1 的命令解析逻辑，在会话内维护加载的 Cluster 状态，避免每次操作都重复 <code>--path</code> 和文件 I/O。</p>
+
+  <h3>6.5 与长期愿景的衔接</h3>
+
+  <div class="flow">
+    <span class="flow-step">CLI CRUD (Phase 1)</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">JSON Import (Phase 2)</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">arrow-map (自然语言→JSON)</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Describe→Discover→Confirm</span>
+  </div>
+
+  <p>CLI CRUD 是基础设施。当 <code>arrow-map</code> crate 实现后，它可以将自然语言描述翻译为 JSON，然后通过 <code>import</code> 命令导入——Phase 1 的 JSON 导入格式直接成为 arrow-map 的输出目标。这样，从手动 CLI 建模到自然语言建模的升级路径是平滑的，不需要推翻 Phase 1 的工作。</p>
+</section>
+
+<!-- ====== 7. TECHNICAL DECISIONS ====== -->
+<section id="decisions">
+  <h2>七、关键技术决策</h2>
+
+  <h3>7.1 状态管理：无状态 + 自动保存</h3>
+
+  <p>每个 CLI 命令是无状态的——执行时加载 .stz 文件、修改 Cluster、保存回文件。这种方式有以下优势：</p>
+
+  <ul>
+    <li><strong>原子性</strong>：每个命令成功后文件立即更新，失败则文件不变</li>
+    <li><strong>可组合</strong>：命令可以自由组合在 Shell 脚本中</li>
+    <li><strong>无状态丢失</strong>：不需要维护 session 文件或临时状态</li>
+    <li><strong>实现简单</strong>：不需要进程间通信或状态序列化</li>
+  </ul>
+
+  <p>代价是每次操作都有文件 I/O（反序列化 + 序列化）。对于原型阶段的 Cluster 规模（几十到几百个节点），这个开销可以忽略。</p>
+
+  <h3>7.2 ID 生成：统一使用 blake3 内容寻址</h3>
+
+  <p>放弃 <code>uuid::Uuid::new_v4()</code>，统一使用 <code>generate_cluster_id()</code>（blake3 前 16 字节 hex 编码）。这符合设计哲学中"内容可寻址：相同内容产生相同 ID"的原则，也与存储格式中的 blake3 完整性哈希一致。</p>
+
+  <p>注意：blake3 内容寻址意味着 Cluster 内容变化后 ID 会变。这在当前阶段是可接受的——ID 用于标识 Cluster 的当前状态，而非永久身份。如果需要永久身份，可以在 <code>meta</code> 中存储一个 UUID 作为 stable identifier。</p>
+
+  <h3>7.3 命令命名：动词-名词 + 子命令</h3>
+
+  <p>遵循 <code>statuz [动词]-[名词] [--参数]</code> 的模式：</p>
+
+  <ul>
+    <li><code>add-node</code>, <code>remove-node</code>, <code>add-field</code>, <code>remove-field</code>, <code>add-edge</code>, <code>remove-edge</code>, <code>add-bridge</code></li>
+    <li><code>query traverse</code>, <code>query impact</code>, <code>query path</code>, <code>query subgraph</code>（query 作为子命令组）</li>
+    <li>保留现有：<code>init</code>, <code>show</code>, <code>save</code>, <code>load</code>, <code>verify</code>, <code>export</code>, <code>clone</code>, <code>merge</code>, <code>set-password</code>, <code>set-visibility</code>, <code>self-test</code></li>
+  </ul>
+
+  <h3>7.4 输出格式：结构化文本</h3>
+
+  <p>查询结果以人类可读的结构化文本输出（缩进列表 + 关系标注），同时支持 <code>--json</code> 标志输出机器可读的 JSON。这兼顾人类阅读和脚本处理。</p>
+
+  <pre><code>$ statuz query traverse --path shop.stz --node api-gateway --field arch
+
+Traverse from: api-gateway (service: "API Gateway")
+Field: arch
+
+  api-gateway
+    └──[depends-on]──▶ auth-service (service: "Auth Service")
+                        └──[depends-on]──▶ db-primary (database: "Primary DB")</code></pre>
+
+  <h3>7.5 默认路径约定</h3>
+
+  <p>支持在工作目录下查找 <code>.statuz</code> 配置文件或默认的 <code>statuz.stz</code> 文件，减少 <code>--path</code> 的重复输入。如果当前目录存在 <code>statuz.stz</code>，则自动使用；否则要求显式指定 <code>--path</code>。</p>
+</section>
+
+<!-- ====== 8. RISK ASSESSMENT ====== -->
+<section id="risks">
+  <h2>八、风险评估</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>风险</th>
+        <th>等级</th>
+        <th>影响</th>
+        <th>缓解措施</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>每次 mutation 命令的 load→modify→save 循环在大 Cluster 上变慢</td>
+        <td>低</td>
+        <td>原型阶段 Cluster 规模小（&lt;1000 节点），msgpack 反序列化在毫秒级</td>
+        <td>Phase 3 REPL 模式下在内存维护状态，退出时保存</td>
+      </tr>
+      <tr>
+        <td>并发写入同一 .stz 文件导致数据丢失</td>
+        <td>低</td>
+        <td>原型阶段单用户单进程使用</td>
+        <td>使用临时文件 + rename 实现原子写入</td>
+      </tr>
+      <tr>
+        <td>CLI 命令过多导致用户认知负担</td>
+        <td>中</td>
+        <td>15+ 个命令可能让新用户困惑</td>
+        <td>提供 <code>statuz help</code> 分组展示；Phase 3 REPL 简化交互</td>
+      </tr>
+      <tr>
+        <td>手动 CLI 建模体验差，用户不愿使用</td>
+        <td>中</td>
+        <td>原型验证失败，无法证明 Statuz 的价值</td>
+        <td>Phase 2 JSON 导入让用户可以用编辑器批量编写；为 Phase 3 arrow-map 预留接口</td>
+      </tr>
+      <tr>
+        <td>blake3 内容寻址 ID 在内容变化后改变，导致外部引用断裂</td>
+        <td>低</td>
+        <td>原型阶段无外部系统引用 Cluster ID</td>
+        <td>在 meta 中存储 stable UUID；未来引入版本链</td>
+      </tr>
+      <tr>
+        <td><code>uuid</code> crate 依赖未在 Cargo.toml 声明</td>
+        <td>中</td>
+        <td>可能编译失败或引入隐式依赖</td>
+        <td>迁移到 blake3 后移除 uuid 依赖；或显式声明</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ====== 9. ROADMAP ====== -->
+<section id="roadmap">
+  <h2>九、实施路线图</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>阶段</th>
+        <th>内容</th>
+        <th>预估工时</th>
+        <th>交付物</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Phase 1a</strong><br>链路修复</td>
+        <td>修复 <code>init</code> 持久化 + <code>save</code> 不用演示数据 + ID 统一为 blake3</td>
+        <td>0.5 天</td>
+        <td><code>statuz init --name X --output f.stz</code> 可创建并保存空 Cluster</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 1b</strong><br>CRUD 命令</td>
+        <td>实现 add-node, remove-node, add-field, remove-field, add-edge, remove-edge, add-bridge</td>
+        <td>1 天</td>
+        <td>用户可通过 CLI 完整构建 Cluster 拓扑</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 1c</strong><br>查询命令</td>
+        <td>实现 query traverse/impact/path/subgraph + validate</td>
+        <td>0.5 天</td>
+        <td>用户可通过 CLI 查询 Cluster 内关系</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 2</strong><br>JSON 导入</td>
+        <td>实现 <code>import</code> 命令，定义 JSON schema，对齐 export 格式</td>
+        <td>1 天</td>
+        <td>用户可批量导入图结构</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 3</strong><br>交互式 REPL</td>
+        <td>实现 <code>statuz shell</code> 交互模式</td>
+        <td>2-3 天</td>
+        <td>用户可在会话内连续操作 Cluster</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 4+</strong><br>Dashboard</td>
+        <td>Web UI 可视化（设计文档 Phase 6）</td>
+        <td>50 天</td>
+        <td>人类管理 Statuz 的控制中枢</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info">
+    <strong>建议优先级：</strong>Phase 1a → 1b → 1c 是最小可用闭环，合计约 2 天。完成后即可验证"用户能否通过 CLI 存储项目信息"这一核心假设。Phase 2 和 3 是增量增强，可在验证后按需推进。
+  </div>
+</section>
+
+<!-- ====== 10. APPENDIX ====== -->
+<section id="appendix">
+  <h2>十、附录：调研素材索引</h2>
+
+  <h3>代码文件</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>文件</th>
+        <th>行数</th>
+        <th>角色</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>crates/statuz-core/src/main.rs</code></td><td>940</td><td>CLI 入口 + 10 个命令 + self-test</td></tr>
+      <tr><td><code>crates/statuz-core/src/lib.rs</code></td><td>27</td><td>公共 API 导出</td></tr>
+      <tr><td><code>crates/statuz-core/src/cluster/cluster.rs</code></td><td>1114</td><td>Cluster 容器实现</td></tr>
+      <tr><td><code>crates/statuz-core/src/cluster/field.rs</code></td><td>61</td><td>Field 子图容器</td></tr>
+      <tr><td><code>crates/statuz-core/src/cluster/sharing.rs</code></td><td>555</td><td>Clone/Merge/Password/Visibility</td></tr>
+      <tr><td><code>crates/statuz-core/src/graph/engine.rs</code></td><td>420</td><td>GraphEngine 邻接表引擎</td></tr>
+      <tr><td><code>crates/statuz-core/src/graph/query.rs</code></td><td>801</td><td>五大查询 + 图算法</td></tr>
+      <tr><td><code>crates/statuz-core/src/graph/types.rs</code></td><td>295</td><td>类型系统</td></tr>
+      <tr><td><code>crates/statuz-core/src/storage/mod.rs</code></td><td>605</td><td>STZ 二进制存储格式</td></tr>
+    </tbody>
+  </table>
+
+  <h3>设计文档</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>文档</th>
+        <th>位置</th>
+        <th>关键内容</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>STATUZ设计哲学的论述.md</code></td><td>项目根</td><td>当前愿景宣言；七月目标：引擎 + CLI UI</td></tr>
+      <tr><td><code>AGENTS.md</code></td><td>项目根</td><td>工作指南；架构规则；硬约束</td></tr>
+      <tr><td><code>POSITIONING_7_25.md</code></td><td>项目根</td><td>定位声明；Cluster = 语义自洽最大半径；三层架构</td></tr>
+      <tr><td><code>CONTEXT.md</code></td><td>项目根</td><td>领域语言定义；Cluster/Field/Bridge 术语</td></tr>
+      <tr><td><code>README.md</code></td><td>项目根</td><td>CLI 命令列表；存储格式；What Statuz is Not</td></tr>
+      <tr><td><code>statuz交互示例.md</code></td><td>准备文件</td><td><strong>空文件（0 字节）</strong>——交互设计空白</td></tr>
+      <tr><td><code>statuz十万个为什么.md</code></td><td>准备文件</td><td>377 个问题 + 部分回答；含交互设计未解问题</td></tr>
+      <tr><td><code>statuz哲学论述6_28.md</code></td><td>准备文件</td><td>Cluster 成长过程定义；init 双层含义</td></tr>
+      <tr><td><code>statuz交接准备7_30</code></td><td>准备文件</td><td>交接文档结构决策；A2A 模式修正</td></tr>
+      <tr><td><code>knowledge-base/04-architecture/</code></td><td>知识库</td><td>引擎架构图；设计决策 ADR 001/002</td></tr>
+      <tr><td><code>knowledge-base/06-unresolved/</code></td><td>知识库</td><td>未解问题清单；表征层 crate 状态</td></tr>
+      <tr><td><code>knowledge-base/07-agent-interaction/</code></td><td>知识库</td><td>注入协议；Dashboard 集成设想</td></tr>
+      <tr><td><code>leftover/Statuz Positioning Report.md</code></td><td>遗留</td><td>Describe→Discover→Confirm UX 理想；用户是 reviewer</td></tr>
+    </tbody>
+  </table>
+
+  <h3>关键引文</h3>
+
+  <blockquote>"现在我们要干的事就两个（七月之前完成）：打造出statuz；在statuz的表征层打造出dashboard和用于cli的命令行UI"<br>— <code>STATUZ设计哲学的论述.md</code></blockquote>
+
+  <blockquote>"Core是底座，而dashboard才是实现和定制具体功能的地方"<br>— <code>STATUZ设计哲学的论述.md</code></blockquote>
+
+  <blockquote>"一个statuz成长的过程，本质就是创建cluster，和映射，以及在它上面搭建更完善，功能更丰富的表征"<br>— <code>statuz哲学论述6_28.md</code></blockquote>
+
+  <blockquote>"The workflow should be: Describe → Discover → Confirm. Not: Create → Maintain"<br>— <code>leftover/Statuz Positioning Report.md</code></blockquote>
+
+  <blockquote>"A Cluster is the largest unit within which a shared ontology holds — the maximal radius over which semantic self-consistency can be maintained."<br>— <code>POSITIONING_7_25.md</code></blockquote>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<div class="report-footer">
+  <p>本报告基于 2026-07-30 对 <code>crates/statuz-core</code> 代码库、准备文件目录、knowledge-base 知识库和 leftover 遗留文档的全面调研编写。所有代码状态和行数均来自实际文件读取，引文均标注来源。</p>
+  <p>调研方法：3 个并行探索 Agent 分别覆盖（1）Rust 代码库实现状态，（2）准备文件交接文档，（3）设计哲学与知识库文档。</p>
+</div>
+
+</div>
+</body>
+</html>

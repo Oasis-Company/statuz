@@ -57,6 +57,9 @@ cd ../.. && powershell -ExecutionPolicy Bypass -File scripts/e2e.ps1   # 12/12 �
 
 ## 五、下一步
 
-- **D2'（当前）**：statuz 自举图 + 合成 1M 边压力图，重跑基准，出 `benchmarks/realgraph-v2.md`；书面决策（必须数字）：内存索引是否够用、方向 C（WAL）/ E（分层折叠）/ A（mmap/磁盘格式）/ **B（impact BFS 机制物理化，ADR-D9）** 的立项顺序
+> **SYN 方向共创机制已收敛（阶段 1–4 完成，工程可交付）**：结论见 📄 [`syn-convergence.md`](syn-convergence.md)。其 A 面 / B 面 / 回望已挂起到 `future-directions.md` §4，gate cluster/fields，**不阻塞当前开发**。
+
+- **D2'（当前活跃战场）**：statuz 自举图 + 合成 1M 边压力图，重跑基准，出 `benchmarks/realgraph-v2.md`；书面决策（必须数字）：内存索引是否够用、方向 C（WAL）/ E（分层折叠）/ A（mmap/磁盘格式）/ **B（impact BFS 机制物理化，ADR-D9）** 的立项顺序
 - D1' 遗留：`init` 目前不落盘；Cluster 反相索引首查惰性构建（加载路径已保持轻量）
 - M7 收尾：`v0.1.0-alpha` 发布推送（tag 已建，待 push）
+- O4 待裁（不阻塞）：`merge_strategy` 下沉归属（见 `syn-convergence.md` §4）

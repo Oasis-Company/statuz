@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statuz 项目交接文档</title>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #0f1117;
+  --surface-2: #161823;
+  --border: #2a2d3a;
+  --accent: #4a7cf7;
+  --accent-2: #f59e0b;
+  --accent-3: #e94560;
+  --green: #4caf50;
+  --text: #e0e0e0;
+  --text-dim: #8b8fa3;
+  --text-bright: #ffffff;
+  --code-bg: #0d1117;
+  --mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  --sans: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+/* Navigation */
+nav {
+  position: fixed; top: 0; left: 0; width: 280px; height: 100vh;
+  background: var(--surface); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 24px 0; z-index: 100;
+}
+nav .logo { padding: 0 24px 20px; font-size: 20px; font-weight: 700; color: var(--text-bright); border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+nav .logo span { color: var(--accent); }
+nav a { display: block; padding: 8px 24px; color: var(--text-dim); text-decoration: none; font-size: 13px; transition: all 0.2s; border-left: 3px solid transparent; }
+nav a:hover { color: var(--text-bright); background: var(--surface-2); border-left-color: var(--accent); }
+nav a.section-link { font-weight: 600; color: var(--accent); margin-top: 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Main content */
+main { margin-left: 280px; padding: 48px 64px; max-width: 1200px; }
+section { margin-bottom: 80px; scroll-margin-top: 20px; }
+h1 { font-size: 36px; font-weight: 800; color: var(--text-bright); margin-bottom: 8px; letter-spacing: -0.5px; }
+h2 { font-size: 28px; font-weight: 700; color: var(--text-bright); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--border); letter-spacing: -0.3px; }
+h3 { font-size: 20px; font-weight: 600; color: var(--accent); margin: 32px 0 12px; }
+h4 { font-size: 16px; font-weight: 600; color: var(--accent-2); margin: 20px 0 8px; }
+p { margin-bottom: 14px; color: var(--text); }
+ul, ol { margin: 12px 0 12px 24px; }
+li { margin-bottom: 6px; }
+strong { color: var(--text-bright); }
+code { font-family: var(--mono); background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; color: var(--accent-2); }
+pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-x: auto; margin: 16px 0; }
+pre code { background: none; padding: 0; color: var(--text); font-size: 13px; }
+
+/* Diagram container */
+.diagram-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center; }
+.diagram-box img { max-width: 100%; height: auto; border-radius: 8px; }
+.diagram-caption { margin-top: 12px; font-size: 13px; color: var(--text-dim); font-style: italic; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+th { background: var(--surface-2); color: var(--text-bright); padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--accent); font-weight: 600; }
+td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text); }
+tr:hover td { background: var(--surface-2); }
+
+/* Cards */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 20px 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; transition: border-color 0.2s; }
+.card:hover { border-color: var(--accent); }
+.card h4 { margin-top: 0; }
+.card .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-active { background: rgba(74,124,247,0.15); color: var(--accent); border: 1px solid var(--accent); }
+.badge-placeholder { background: rgba(245,158,11,0.15); color: var(--accent-2); border: 1px solid var(--accent-2); }
+.badge-frozen { background: rgba(139,143,163,0.15); color: var(--text-dim); border: 1px solid var(--text-dim); }
+.badge-done { background: rgba(76,175,80,0.15); color: var(--green); border: 1px solid var(--green); }
+
+/* Callouts */
+.callout { border-left: 4px solid var(--accent); background: var(--surface); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+.callout.warning { border-left-color: var(--accent-2); }
+.callout.danger { border-left-color: var(--accent-3); }
+.callout.success { border-left-color: var(--green); }
+.callout p:last-child { margin-bottom: 0; }
+
+/* Hero */
+.hero { text-align: center; padding: 40px 0 60px; border-bottom: 1px solid var(--border); margin-bottom: 60px; }
+.hero h1 { font-size: 48px; margin-bottom: 16px; }
+.hero .subtitle { font-size: 18px; color: var(--text-dim); max-width: 700px; margin: 0 auto; }
+.hero .meta { margin-top: 24px; display: flex; justify-content: center; gap: 32px; font-size: 13px; color: var(--text-dim); }
+.hero .meta strong { color: var(--text-bright); }
+
+/* Status indicator */
+.status-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-active { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.dot-placeholder { background: var(--accent-2); }
+.dot-frozen { background: var(--text-dim); }
+
+/* Checklist */
+.checklist { list-style: none; margin-left: 0; }
+.checklist li { padding-left: 28px; position: relative; margin-bottom: 10px; }
+.checklist li::before { content: '\2610'; position: absolute; left: 0; font-size: 18px; color: var(--accent); }
+.checklist li.done::before { content: '\2611'; color: var(--green); }
+
+/* File tree */
+.file-tree { font-family: var(--mono); font-size: 13px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-x: auto; white-space: pre; line-height: 1.5; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  nav { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  main { margin-left: 0; padding: 24px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Statuz <span>Handoff</span></div>
+  <a href="#overview" class="section-link">总览</a>
+  <a href="#overview">项目概述</a>
+  <a href="#philosophy">设计哲学</a>
+  <a href="#vision-diagram">愿景全景图</a>
+  <a href="#three-layer">三层架构</a>
+  <a href="#info-loop">信息循环</a>
+  <a href="#cluster-ecosystem">Cluster 生态</a>
+  <a href="#code-arch" class="section-link">技术架构</a>
+  <a href="#crate-deps">Crate 依赖</a>
+  <a href="#engine-arch">引擎架构</a>
+  <a href="#data-model">数据模型</a>
+  <a href="#storage">存储格式</a>
+  <a href="#queries">五大查询</a>
+  <a href="#bridge">桥接机制</a>
+  <a href="#sharing">共享机制</a>
+  <a href="#cli">CLI 命令</a>
+  <a href="#agent-framework" class="section-link">交互与规划</a>
+  <a href="#agent-framework">Agent 交互</a>
+  <a href="#roadmap">开发路线图</a>
+  <a href="#unresolved">未解决问题</a>
+  <a href="#hard-rules">硬规则</a>
+  <a href="#file-index">文件索引</a>
+  <a href="#checklist">交接清单</a>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Statuz 项目交接文档</h1>
+  <p class="subtitle">为 AI Agent 设计的持久化依赖图引擎 — Better Engine, Better Diagram, Better Loop</p>
+  <div class="meta">
+    <span>日期: <strong>2026-08-02</strong></span>
+    <span>语言: <strong>Rust</strong></span>
+    <span>状态: <strong>Phase 4 引擎完善中</strong></span>
+    <span>代码量: <strong>~2500 行 Rust</strong></span>
+  </div>
+</div>
+
+<!-- SECTION 1: OVERVIEW -->
+<section id="overview">
+  <h2>项目概述</h2>
+  <p>Statuz 是一个<strong>持久化、跨工具的依赖图引擎</strong>，为 AI Agent 设计，配有决定 Agent 当前需要知道什么的注意力层。它不是协议、不是数据库、不是 RAG 系统——它是 <strong>agent 状态基础设施</strong>，更接近文件系统或版本控制对象模型。</p>
+
+  <div class="callout">
+    <p><strong>权威定位文档：</strong><code>POSITIONING_7_25.md</code>（2026-07-25）。当其他文档与此冲突时，以此为准。</p>
+  </div>
+
+  <h3>核心问题</h3>
+  <p>LLM 始终在预测和压缩，信息留存量递减，文档完全无用。用户不可能任何时间都进入良好的工作状态，几个提示词下去整个对话节奏就全乱了。Statuz 要解决的核心问题是：<strong>让 AI 知道自己和项目的状态</strong>——知道自己在干什么、意义何在、在整体生态位中的位置。</p>
+
+  <h3>什么不是 Statuz</h3>
+  <table>
+    <tr><th>不是</th><th>原因</th></tr>
+    <tr><td>传输协议</td><td>那是 MCP 的职责。Statuz 通过 MCP 被访问，不替代它</td></tr>
+    <tr><td>数据库</td><td>没有超过三个查询以外的操作</td></tr>
+    <tr><td>向量存储 / RAG</td><td>RAG 假设 Agent 知道该问什么，长周期 Agent 不知道</td></tr>
+    <tr><td>内容数据库</td><td>不存储源文件/文档，只存储拓扑关系</td></tr>
+    <tr><td>YAML 文档系统</td><td>旧范式已死，引擎使用 msgpack 二进制存储</td></tr>
+    <tr><td>实时同步系统</td><td>仅离线文件共享</td></tr>
+  </table>
+
+  <h3>北极星指标</h3>
+  <p><strong>Context-recovery cost</strong>：Agent 在会话边界后，达到能有效处理长周期任务状态所需的工具调用数（或 token 数）。通过 <code>judge statuz</code> 配对 A/B 测试衡量。</p>
+
+  <h3>项目历史</h3>
+  <table>
+    <tr><th>时期</th><th>范式</th><th>状态</th></tr>
+    <tr><td>2026年6月</td><td>TypeScript + YAML 协议范式</td><td><span class="badge badge-frozen">冻结，迁移至 leftover/</span></td></tr>
+    <tr><td>2026年7月</td><td>范式转换 → Rust 图引擎</td><td><span class="badge badge-active">当前，活跃开发</span></td></tr>
+  </table>
+</section>
+
+<!-- SECTION 2: PHILOSOPHY -->
+<section id="philosophy">
+  <h2>设计哲学</h2>
+  <p>来源：<code>STATUZ设计哲学的论述.md</code> — Dr. Ceaserzhao</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>Better Engine</h4>
+      <p>depsgraph 同构的内核。纯拓扑计算，无语义判断。Cluster 原始图是权威的、内容寻址的。</p>
+    </div>
+    <div class="card">
+      <h4>Better Diagram</h4>
+      <p>工作集投影。Agent 和人类实际看到的是注意力排名的评估图，而非原图。</p>
+    </div>
+    <div class="card">
+      <h4>Better Loop</h4>
+      <p>tag → impact-flush → recompute attention。增量、多速率循环。结构变更和价值变更走两个时钟。</p>
+    </div>
+  </div>
+
+  <h3>核心设计原则</h3>
+  <ul>
+    <li><strong>信息主动释放</strong>：像人脑工作记忆，而非被动检索。这是与 RAG 的根本区别</li>
+    <li><strong>不被上下文局限</strong>：项目和生态系统的全部关键信息保存在 Statuz 里，让 Agent 无缝打工</li>
+    <li><strong>功能涌现</strong>：Statuz 只专注核心和交互模式，功能从基座中涌现</li>
+    <li><strong>双图分离</strong>：Cluster 原始图永不被评估修改，排名/衰减/上下文化存在于派生的工作集投影中</li>
+    <li><strong>impact() 是传播原语</strong>：不仅是读查询，事件标记变更节点后沿依赖边刷新</li>
+  </ul>
+
+  <h3>主动释放的管道定义</h3>
+  <p>主动释放不是任何一层能单独声称的组件，而是一个端到端管道：</p>
+  <ol>
+    <li>内核发射纯拓扑信号（中心性、新近性、差异量级、种子随机游走分数）</li>
+    <li>表征层为特定 <code>(agent, task)</code> 执行相关性仲裁</li>
+    <li>结果是 Agent 接收的工作集投影</li>
+  </ol>
+</section>
+
+<!-- DIAGRAM 1: VISION -->
+<section id="vision-diagram">
+  <h2>愿景全景图</h2>
+  <p>Statuz 解决的问题域、提供的解决方案、以及设计哲学之间的关系。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/01-vision.png" alt="Statuz 愿景全景图">
+    <div class="diagram-caption">图 1: Statuz 愿景全景 — 从问题域到解决方案到设计哲学</div>
+  </div>
+</section>
+
+<!-- DIAGRAM 2: THREE-LAYER -->
+<section id="three-layer">
+  <h2>三层架构愿景</h2>
+  <p>Statuz 的权威架构定义来自 <code>POSITIONING_7_25.md</code>，分为三层：内核、表征层、注意力层。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/02-three-layer.png" alt="三层架构">
+    <div class="diagram-caption">图 2: 三层架构 — Kernel / Representation / Attention</div>
+  </div>
+
+  <h3>各层职责</h3>
+  <table>
+    <tr><th>层</th><th>职责</th><th>关键特性</th></tr>
+    <tr><td><strong>内核 (Kernel)</strong></td><td>纯拓扑计算，reachability</td><td>权威原始图、内容寻址、无语义判断、不可变</td></tr>
+    <tr><td><strong>表征层 (Representation)</strong></td><td>语义、判断、所有可能出错的东西</td><td>允许犯错、允许调用 LLM、允许有观点</td></tr>
+    <tr><td><strong>注意力层 (Attention)</strong></td><td>注意力预算、衰减、溢出、置信度</td><td>真正的研究前沿、工作集投影</td></tr>
+  </table>
+
+  <div class="callout warning">
+    <p><strong>当前实现状态：</strong>仅内核层（statuz-core）已实现。表征层（arrow-map/niche/syn）为占位符。注意力层尚未开始。</p>
+  </div>
+</section>
+
+<!-- DIAGRAM 3: INFO LOOP -->
+<section id="info-loop">
+  <h2>信息循环机制</h2>
+  <p>Better Loop 的核心是 tag → impact-flush → recompute attention 循环，配合双时钟机制和双图分离。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/03-info-loop.png" alt="信息循环">
+    <div class="diagram-caption">图 3: 信息循环 — 双时钟 + 双图分离 + 收敛机制</div>
+  </div>
+
+  <h3>双时钟机制</h3>
+  <table>
+    <tr><th>时钟</th><th>变更类型</th><th>频率</th><th>机制</th></tr>
+    <tr><td>结构变更（慢时钟）</td><td>边出现/消失</td><td>罕见、昂贵</td><td>必须走 proposal 机制</td></tr>
+    <tr><td>价值变更（快时钟）</td><td>注意力/置信度/派生权重更新</td><td>频繁、廉价</td><td>完全在工作集投影中</td></tr>
+  </table>
+</section>
+
+<!-- DIAGRAM 4: CLUSTER ECOSYSTEM -->
+<section id="cluster-ecosystem">
+  <h2>Cluster 生态系统</h2>
+  <p>Cluster 是<strong>信息宇宙的边界</strong>——共享本体论成立的最大单元。两个 Cluster 之间不能联通（设计约束，非技术限制）。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/04-cluster-ecosystem.png" alt="Cluster 生态系统">
+    <div class="diagram-caption">图 4: Cluster 生态 — 多 Field + Bridge + Cluster 边界 + 未来愿景</div>
+  </div>
+
+  <h3>Cluster 边界论述</h3>
+  <ul>
+    <li>Cluster 边界是逻辑后果，不是待修复的缺陷</li>
+    <li>传输问题已解决（MCP 的职责）；对齐问题是开放的（数十年未解难题）</li>
+    <li>跨 Cluster 桥接只能在表征层生成<strong>置信度加权的假设映射</strong>，永不进入内核作为边</li>
+    <li>"我们自己的 A2A 模式" = 表征层生成置信度加权、始终可修订的 Cluster 间假设映射</li>
+  </ul>
+
+  <h3>未来愿景</h3>
+  <p>Cluster 将像 GitHub 仓库一样运作——每个公司或个人拥有多个 Cluster，作为云端组件。公司主 Cluster 包含不同 Field（架构、数据流等），个人 Cluster 包含研究 Field。</p>
+</section>
+
+<!-- SECTION: CODE ARCHITECTURE -->
+<section id="code-arch">
+  <h2>技术架构</h2>
+</section>
+
+<!-- DIAGRAM 5: CRATE DEPS -->
+<section id="crate-deps">
+  <h2>Crate 依赖关系</h2>
+  <p>Cargo Workspace 包含 5 个成员 crate。statuz-core 是唯一活跃开发的核心，其余为占位符或冻结状态。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/05-crate-deps.png" alt="Crate 依赖关系">
+    <div class="diagram-caption">图 5: Crate 依赖关系 — 活跃 / 占位符 / 冻结 / 遗留</div>
+  </div>
+
+  <table>
+    <tr><th>Crate</th><th>状态</th><th>定位</th><th>版本</th></tr>
+    <tr><td><code>statuz-core</code></td><td><span class="badge badge-active">活跃</span></td><td>Rust 图引擎核心</td><td>0.1.0</td></tr>
+    <tr><td><code>arrow-map</code></td><td><span class="badge badge-placeholder">占位符</span></td><td>文本转图解析器</td><td>0.1.0</td></tr>
+    <tr><td><code>niche</code></td><td><span class="badge badge-placeholder">占位符</span></td><td>语义解释引擎</td><td>0.1.0</td></tr>
+    <tr><td><code>syn</code></td><td><span class="badge badge-placeholder">占位符</span></td><td>变更决策审计系统</td><td>0.1.0</td></tr>
+    <tr><td><code>statuz-core-napi</code></td><td><span class="badge badge-frozen">冻结</span></td><td>Node.js N-API 绑定</td><td>0.1.0</td></tr>
+  </table>
+
+  <div class="callout warning">
+    <p><strong>表示层 crate 约束：</strong>arrow-map、niche、syn 必须通过 statuz-core 公共 API 通信，<strong>不得创建独立存储、CLI 命令或 Schema 文件</strong>。</p>
+  </div>
+
+  <h3>statuz-core 依赖</h3>
+  <pre><code>serde          — 序列化框架
+rmp-serde      — msgpack 编码
+blake3         — 内容寻址哈希
+argon2         — 密码哈希
+zstd           — 压缩
+chacha20       — 加密
+clap           — CLI 解析
+serde_json     — JSON 导出
+rand           — 随机数（salt 生成）
+hex            — hex 编码</code></pre>
+</section>
+
+<!-- DIAGRAM 6: ENGINE ARCH -->
+<section id="engine-arch">
+  <h2>引擎代码架构</h2>
+  <p>四层代码架构：CLI → 公共 API → Cluster 层 → Graph 层 → Storage 层。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/06-engine-arch.png" alt="引擎架构">
+    <div class="diagram-caption">图 6: 引擎代码架构 — 四层模块组织</div>
+  </div>
+
+  <h3>模块组织</h3>
+  <div class="file-tree">crates/statuz-core/src/
+├── main.rs              ← CLI (11 commands, self-test)
+├── lib.rs               ← 公共 API 导出
+├── standalone_test.rs   ← 独立测试
+├── graph/
+│   ├── types.rs         ← Node, Edge, Relation, 查询结果类型, SYN类型
+│   ├── engine.rs        ← GraphEngine: 邻接表 + 增删查改
+│   └── query.rs         ← 五大查询 + 辅助算法
+├── cluster/
+│   ├── cluster.rs       ← Cluster: 注册表, Field, Bridge, diff, validate
+│   ├── field.rs         ← Field: 子图包装器
+│   ├── sharing.rs       ← Clone, Merge, Password, Visibility
+│   └── mod.rs           ← 模块导出
+└── storage/
+    └── mod.rs           ← 序列化/反序列化, 加密, 压缩, 哈希</div>
+
+  <h3>GraphEngine 核心数据结构</h3>
+  <pre><code>pub struct GraphEngine {
+    nodes: HashMap&lt;NodeId, Node&gt;,
+    edges: HashMap&lt;EdgeId, Edge&gt;,
+    adj: HashMap&lt;NodeId, AdjacencyCell&gt;,
+}
+
+pub struct AdjacencyCell {
+    pub outgoing: HashMap&lt;String, Vec&lt;Edge&gt;&gt;,  // relation → 出边
+    pub incoming: HashMap&lt;String, Vec&lt;Edge&gt;&gt;,  // relation → 入边
+}</code></pre>
+  <p>邻接表按 relation 分组存储，支持按关系类型 O(1) 过滤查询。边数据克隆两份分别存入 source 的 outgoing 和 target 的 incoming，实现双向查找。</p>
+</section>
+
+<!-- DIAGRAM 7: DATA MODEL -->
+<section id="data-model">
+  <h2>数据模型</h2>
+  <p>核心类型系统：Node、Edge、Cluster、Field 及其关系。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/07-data-model.png" alt="数据模型 ER 图">
+    <div class="diagram-caption">图 7: 数据模型 — 实体关系图</div>
+  </div>
+
+  <h3>Relation 枚举（可扩展）</h3>
+  <table>
+    <tr><th>关系</th><th>语义</th><th>用途</th></tr>
+    <tr><td><code>DependsOn</code></td><td>依赖于</td><td>服务依赖关系</td></tr>
+    <tr><td><code>Produces</code></td><td>产生</td><td>数据生产</td></tr>
+    <tr><td><code>Consumes</code></td><td>消费</td><td>数据消费</td></tr>
+    <tr><td><code>Validates</code></td><td>验证</td><td>验证关系</td></tr>
+    <tr><td><code>Informs</code></td><td>通知</td><td>信息传递</td></tr>
+    <tr><td><code>Contains</code></td><td>包含</td><td>层级关系</td></tr>
+    <tr><td><code>DelegatesTo</code></td><td>委托给</td><td>任务委派</td></tr>
+    <tr><td><code>Bridges</code></td><td>桥接</td><td>跨 Field 连接（专用）</td></tr>
+    <tr><td><code>Custom(String)</code></td><td>自定义</td><td>任意扩展关系</td></tr>
+  </table>
+
+  <h3>NodeStatus 枚举</h3>
+  <p><code>Active</code>（活跃）| <code>Dormant</code>（休眠）| <code>Blocked</code>（阻塞）| <code>Done</code>（完成）| <code>Planned</code>（计划中）</p>
+</section>
+
+<!-- DIAGRAM 8: STORAGE -->
+<section id="storage">
+  <h2>存储格式</h2>
+  <p>.stz 二进制格式：msgpack + blake3 + argon2 + zstd + chacha20。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/08-storage-format.png" alt="存储格式">
+    <div class="diagram-caption">图 8: 存储格式 — 二进制布局 + 序列化/反序列化流程 + 加密细节</div>
+  </div>
+
+  <h3>二进制布局</h3>
+  <pre><code>[magic: 4B]     "STZ\0" (0x53 0x54 0x5A 0x00)
+[version: 2B]   u16 LE (当前 0x0002, 兼容 0x0001)
+[flags: 2B]     bit0=encrypted, bit1=compressed
+[salt: 16B]     argon2 salt (v0x0002+, 未加密时全零)
+[content: 变长] msgpack 编码的 Cluster (可选压缩+加密)
+[hash: 32B]     blake3 完整性哈希 (仅覆盖 content)</code></pre>
+
+  <h3>加密细节</h3>
+  <ul>
+    <li><strong>密钥派生：</strong>argon2id（16KB 内存、2 次迭代、1 并行度、32B 输出）</li>
+    <li><strong>Nonce：</strong>salt 的前 12 字节（确定性，无需单独存储）</li>
+    <li><strong>算法：</strong>ChaCha20 对称流密码</li>
+    <li><strong>压缩：</strong>zstd level 3</li>
+  </ul>
+
+  <h3>版本兼容</h3>
+  <table>
+    <tr><th>版本</th><th>最小文件</th><th>区别</th></tr>
+    <tr><td>v0x0001</td><td>40B (header 8 + hash 32)</td><td>无 salt 区</td></tr>
+    <tr><td>v0x0002</td><td>56B (header 8 + salt 16 + hash 32)</td><td>新增 16B salt 区</td></tr>
+  </table>
+</section>
+
+<!-- DIAGRAM 9: QUERIES -->
+<section id="queries">
+  <h2>五大查询</h2>
+  <p>三大核心查询 + 两项扩展方法 + 辅助算法 + 跨字段查询。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/09-queries.png" alt="五大查询">
+    <div class="diagram-caption">图 9: 查询系统 — 核心 / 扩展 / 辅助 / 跨字段</div>
+  </div>
+
+  <table>
+    <tr><th>查询</th><th>回答什么问题</th><th>算法</th><th>复杂度</th></tr>
+    <tr><td><code>traverse(from, relation?)</code></td><td>这个节点连接到什么？</td><td>直接邻接查找</td><td>O(1)</td></tr>
+    <tr><td><code>impact(nodeId)</code></td><td>如果这个变了，谁受影响？</td><td>反向 BFS</td><td>O(V+E)</td></tr>
+    <tr><td><code>path(from, to)</code></td><td>怎么从 A 到 B？</td><td>BFS 最短路径</td><td>O(V+E)</td></tr>
+    <tr><td><code>subgraph(seeds, depth, relation?)</code></td><td>子生态系统长什么样？</td><td>BFS 提取</td><td>O(V+E)</td></tr>
+    <tr><td><code>validate()</code></td><td>图内部一致吗？</td><td>结构检查</td><td>O(E)</td></tr>
+  </table>
+
+  <div class="callout">
+    <p><strong>重要纠偏：</strong>POSITIONING_7_25.md 明确指出内核查询面固定为<strong>三个原语</strong>：traverse、impact、path。subgraph 和 validate 是这三个的组合或工具，不是第四、第五个"核心查询"。</p>
+  </div>
+
+  <h3>跨字段查询</h3>
+  <ul>
+    <li><code>traverse_across_fields</code>：递归进入目标 Field，visited 防循环</li>
+    <li><code>impact_across_fields</code>：遍历所有 Field 的 incoming，Bridge 自动跟随</li>
+    <li><code>path_across_fields</code>：BFS 状态含 current_field，field_path 记录路径</li>
+  </ul>
+
+  <h3>辅助算法</h3>
+  <ul>
+    <li><code>centrality(limit)</code>：度中心性（in + out degree），降序 top-N</li>
+    <li><code>reachable(from)</code>：传递闭包 BFS，返回所有可达节点</li>
+    <li><code>health()</code>：孤儿/源/汇/连通分量统计</li>
+  </ul>
+</section>
+
+<!-- DIAGRAM 10: BRIDGE -->
+<section id="bridge">
+  <h2>跨字段桥接机制</h2>
+  <p>Bridge 是 Field 之间的双向连接，使查询可以自动跨越 Field 边界。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/10-bridge-mechanism.png" alt="桥接机制">
+    <div class="diagram-caption">图 10: 桥接机制 — 双向创建 + 跨字段查询 + 四层验证</div>
+  </div>
+
+  <h3>Bridge 创建流程</h3>
+  <ol>
+    <li>验证两个 Field 和两个 Node 都存在</li>
+    <li>创建<strong>两条边</strong>：forward（存入 from_field）和 reverse（存入 to_field）</li>
+    <li>两条边都设置 <code>target_field</code> 指向对方字段，<code>relation = Bridges</code></li>
+    <li>同时存入 Cluster 级别的 <code>bridges</code> 注册表</li>
+    <li>ID 格式：<code>bridge-{from_field}-{source}-{to_field}-{target}-fwd/rev</code></li>
+  </ol>
+
+  <h3>Cluster 四层验证</h3>
+  <table>
+    <tr><th>层级</th><th>检查内容</th><th>严重度</th></tr>
+    <tr><td>Field 级</td><td>孤儿边（source/target 不存在）</td><td>Error</td></tr>
+    <tr><td>外部节点</td><td>边引用不在 Cluster 注册表中</td><td>Error</td></tr>
+    <tr><td>断裂桥接</td><td>Bridge 的 target_field 指向不存在的 Field</td><td>Error</td></tr>
+    <tr><td>孤儿节点</td><td>注册但不在任何 Field 中</td><td>Warning</td></tr>
+  </table>
+</section>
+
+<!-- DIAGRAM 11: SHARING -->
+<section id="sharing">
+  <h2>共享机制</h2>
+  <p>Clone、Merge、Password、Visibility 四种共享机制。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/11-sharing.png" alt="共享机制">
+    <div class="diagram-caption">图 11: 共享机制 — Clone / Merge / Password / Visibility</div>
+  </div>
+
+  <h3>Merge 四种策略</h3>
+  <table>
+    <tr><th>策略</th><th>行为</th><th>适用场景</th></tr>
+    <tr><td><code>Skip</code></td><td>保留现有，跳过冲突</td><td>默认策略，安全合并</td></tr>
+    <tr><td><code>Overwrite</code></td><td>用源数据替换</td><td>强制更新</td></tr>
+    <tr><td><code>Rename</code></td><td>给冲突 ID 加后缀</td><td>保留双方数据</td></tr>
+    <tr><td><code>MergeMeta</code></td><td>合并 meta 字段（保留现有键，补充缺失键）</td><td>细粒度 meta 合并</td></tr>
+  </table>
+
+  <h3>密码管理</h3>
+  <ul>
+    <li><code>set_password</code>：argon2 哈希</li>
+    <li><code>change_password</code>：先验证旧密码再设置新密码</li>
+    <li><code>clear_password</code>：清除密码哈希</li>
+    <li><code>unlock</code>：验证密码（无密码时永远返回 true）</li>
+  </ul>
+</section>
+
+<!-- DIAGRAM 12: CLI -->
+<section id="cli">
+  <h2>CLI 命令系统</h2>
+  <p>11 个命令覆盖创建、管理、验证、共享和测试全流程。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/13-cli-commands.png" alt="CLI 命令">
+    <div class="diagram-caption">图 12: CLI 命令系统 — 11 个命令 + Self-Test 11 阶段 + 测试 Cluster</div>
+  </div>
+
+  <h3>命令清单</h3>
+  <table>
+    <tr><th>命令</th><th>功能</th><th>关键参数</th></tr>
+    <tr><td><code>init</code></td><td>初始化新 Cluster</td><td>-n name, -v visibility, -p password</td></tr>
+    <tr><td><code>show</code></td><td>显示 Cluster 信息</td><td>-p path</td></tr>
+    <tr><td><code>save</code></td><td>保存为 .stz 文件</td><td>-o output, --compress, --encrypt, --password</td></tr>
+    <tr><td><code>load</code></td><td>加载 .stz 文件</td><td>-p path</td></tr>
+    <tr><td><code>verify</code></td><td>轻量级完整性验证</td><td>-p path</td></tr>
+    <tr><td><code>export</code></td><td>导出为 JSON</td><td>-p path, -o output</td></tr>
+    <tr><td><code>clone</code></td><td>克隆 Cluster</td><td>-i input, -o output, -n name, -p password</td></tr>
+    <tr><td><code>merge</code></td><td>合并两个 Cluster</td><td>-t target, -s source, --strategy</td></tr>
+    <tr><td><code>set-password</code></td><td>设置/修改/清除密码</td><td>-p path, --set/--old/--new/--clear</td></tr>
+    <tr><td><code>set-visibility</code></td><td>设置可见性</td><td>-p path, -v visibility</td></tr>
+    <tr><td><code>self-test</code></td><td>11 阶段综合自测</td><td>（无参数）</td></tr>
+  </table>
+
+  <h3>验证命令</h3>
+  <pre><code>cd crates/statuz-core
+cargo run -- self-test       # 11 阶段 ~70 断言
+cargo test                   # 单元测试
+scripts/e2e.ps1              # 端到端 11 阶段
+scripts/build.ps1            # 5 步构建验证</code></pre>
+</section>
+
+<!-- DIAGRAM 13: AGENT FRAMEWORK -->
+<section id="agent-framework">
+  <h2>Agent 交互框架</h2>
+  <p>已设计但尚未实现的 4 阶段交互框架 + 6 阶段实现路线图。</p>
+  <div class="diagram-box">
+    <img src="handoff-diagrams/12-agent-interaction.png" alt="Agent 交互框架">
+    <div class="diagram-caption">图 13: Agent 交互框架 — 注入层 / 运行时查询 / 回写同步 / Multi-Agent + 路线图</div>
+  </div>
+
+  <h3>四阶段交互</h3>
+  <div class="card-grid">
+    <div class="card">
+      <h4>Phase 1: 注入层</h4>
+      <p>Agent 启动前注入拓扑上下文。权重感知：≥0.8 强制包含，0.5-0.8 有条件，&lt;0.5 按需。ACE Delta 增量更新。</p>
+    </div>
+    <div class="card">
+      <h4>Phase 2: 运行时查询</h4>
+      <p>6 个查询映射为 MCP 工具：traverse/impact/path/subgraph/validate/diff。结构化契约，非自然语言。</p>
+    </div>
+    <div class="card">
+      <h4>Phase 3: 回写同步</h4>
+      <p>Agent 不直接修改 Cluster，通过 diff → syn 提案 → 合并流程。SynProposal 生命周期：Draft → UnderReview → Approved/Rejected → Implemented。</p>
+    </div>
+    <div class="card">
+      <h4>Phase 4: Multi-Agent</h4>
+      <p>三层架构：Swarm → Coordinator → Subagent。DAG 任务图调度。分级错误：Abort/Skip/Retry/Fallback。</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION: ROADMAP -->
+<section id="roadmap">
+  <h2>开发路线图</h2>
+
+  <h3>当前状态（Phase 4 引擎完善）</h3>
+  <table>
+    <tr><th>任务</th><th>优先级</th><th>状态</th></tr>
+    <tr><td>存储格式升级（加密+压缩）</td><td>P0</td><td><span class="badge badge-done">已完成</span></td></tr>
+    <tr><td>单元测试（5 模块边界场景）</td><td>P0</td><td><span class="badge badge-done">已完成</span></td></tr>
+    <tr><td>端到端脚本 e2e.ps1</td><td>P0</td><td><span class="badge badge-done">已完成</span></td></tr>
+    <tr><td>README.md 撰写</td><td>P0</td><td><span class="badge badge-done">已完成</span></td></tr>
+    <tr><td>AGENTS.md 更新</td><td>P0</td><td><span class="badge badge-done">已完成</span></td></tr>
+    <tr><td>GitHub CI 完善</td><td>P1</td><td><span class="badge badge-active">部分完成</span></td></tr>
+    <tr><td>GitHub Release v0.1.0-alpha</td><td>P1</td><td><span class="badge badge-frozen">未执行</span></td></tr>
+    <tr><td>官网部署 GitHub Pages</td><td>P1</td><td><span class="badge badge-frozen">未执行</span></td></tr>
+  </table>
+
+  <h3>Agent × Statuz 实现路线图（6 阶段）</h3>
+  <table>
+    <tr><th>Phase</th><th>时间</th><th>目标</th><th>核心交付</th></tr>
+    <tr><td>Phase 1</td><td>0-7天</td><td>引擎能力扩展</td><td>weighted_subgraph, InjectionConfig, SubAgentLifecycle, ConflictDetection</td></tr>
+    <tr><td>Phase 2</td><td>7-14天</td><td>注入层 CLI</td><td><code>statuz inject</code> 命令, Markdown/JSON 输出</td></tr>
+    <tr><td>Phase 3</td><td>14-21天</td><td>MCP 桥接</td><td>6 个查询 + inject 作为 MCP 工具, <code>statuz-core-mcp</code></td></tr>
+    <tr><td>Phase 4</td><td>21-35天</td><td>表征层实现</td><td>arrow-map 解析器, niche 漂移检测, syn 提案审批</td></tr>
+    <tr><td>Phase 5</td><td>35-45天</td><td>Multi-Agent 协调器</td><td><code>statuz-coordinator</code>, DAG 调度</td></tr>
+    <tr><td>Phase 6</td><td>45-50天</td><td>Dashboard 可视化</td><td>SVG 渲染器（子图/差异/影响半径/时间线）</td></tr>
+  </table>
+
+  <h3>未来方向</h3>
+  <div class="card-grid">
+    <div class="card">
+      <h4>短期</h4>
+      <ul>
+        <li>跨 Cluster 引用</li>
+        <li>版本管理（三路合并）</li>
+        <li>可视化（Web/TUI/Graphviz）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>中期</h4>
+      <ul>
+        <li>MCP 集成（Rust 重写或桥接）</li>
+        <li>惰性克隆（Copy-on-Write）</li>
+        <li>索引优化</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>长期</h4>
+      <ul>
+        <li>图计算引擎（PageRank/社区发现）</li>
+        <li>协作平台（实时同步 CRDT）</li>
+        <li>生态系统（MCP 插件/仪表盘/CI 集成）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION: UNRESOLVED -->
+<section id="unresolved">
+  <h2>未解决问题</h2>
+
+  <h3>存储与序列化</h3>
+  <ul>
+    <li><strong>加密密钥管理</strong>：当前密码通过 CLI 参数明文传入，不安全。可能方案：环境变量、密钥文件、系统密钥链</li>
+    <li><strong>大文件处理</strong>：当前全量读写，无流式处理。大 Cluster（>100MB）可能内存溢出</li>
+    <li><strong>加密/压缩端到端验证</strong>：代码已实现但尚未进行完整前端验证</li>
+  </ul>
+
+  <h3>共享与合并</h3>
+  <ul>
+    <li><strong>跨 Cluster 引用</strong>：未实现。每个 Cluster 完全独立</li>
+    <li><strong>三路合并</strong>：当前是"两路"合并，缺少共同祖先</li>
+    <li><strong>惰性克隆</strong>：当前 Clone 是全量深拷贝 O(n)</li>
+    <li><strong>合并时密码验证</strong>：源 Cluster 有密码时是否要求验证？未实现</li>
+  </ul>
+
+  <h3>查询与算法</h3>
+  <ul>
+    <li><strong>路径查询索引</strong>：长路径（>100 节点）BFS 效率可能不足</li>
+    <li><strong>Impact 查询精度</strong>：当前简单反向 BFS，未考虑边类型和深度限制</li>
+    <li><strong>blast_radius</strong>：当前为空 Vec，未实现</li>
+    <li><strong>子图查询性能边界</strong>：大图深度无限制时未做基准测试</li>
+  </ul>
+
+  <h3>表征层与 Agent 交互</h3>
+  <ul>
+    <li><strong>niche/SYN/Arrow Map 占位 crate</strong>：已创建为占位符，编译通过，无功能逻辑</li>
+    <li><strong>MCP 集成</strong>：旧 TS MCP Server 需被 Rust 版本取代或作为桥接保留，未决定</li>
+    <li><strong>Agent 交互框架</strong>：7 份框架文档已完成设计，实现尚未开始。需要 18 个新算法 + 6 个新 crate</li>
+  </ul>
+
+  <h3>文档问题</h3>
+  <div class="callout danger">
+    <p><strong>License 不一致：</strong>README.md 标注为 MIT，hard-rules.md 标注为 Apache-2.0。需人工确认。</p>
+  </div>
+</section>
+
+<!-- SECTION: HARD RULES -->
+<section id="hard-rules">
+  <h2>硬规则</h2>
+  <p>来源：<code>AGENTS.md</code>（权威来源，与 knowledge-base 冲突时以 AGENTS.md 为准）</p>
+
+  <h3>身份规则</h3>
+  <ul>
+    <li>Statuz 不是传输协议、不替代 MCP、不实现 A2A（A2A 字段是预留占位符）</li>
+  </ul>
+
+  <h3>范式规则</h3>
+  <ul>
+    <li>不添加 YAML 文件（旧范式已死）</li>
+    <li>不复活 niche/SYN/Arrow Map 文件格式</li>
+    <li>表示层 crate 不得创建独立存储/CLI/Schema/序列化</li>
+    <li>不添加 CLI 命令在 Engine 稳固之前</li>
+    <li>不添加数据库、服务器、网络调用</li>
+  </ul>
+
+  <h3>质量规则</h3>
+  <ul>
+    <li>self-test 必须在每次变更后通过</li>
+    <li>代码语言必须是英文</li>
+    <li>零非 serde 依赖（图算法用 std 集合）</li>
+    <li>内存优先，序列化是快照</li>
+    <li>无 <code>unwrap()</code> 在库代码中</li>
+    <li>无未使用变量或导入</li>
+  </ul>
+
+  <h3>存储规则</h3>
+  <ul>
+    <li>Cluster 是唯一存储单元</li>
+    <li>存储格式不可变（magic + version 不能更改）</li>
+    <li>内容可寻址（blake3）</li>
+  </ul>
+
+  <h3>决策规则</h3>
+  <table>
+    <tr><th>旧概念出现时</th><th>处理方式</th></tr>
+    <tr><td>引擎可计算？</td><td>→ 添加为 Rust 方法</td></tr>
+    <tr><td>UI 关注？</td><td>→ 推迟到 Dashboard 阶段</td></tr>
+    <tr><td>YAML 文件模式？</td><td>→ 丢弃</td></tr>
+  </table>
+</section>
+
+<!-- SECTION: FILE INDEX -->
+<section id="file-index">
+  <h2>关键文件索引</h2>
+  <table>
+    <tr><th>文件</th><th>说明</th><th>优先级</th></tr>
+    <tr><td><code>AGENTS.md</code></td><td>引擎工作指南（代理必读，硬规则权威来源）</td><td>最高</td></tr>
+    <tr><td><code>POSITIONING_7_25.md</code></td><td>权威定位文档（2026-07-25，与其他文档冲突时以此为准）</td><td>最高</td></tr>
+    <tr><td><code>STATUZ设计哲学的论述.md</code></td><td>设计哲学论述</td><td>高</td></tr>
+    <tr><td><code>CONTEXT.md</code></td><td>领域上下文定义</td><td>高</td></tr>
+    <tr><td><code>README.md</code></td><td>项目 README</td><td>中</td></tr>
+    <tr><td><code>crates/statuz-core/src/</code></td><td>Rust 引擎核心代码</td><td>最高</td></tr>
+    <tr><td><code>knowledge-base/04-architecture/</code></td><td>架构文档</td><td>高</td></tr>
+    <tr><td><code>knowledge-base/07-agent-interaction/</code></td><td>Agent 交互框架（7 份+算法规划）</td><td>高</td></tr>
+    <tr><td><code>knowledge-base/05-hard-rules/hard-rules.md</code></td><td>硬规则</td><td>高</td></tr>
+    <tr><td><code>knowledge-base/06-unresolved/open-questions.md</code></td><td>未解决问题</td><td>中</td></tr>
+    <tr><td><code>knowledge-base/02-plans/</code></td><td>路线图和计划</td><td>中</td></tr>
+    <tr><td><code>scripts/e2e.ps1</code></td><td>端到端测试脚本</td><td>中</td></tr>
+    <tr><td><code>scripts/build.ps1</code></td><td>构建验证脚本</td><td>中</td></tr>
+    <tr><td><code>leftover/</code></td><td>所有过时文档、Schema 和示例（旧范式存档）</td><td>低（仅参考）</td></tr>
+    <tr><td><code>packages/</code></td><td>遗留 TS/Python 代码（冻结，待替换）</td><td>低（仅参考）</td></tr>
+  </table>
+</section>
+
+<!-- SECTION: CHECKLIST -->
+<section id="checklist">
+  <h2>交接清单</h2>
+
+  <h3>下一个 Agent 必须知道的</h3>
+  <ol class="checklist">
+    <li class="done">项目已从 TypeScript+YAML 范式转换为 Rust 图引擎范式（2026年7月）</li>
+    <li class="done">statuz-core 是唯一活跃 crate，~2500 行 Rust 代码</li>
+    <li class="done">arrow-map/niche/syn 是占位符 crate，依赖 statuz-core</li>
+    <li class="done">packages/ 下所有 TS/Python 代码已冻结，不可恢复</li>
+    <li class="done">leftover/ 下所有旧文档仅作参考，不可恢复</li>
+    <li class="done">POSITIONING_7_25.md 是权威定位文档，冲突时以此为准</li>
+    <li class="done">AGENTS.md 是硬规则权威来源</li>
+    <li>self-test 必须在每次变更后通过：<code>cd crates/statuz-core && cargo run -- self-test</code></li>
+    <li>内核查询面固定为三个原语：traverse, impact, path</li>
+    <li>Cluster 是唯一存储单元，两个 Cluster 之间不能联通（设计约束）</li>
+    <li>Field 是子图视图，Bridge 实现跨 Field 双向连接</li>
+    <li>存储格式：msgpack + blake3 + argon2 + zstd + chacha20</li>
+    <li>零非 serde 依赖原则</li>
+    <li>Agent 交互框架已设计 7 份文档，需要 18 个新算法 + 6 个新 crate</li>
+    <li>License 存在不一致（README: MIT, hard-rules: Apache-2.0），需人工确认</li>
+    <li>blast_radius 未实现（当前为空 Vec）</li>
+    <li>加密密钥通过 CLI 明文传入，不安全（待改进）</li>
+    <li>GitHub Release v0.1.0-alpha 尚未创建</li>
+  </ol>
+
+  <h3>建议的下一步</h3>
+  <ol>
+    <li><strong>验证环境</strong>：运行 <code>cd crates/statuz-core && cargo run -- self-test</code> 确认引擎正常</li>
+    <li><strong>完善 Phase 4</strong>：完成 GitHub CI 配置和 Release v0.1.0-alpha</li>
+    <li><strong>开始 Agent 交互 Phase 1</strong>：实现 weighted_subgraph 和 InjectionConfig</li>
+    <li><strong>修复 License 不一致</strong>：确认项目使用的 License</li>
+    <li><strong>实现 blast_radius</strong>：完成 impact 查询的爆炸半径功能</li>
+  </ol>
+
+  <div class="callout success">
+    <p><strong>验证命令：</strong></p>
+    <pre><code>cd crates/statuz-core
+cargo run -- self-test       # 11 阶段 ~70 断言
+cargo test                   # 单元测试
+cargo clippy -- -D warnings  # 代码质量
+scripts/e2e.ps1              # 端到端测试</code></pre>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
