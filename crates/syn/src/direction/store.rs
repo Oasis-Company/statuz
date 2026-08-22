@@ -159,4 +159,45 @@ mod tests {
         assert!(back.tension.contains(&"h3 还没严格验证".into()));
         assert_eq!(back.trail, vec!["n_core".to_string()]);
     }
+
+    #[test]
+    fn adjudication_loop_writes_the_shared_decision_back_to_graph() {
+        use crate::direction::adjudicate::{apply_prompt, should_hand_to_user};
+        use crate::direction::confidence::uncertainty_from;
+        use crate::direction::escalation::DEFAULT_ESCALATION_THRESHOLD;
+
+        // A small Statuz-flavoured graph; n_core is the in-degree hotspot.
+        let mut g = GraphEngine::new();
+        for id in ["n_cluster", "n_syn", "n_core", "n_storage"] {
+            g.add_node(node(id));
+        }
+        g.add_edge(edge("e1", "n_cluster", "n_core"));
+        g.add_edge(edge("e2", "n_syn", "n_core"));
+        g.add_edge(edge("e3", "n_storage", "n_core"));
+
+        // 1) the system grows a candidate at the hotspot
+        let mut carriers = seed_candidates(&g, 1);
+        let candidate = carriers.remove(0);
+
+        // 2) the system computes its OWN uncertainty (evidence thickness)
+        let u = uncertainty_from(&candidate);
+        assert!((0.0..=1.0).contains(&u));
+
+        // 3) at the default, quiet threshold the thin seed self-decides (no interruption)
+        assert!(!should_hand_to_user(u, DEFAULT_ESCALATION_THRESHOLD));
+
+        // 4) but a stricter threshold puts the same direction in your hands
+        assert!(should_hand_to_user(u, 0.3));
+
+        // 5) the user co-creates on the carrier: rewrite the intent
+        let decided = apply_prompt(&candidate, "改 把核心目录当方向，先收敛").expect("valid rewrite");
+
+        // 6) the shared decision is written back into the graph
+        attach_carrier(&mut g, &decided);
+
+        // 7) the "next session" reads the decided direction back intact
+        let back = load_carrier(&g, &decided.id).expect("decided carrier readable");
+        assert_eq!(back.intent, "把核心目录当方向，先收敛");
+        assert_eq!(back.trail, candidate.trail); // evidence preserved
+    }
 }

@@ -3,6 +3,7 @@
 //! Lives in the Representation layer (ADR-0001). Carriers, co-editing, and
 //! escalation belong here, not in the kernel.
 
+pub mod adjudicate;
 pub mod carrier;
 pub mod coedit;
 pub mod confidence;
