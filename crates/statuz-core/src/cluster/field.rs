@@ -166,6 +166,74 @@ mod tests {
         assert!(back.fields.get("f1").unwrap().type_.is_none());
     }
 
+    // ─── Identity axiom (Task A1) ───────────────────────────
+    // A Field's identity anchors to its `id`, independent of its node set.
+    // Deleting all nodes must not change the field's identity.
+
+    #[test]
+    fn identity_survives_all_nodes_removed() {
+        let mut f = Field::new("f1".into(), "Architecture".into(), None);
+        f.graph.add_node(Node {
+            id: "n_arch".into(),
+            type_: "domain".into(),
+            label: "Arch".into(),
+            status: crate::graph::types::NodeStatus::Active,
+            meta: None,
+        });
+        f.graph.add_node(Node {
+            id: "n_flow".into(),
+            type_: "domain".into(),
+            label: "Flow".into(),
+            status: crate::graph::types::NodeStatus::Active,
+            meta: None,
+        });
+        assert_eq!(f.graph.node_count(), 2);
+
+        // Capture the identity tokens we expect to survive.
+        let id_before = f.id.clone();
+        let name_before = f.name.clone();
+
+        // Remove every node in the field.
+        let node_ids: Vec<String> = f.graph.all_nodes().iter().map(|n| n.id.clone()).collect();
+        for nid in node_ids {
+            f.graph.remove_node(&nid);
+        }
+
+        assert_eq!(f.graph.node_count(), 0);
+        // Identity must be unchanged: the field is the same thing,
+        // not a function of whatever nodes it currently holds.
+        assert_eq!(f.id, id_before);
+        assert_eq!(f.name, name_before);
+        assert_eq!(f.id, "f1");
+    }
+
+    #[test]
+    fn identity_anchors_to_id_not_to_content() {
+        // Two fields with the same nodes are different fields (different ids);
+        // the same field keeps its id across content churn.
+        let mut a = Field::new("fa".into(), "Alpha".into(), None);
+        let mut b = Field::new("fb".into(), "Beta".into(), None);
+        a.graph.add_node(Node {
+            id: "n_shared".into(),
+            type_: "domain".into(),
+            label: "Shared".into(),
+            status: crate::graph::types::NodeStatus::Active,
+            meta: None,
+        });
+        b.graph.add_node(Node {
+            id: "n_shared".into(),
+            type_: "domain".into(),
+            label: "Shared".into(),
+            status: crate::graph::types::NodeStatus::Active,
+            meta: None,
+        });
+        // Distinct fields holding identical content are still distinct.
+        assert_ne!(a.id, b.id);
+        // Each keeps its own id; content did not merge identities.
+        assert_eq!(a.id, "fa");
+        assert_eq!(b.id, "fb");
+    }
+
     fn cluster_with_field(f: Field) -> crate::Cluster {
         let mut c = crate::Cluster::new("c1".into(), "Test".into(), Visibility::Private);
         c.fields.insert(f.id.clone(), f);
