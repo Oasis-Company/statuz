@@ -43,3 +43,10 @@ Statuz 不是一个单层图引擎，而是一个三层结构。**越往顶层�
 - 注意力层（释放与衰减）的机制尚未定义——只知存在，未立项。
 - 三层各自的 crate 归属在部分层面仍未固定（如表征层内部 `syn` vs `niche` 分工）。
 - 内核 `types.rs` 的 Syn 类型是否迁出、迁到哪，待执行计划 O4 裁决。
+
+---
+
+## Field 相关锚点（2026-08-22）
+
+- **Field Class 设计定稿**：[`field-class-design.md`](./field-class-design.md) — "为什么 field 要有 class"（从可被握住导出）+ 四项最小公理（身份/归属/内聚/演变）。执行计划见 [`paper/field-class-execution-plan.md`](../../paper/field-class-execution-plan.md)。
+- 归属说明：Field 的**形态**（A/B/C/D 公理落地）属于**内核层**（`statuz-core` 的 Cluster/Field）；field 的**类型本体**（类型间关系等）属**表征层**，是公理 C 之后的后续阶段，不在此混为一谈。
