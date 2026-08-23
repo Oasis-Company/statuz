@@ -168,13 +168,77 @@ impl Cluster {
     }
 
     /// Remove a field and all its edges from the cluster.
+    ///
+    /// Its cascade keeps nodes in the central registry (they are shared, not
+    /// owned by any single field). What is removed:
+    /// - the field itself,
+    /// - every bridge edge in OTHER fields that targets this field (they would
+    ///   otherwise dangle at a non-existent field),
+    /// - those bridge edges from the cluster bridge registry.
     pub fn remove_field(&mut self, id: &str) {
+        // 1. Catch bridge edges stored in OTHER fields that target this field.
+        let mut dangling: Vec<(FieldId, EdgeId)> = Vec::new();
+        for (fid, field) in self.fields.iter() {
+            for e in field.graph.all_edges() {
+                if e.target_field.as_deref() == Some(id) {
+                    dangling.push((fid.clone(), e.id.clone()));
+                }
+            }
+        }
+        // 2. Remove them from their owning fields.
+        for (fid, eid) in &dangling {
+            if let Some(f) = self.fields.get_mut(fid) {
+                f.graph.remove_edge(eid);
+            }
+        }
+        // 3. Drop the field itself.
         self.fields.remove(id);
+        // 4. Rebuild the bridge registry to keep ONLY edges still alive in a
+        //    surviving field's graph. This also drops the removed field's own
+        //    bridge edges (whose graphs are gone), which the "targets deleted
+        //    field" catch above alone would leave as ghost entries.
+        if let Some(bridges) = self.bridges.as_mut() {
+            let live: HashMap<EdgeId, Edge> = bridges
+                .values()
+                .filter(|e| self.fields.values().any(|f| f.graph.get_edge(&e.id).is_some()))
+                .map(|e| (e.id.clone(), e.clone()))
+                .collect();
+            *bridges = live;
+        }
         self.invalidate_index();
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
+    }
+
+    /// Axiom B (membership) · deterministic member set of a field.
+    ///
+    /// A node is a member of a field iff it is an endpoint of a non-bridge
+    /// (local) edge inside the field, or the **source** of a bridge edge in the
+    /// field (a resident node that connects outward). Bridge **targets**
+    /// (`target_field = Some(..)`) belong to the OTHER field and are excluded.
+    ///
+    /// Result is sorted and deterministic: same member set for the same field
+    /// no matter how edges were inserted.
+    pub fn field_members(&self, field_id: &str) -> Vec<NodeId> {
+        let Some(field) = self.fields.get(field_id) else {
+            return Vec::new();
+        };
+        let mut members: HashSet<NodeId> = HashSet::new();
+        for e in field.graph.all_edges() {
+            let is_bridge = e.target_field.is_some();
+            if is_bridge {
+                // Only the bridge source is a resident of THIS field.
+                members.insert(e.source.clone());
+            } else {
+                members.insert(e.source.clone());
+                members.insert(e.target.clone());
+            }
+        }
+        let mut out: Vec<NodeId> = members.into_iter().collect();
+        out.sort();
+        out
     }
 
     // ─── Cross-Field Bridge Communication ─────────────────
@@ -1139,6 +1203,71 @@ mod tests {
             c.get_field("f2").is_some(),
             "other field should still exist"
         );
+    }
+
+    // ─── Membership Axiom (A2) ─────────────────────────────
+
+    #[test]
+    fn field_members_is_deterministic_and_sorted() {
+        let c = build_test_cluster();
+        // f1 holds local edges a→b, b→c : members {a,b,c}
+        let mut m1 = c.field_members("f1");
+        assert_eq!(m1, vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+        m1.sort();
+        assert_eq!(m1, c.field_members("f1"), "member set is deterministic/path-independent");
+        // f2 holds the reverse bridge d→a; only the bridge SOURCE (d) is a
+        // resident of f2 — the target a belongs to f1.
+        assert_eq!(c.field_members("f2"), vec!["d".to_string()]);
+    }
+
+    #[test]
+    fn field_members_excludes_unknown_field() {
+        let c = build_test_cluster();
+        assert!(c.field_members("ghost").is_empty());
+    }
+
+    #[test]
+    fn field_members_survives_node_unregister_but_field_edge_removal_does_not() {
+        // unregister_node removes a node from ALL fields' graphs, so a member
+        // whose only presence was as an edge endpoint disappears with that edge.
+        let mut c = build_test_cluster();
+        // "c" exists in f1 as the target of b→c. Unregistering/removing it from
+        // the field must drop it from field_members.
+        let f1 = c.fields.get_mut("f1").unwrap();
+        f1.graph.remove_edge("e2"); // b→c removed
+        assert_eq!(c.field_members("f1"), vec!["a".to_string(), "b".to_string()]);
+    }
+
+    #[test]
+    fn remove_field_cascades_outgoing_bridges_and_registry() {
+        let mut c = build_test_cluster();
+        // A bridge f1.a → f2.d exists. Removing f2 must:
+        // 1) drop the dangling reverse bridge edge from f1's graph,
+        // 2) drop both bridge entries from the registry,
+        // while keeping the actual nodes alive in the central registry.
+        let nodes_before: Vec<_> = c.nodes.keys().cloned().collect();
+
+        c.remove_field("f2");
+
+        assert!(c.get_field("f2").is_none());
+        assert_eq!(
+            c.fields.len(),
+            1,
+            "only f1 should remain after removing f2"
+        );
+        // f1 must no longer hold the bridge edge that pointed at f2.
+        let f1 = c.get_field("f1").unwrap();
+        assert!(
+            !f1.graph.all_edges().iter().any(|e| e.target_field.is_some()),
+            "f1 should have no bridge edges left after f2 is removed"
+        );
+        // Bridge registry is empty.
+        let bridges = c.bridges.as_ref().unwrap();
+        assert!(bridges.is_empty(), "bridge registry should be cascaded");
+        // Nodes are shared — they must survive field removal.
+        for nid in &nodes_before {
+            assert!(c.nodes.contains_key(nid), "node '{}' must survive cascades", nid);
+        }
     }
 
     // ─── Cross-Field Traverse ────────────────────────────
