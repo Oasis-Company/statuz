@@ -1,5 +1,6 @@
 #[allow(clippy::module_inception)]
 pub mod cluster;
+pub mod cohesion;
 pub mod field;
 pub mod sharing;
 
