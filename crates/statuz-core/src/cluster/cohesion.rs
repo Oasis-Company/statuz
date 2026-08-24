@@ -88,6 +88,34 @@ fn dfs_component<'a>(
     count
 }
 
+// ─── Axiom D · Evolution signal ─────────────────────────────
+
+/// Axiom D · Evolution — "when is this field no longer itself".
+///
+/// A field has drifted / evolved past its working shape when its members no
+/// longer hold together as a single block. We emit a single, falsifiable
+/// re-divide signal: **cohesion dropped below a threshold**.
+///
+/// `true` means "this field is worth re-scoping (re-divide)"; it deliberately
+/// does NOT perform the re-divide itself (that is a later phase, per design
+/// decision C/D). The signal is the trigger for field-lifecycle §3-④.
+///
+/// `None` when the field has no members or does not exist (nothing to stale).
+pub fn needs_redivide(
+    c: &Cluster,
+    field_id: &str,
+    cohesion_threshold: f64,
+) -> Option<bool> {
+    let score = cohesion(c, field_id)?;
+    Some(score < cohesion_threshold)
+}
+
+/// Default re-divide threshold (Axiom D). Chosen so that a field whose largest
+/// block covers less than two-thirds of its members is *clearly* no longer one
+/// thing — e.g. two roughly-equal clumps (0.5) trip it, one dominant block (0.75)
+/// does not. Adjustable downstream; the default is only a documented starting point.
+pub const DEFAULT_REDIVIDE_THRESHOLD: f64 = 0.67;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,5 +215,137 @@ mod tests {
     fn unknown_field_has_no_cohesion() {
         let c = cluster_connected();
         assert!(cohesion(&c, "ghost").is_none());
+    }
+
+    // ─── Axiom D · evolution signal tests ───────────────────
+
+    #[test]
+    fn healthy_field_does_not_need_redivide() {
+        let c = cluster_connected(); // CCR = 1.0
+        assert_eq!(
+            needs_redivide(&c, "f1", DEFAULT_REDIVIDE_THRESHOLD),
+            Some(false),
+            "a single connected block is not stale"
+        );
+    }
+
+    #[test]
+    fn disconnected_field_needs_redivide() {
+        let c = cluster_disconnected(); // CCR = 0.5
+        assert_eq!(
+            needs_redivide(&c, "f1", DEFAULT_REDIVIDE_THRESHOLD),
+            Some(true),
+            "a field split into two clumps should trip the re-divide signal"
+        );
+    }
+
+    #[test]
+    fn evolution_is_a_movable_observation_not_a_frozen_label() {
+        // The SAME field object crosses from healthy to stale as edges change —
+        // the evolution signal is emitted against the current topology, proving
+        // it responds to the field actually drifting, not to a stored opinion.
+        // Scaffold: a 5-node chain a→b→c→d→e as the main block.
+        let mut c = Cluster::new("c".into(), "C".into(), Visibility::Private);
+        for id in ["a", "b", "c", "d", "e"] {
+            c.nodes.insert(
+                id.into(),
+                Node {
+                    id: id.into(),
+                    type_: "domain".into(),
+                    label: id.into(),
+                    status: NodeStatus::Active,
+                    meta: None,
+                },
+            );
+        }
+        c.fields.insert("f1".into(), Fld::new("f1".into(), "F".into(), None));
+        let field = c.fields.get_mut("f1").unwrap();
+        let chain = [("a", "b", "e1"), ("b", "c", "e2"), ("c", "d", "e3"), ("d", "e", "e4")];
+        for (s, t, eid) in chain {
+            field.graph.add_edge(Edge {
+                id: eid.into(),
+                source: s.into(),
+                target: t.into(),
+                relation: Relation::DependsOn,
+                weight: 1.0,
+                description: "".into(),
+                target_field: None,
+                meta: None,
+            });
+        }
+        assert_eq!(
+            needs_redivide(&c, "f1", DEFAULT_REDIVIDE_THRESHOLD),
+            Some(false),
+            "a single 5-node block is healthy"
+        );
+
+        // Attach ONE unrelated clump f↔g → 5/7 = 0.71, still dominant → healthy.
+        for id in ["f", "g"] {
+            c.nodes.insert(
+                id.into(),
+                Node {
+                    id: id.into(),
+                    type_: "domain".into(),
+                    label: id.into(),
+                    status: NodeStatus::Active,
+                    meta: None,
+                },
+            );
+        }
+        let field = c.fields.get_mut("f1").unwrap();
+        field.graph.add_edge(Edge {
+            id: "e5".into(),
+            source: "f".into(),
+            target: "g".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "".into(),
+            target_field: None,
+            meta: None,
+        });
+        assert_eq!(
+            needs_redivide(&c, "f1", DEFAULT_REDIVIDE_THRESHOLD),
+            Some(false),
+            "5/7 = 0.71 block is still the dominant thing, not stale"
+        );
+
+        // Attach a SECOND clump h↔i → 5/9 = 0.56: the original block is no
+        // longer "the field"; it has genuinely drifted into several clumps.
+        for id in ["h", "i"] {
+            c.nodes.insert(
+                id.into(),
+                Node {
+                    id: id.into(),
+                    type_: "domain".into(),
+                    label: id.into(),
+                    status: NodeStatus::Active,
+                    meta: None,
+                },
+            );
+        }
+        let field = c.fields.get_mut("f1").unwrap();
+        field.graph.add_edge(Edge {
+            id: "e6".into(),
+            source: "h".into(),
+            target: "i".into(),
+            relation: Relation::DependsOn,
+            weight: 1.0,
+            description: "".into(),
+            target_field: None,
+            meta: None,
+        });
+        assert_eq!(
+            needs_redivide(&c, "f1", DEFAULT_REDIVIDE_THRESHOLD),
+            Some(true),
+            "once the main block covers 5/9, the field has genuinely drifted"
+        );
+    }
+
+    #[test]
+    fn empty_or_unknown_field_has_no_evolution_signal() {
+        let c = Cluster::new("c".into(), "C".into(), Visibility::Private);
+        assert_eq!(needs_redivide(&c, "f1", 0.67), None);
+        let c2 = cluster_connected();
+        assert_eq!(needs_redivide(&c2, "ghost", 0.67), None);
     }
 }
